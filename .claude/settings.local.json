@@ -9,7 +9,8 @@
       "Bash(find \"/c/Users/Emad.Ayyash/OneDrive - tasheelfinance/Documents\" -maxdepth 4 -iname \"*funnel*\" 2>/dev/null)",
       "Bash(npm --version)",
       "Bash(awk 'NR==280,NR==335' \"/c/Users/Emad.Ayyash/OneDrive - tasheelfinance/Documents/files/Acquisition_Command_Dashboard.html\")",
-      "Bash(awk 'NR==636,NR==643' \"/c/Users/Emad.Ayyash/OneDrive - tasheelfinance/Documents/files/Acquisition_Command_Dashboard.html\")"
+      "Bash(awk 'NR==636,NR==643' \"/c/Users/Emad.Ayyash/OneDrive - tasheelfinance/Documents/files/Acquisition_Command_Dashboard.html\")",
+      "Bash(tasklist)"
     ]
   }
 }
