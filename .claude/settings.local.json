@@ -36,7 +36,11 @@
       "Bash(cmd.exe /c \"echo test\")",
       "Read(//c/WINDOWS/System32/WindowsPowerShell/v1.0/**)",
       "Bash(cmd.exe /c \"powershell -NoProfile -Command \\\\\"Write-Output 'test'\\\\\"\")",
-      "Bash(taskkill //F //PID 8492)"
+      "Bash(taskkill //F //PID 8492)",
+      "Bash(grep -viE \"acquisition_for_loans_2026-0[1-6]|07-1[0-9]$|07-20\")",
+      "Skill(artifact-design)",
+      "Skill(artifact-design:*)",
+      "WebFetch(domain:claude.ai)"
     ]
   }
 }
