@@ -40,7 +40,9 @@
       "Bash(grep -viE \"acquisition_for_loans_2026-0[1-6]|07-1[0-9]$|07-20\")",
       "Skill(artifact-design)",
       "Skill(artifact-design:*)",
-      "WebFetch(domain:claude.ai)"
+      "WebFetch(domain:claude.ai)",
+      "Bash(ls -la \"/c/Users/Emad.Ayyash/Downloads/\" | grep -i \"Tawarruq_Funnel\")",
+      "Bash(awk 'NR==780,NR==829' \"/c/Users/Emad.Ayyash/OneDrive - tasheelfinance/Documents/EIA Work/AI-Work/Analysis Agent/Funnel_Analysis.html\")"
     ]
   }
 }
