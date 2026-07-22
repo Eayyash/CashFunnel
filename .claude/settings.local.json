@@ -45,7 +45,8 @@
       "Bash(awk 'NR==780,NR==829' \"/c/Users/Emad.Ayyash/OneDrive - tasheelfinance/Documents/EIA Work/AI-Work/Analysis Agent/Funnel_Analysis.html\")",
       "Bash(where 7z 7z.exe)",
       "Bash(tar --version)",
-      "Bash(tar --help)"
+      "Bash(tar --help)",
+      "Bash(grep -o 'const FUNNEL_DEFAULT ?= ?{\"meta\": {\"min\": \"[0-9-]*\", \"max\": \"[0-9-]*\"' \"/c/Users/Emad.Ayyash/OneDrive - tasheelfinance/Documents/EIA Work/AI-Work/Analysis Agent/Funnel_Analysis.html\")"
     ]
   }
 }
