@@ -295,8 +295,14 @@ select.dd-filter:focus{outline:none;border-color:var(--cyan)}
 </section>
 <section class="panel-tab" id="notes">
   <div class="sec-h"><span class="k">HIGHLIGHTS</span><h2>Key highlights for selected range</h2><span class="hint" id="wk-range"></span></div>
-  <div class="controls" id="notes-filter-row"><select id="notes-f-employer" class="dd-filter" data-label="Employer"></select><select id="notes-f-income" class="dd-filter" data-label="Income"></select><select id="notes-f-nationality" class="dd-filter" data-label="Nationality"></select></div>
-  <div id="notes-body"></div>
+  <div class="controls" id="notes-sub-filter-row"><select id="notes-sub-f-employer" class="dd-filter" data-label="Employer"></select><select id="notes-sub-f-income" class="dd-filter" data-label="Income"></select><select id="notes-sub-f-nationality" class="dd-filter" data-label="Nationality"></select></div>
+  <div id="notes-block-sub"></div>
+  <div class="controls" id="notes-init-filter-row" style="margin-top:16px"><select id="notes-init-f-employer" class="dd-filter" data-label="Employer"></select><select id="notes-init-f-income" class="dd-filter" data-label="Income"></select><select id="notes-init-f-nationality" class="dd-filter" data-label="Nationality"></select></div>
+  <div id="notes-block-init"></div>
+  <div class="controls" id="notes-book-filter-row" style="margin-top:16px"><select id="notes-book-f-employer" class="dd-filter" data-label="Employer"></select><select id="notes-book-f-income" class="dd-filter" data-label="Income"></select><select id="notes-book-f-nationality" class="dd-filter" data-label="Nationality"></select></div>
+  <div id="notes-block-book"></div>
+  <div class="controls" id="notes-dec-filter-row" style="margin-top:16px"><select id="notes-dec-f-employer" class="dd-filter" data-label="Employer"></select><select id="notes-dec-f-income" class="dd-filter" data-label="Income"></select><select id="notes-dec-f-nationality" class="dd-filter" data-label="Nationality"></select></div>
+  <div id="notes-block-decline"></div>
 </section>
 <section class="panel-tab" id="demo">
   <div class="controls"><div class="seg stage-ctl"><span class="lbl">Stage</span>
@@ -539,28 +545,6 @@ function renderChartTab(tab){const st=tabState[tab];tabCharts[tab].forEach(id=>{
 const DIMLAB={employer:'Employer type',nationality:'Nationality',income:'Income band',risk:'Risk grade'};
 function miniTable(obj){let e=sortDesc(obj);const tot=e.reduce((s,x)=>s+x[1],0)||1;const max=Math.max(...e.map(x=>x[1]),1);
   let h='<table class="dt"><tbody>';e.forEach(([k,v])=>{h+=`<tr><td class="bar-cell"><span class="bfill" style="width:${v/max*100}%"></span><span>${k}</span></td><td class="num">${fmt(v)}</td><td class="num" style="color:var(--faint)">${(100*v/tot).toFixed(0)}%</td></tr>`;});return h+'</tbody></table>';}
-function renderNotes(override){
-  const c=CUR;document.getElementById('wk-range').textContent=`${prettyD(c.from)}–${prettyD(c.to)} · decline Δ vs prior ${daysInRange(c.from,c.to)} days`;
-  const dims=['employer','nationality','income','risk'];const kk=override?override.k:c.cur.k;const d=override?override.d:c.cur.d;
-  const blocks=[['sub','Submissions','What came in the door',null],['init','Initial approved','DE-approved applications',null],
-   ['book','Booked & funded',CONFIG.bookedLabel,{count:kk.book,avg:kk.book?kk.val/kk.book:0,total:kk.val}]];
-  let h='';
-  blocks.forEach(([key,title,sub,summ])=>{h+=`<div class="note-block"><h3>${title}</h3><div class="nsub">${sub}</div>`;
-    if(summ){h+=`<div class="summary-cards">
-      <div class="card money kpi"><div class="lab">Booked</div><div class="big" style="font-size:23px">${fmt(summ.count)}</div></div>
-      <div class="card money kpi"><div class="lab">Avg loan size</div><div class="big" style="font-size:23px">${money(summ.avg)}</div></div>
-      <div class="card money kpi"><div class="lab">Total sales value</div><div class="big" style="font-size:23px">${money(summ.total)}</div></div></div>`;}
-    h+='<div class="three">';dims.forEach(dm=>{h+=`<div><div class="nsub" style="margin-bottom:6px;color:var(--ink2);font-weight:600">${DIMLAB[dm]}</div>${miniTable(d[dm][key])}</div>`;});h+='</div></div>';});
-  const dw=override?override.dec:c.cur.dec,dp=override?override.decPrev:c.decPrev;const keys=[...new Set([...Object.keys(dw),...Object.keys(dp)])].sort((a,b)=>(dw[b]||0)-(dw[a]||0));
-  let dh=`<div class="note-block"><h3>Decline reasons — vs prior period</h3><div class="nsub">Submissions declined · ${prettyD(c.from)}–${prettyD(c.to)} vs ${c.pwLabel}</div>`;
-  dh+='<table class="dt"><thead><tr><th>Simplified reason</th><th class="num">This period</th><th class="num">Prior</th><th class="num">Δ</th></tr></thead><tbody>';
-  keys.forEach(k=>{const a=dw[k]||0,b=dp[k]||0,dd=a-b;const cl=dd>0?'dn':(dd<0?'up':'flat');const ar=dd>0?'▲':(dd<0?'▼':'▬');
-    dh+=`<tr><td>${k}</td><td class="num">${fmt(a)}</td><td class="num" style="color:var(--faint)">${fmt(b)}</td><td class="num deltac ${cl}">${ar} ${dd>0?'+':''}${dd}</td></tr>`;});
-  dh+='</tbody></table><div class="callout" style="margin-top:12px">▲ red = more declines vs prior period (worse) · ▼ green = fewer (better).</div></div>';
-  document.getElementById('notes-body').innerHTML=h+dh;
-}
-
-
 /* ============ 06 Approved Criteria ============ */
 const AP_LAB={simah:'SIMAH grade',dbr:'DBR band',income:'Income band',age:'Age band',employer:'Employer type',region:'Region',product:'Product',nationality:'Nationality',gender:'Gender',source:'Submit source',scoreband:'Score band',marital:'Marital status'};
 function apRate(dim){const d=CUR.cur.d[dim]||{};const bk=d.book||{},sb=d.sub||{};
@@ -1015,6 +999,60 @@ const RAWSTORE = {"n":226466,"dates":["2026-04-06","2026-04-07","2026-04-08","20
 (function(){
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function E(){return window.__engine;}
+function notesMiniBlock(title,sub,key,summary,agg){
+  const d=agg?agg.d:CUR.cur.d;
+  const dims=['employer','nationality','income','risk'];
+  let h='<div class="note-block"><h3>'+title+'</h3><div class="nsub">'+sub+'</div>';
+  if(summary){h+='<div class="summary-cards"><div class="card money kpi"><div class="lab">Booked</div><div class="big" style="font-size:23px">'+fmt(summary.count)+'</div></div>'+
+    '<div class="card money kpi"><div class="lab">Avg loan size</div><div class="big" style="font-size:23px">'+money(summary.avg)+'</div></div>'+
+    '<div class="card money kpi"><div class="lab">Total sales value</div><div class="big" style="font-size:23px">'+money(summary.total)+'</div></div></div>';}
+  h+='<div class="three">';dims.forEach(function(dm){h+='<div><div class="nsub" style="margin-bottom:6px;color:var(--ink2);font-weight:600">'+DIMLAB[dm]+'</div>'+miniTable(d[dm][key])+'</div>';});h+='</div></div>';
+  return h;
+}
+function notesDeclineBlock(agg){
+  const c=CUR;
+  const dw=agg?agg.dec:c.cur.dec,dp=agg?agg.decPrev:c.decPrev;
+  const keys=[...new Set([...Object.keys(dw),...Object.keys(dp)])].sort((a,b)=>(dw[b]||0)-(dw[a]||0));
+  let dh='<div class="note-block"><h3>Decline reasons vs prior period</h3><div class="nsub">Submissions declined - '+prettyD(c.from)+String.fromCharCode(8211)+prettyD(c.to)+' vs '+c.pwLabel+'</div>';
+  dh+='<table class="dt"><thead><tr><th>Simplified reason</th><th class="num">This period</th><th class="num">Prior</th><th class="num">'+String.fromCharCode(916)+'</th></tr></thead><tbody>';
+  keys.forEach(function(k){const a=dw[k]||0,b=dp[k]||0,dd=a-b;const cl=dd>0?'dn':(dd<0?'up':'flat');const ar=dd>0?'▲':(dd<0?'▼':'▬');
+    dh+='<tr><td>'+k+'</td><td class="num">'+fmt(a)+'</td><td class="num" style="color:var(--faint)">'+fmt(b)+'</td><td class="num deltac '+cl+'">'+ar+' '+(dd>0?'+':'')+dd+'</td></tr>';});
+  dh+='</tbody></table><div class="callout" style="margin-top:12px">'+String.fromCharCode(9650)+' red = more declines vs prior period (worse) - '+String.fromCharCode(9660)+' green = fewer (better).</div></div>';
+  return dh;
+}
+function renderNotesHeader(){const c=CUR;document.getElementById('wk-range').textContent=prettyD(c.from)+String.fromCharCode(8211)+prettyD(c.to)+' - decline '+String.fromCharCode(916)+' vs prior '+daysInRange(c.from,c.to)+' days';}
+function renderNotesSub(){
+  renderNotesHeader();
+  fillSelect(document.getElementById('notes-sub-f-employer'),'employer');fillSelect(document.getElementById('notes-sub-f-income'),'income');fillSelect(document.getElementById('notes-sub-f-nationality'),'nationality');
+  const spec=readFilters('notes-sub-f',['employer','income','nationality']);
+  const agg=Object.keys(spec).length?E().notesAggregate(spec):null;
+  document.getElementById('notes-block-sub').innerHTML=notesMiniBlock('Submissions','What came in the door','sub',null,agg);
+}
+['notes-sub-f-employer','notes-sub-f-income','notes-sub-f-nationality'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('change',renderNotesSub);});
+function renderNotesInit(){
+  fillSelect(document.getElementById('notes-init-f-employer'),'employer');fillSelect(document.getElementById('notes-init-f-income'),'income');fillSelect(document.getElementById('notes-init-f-nationality'),'nationality');
+  const spec=readFilters('notes-init-f',['employer','income','nationality']);
+  const agg=Object.keys(spec).length?E().notesAggregate(spec):null;
+  document.getElementById('notes-block-init').innerHTML=notesMiniBlock('Initial approved','DE-approved applications','init',null,agg);
+}
+['notes-init-f-employer','notes-init-f-income','notes-init-f-nationality'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('change',renderNotesInit);});
+function renderNotesBook(){
+  fillSelect(document.getElementById('notes-book-f-employer'),'employer');fillSelect(document.getElementById('notes-book-f-income'),'income');fillSelect(document.getElementById('notes-book-f-nationality'),'nationality');
+  const spec=readFilters('notes-book-f',['employer','income','nationality']);
+  const agg=Object.keys(spec).length?E().notesAggregate(spec):null;
+  const kk=agg?agg.k:CUR.cur.k;
+  const summary={count:kk.book,avg:kk.book?kk.val/kk.book:0,total:kk.val};
+  document.getElementById('notes-block-book').innerHTML=notesMiniBlock('Booked & funded',CONFIG.bookedLabel,'book',summary,agg);
+}
+['notes-book-f-employer','notes-book-f-income','notes-book-f-nationality'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('change',renderNotesBook);});
+function renderNotesDecline(){
+  fillSelect(document.getElementById('notes-dec-f-employer'),'employer');fillSelect(document.getElementById('notes-dec-f-income'),'income');fillSelect(document.getElementById('notes-dec-f-nationality'),'nationality');
+  const spec=readFilters('notes-dec-f',['employer','income','nationality']);
+  const agg=Object.keys(spec).length?E().notesAggregate(spec):null;
+  document.getElementById('notes-block-decline').innerHTML=notesDeclineBlock(agg);
+}
+['notes-dec-f-employer','notes-dec-f-income','notes-dec-f-nationality'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('change',renderNotesDecline);});
+window.renderNotes=function(){renderNotesSub();renderNotesInit();renderNotesBook();renderNotesDecline();};
 function fillSelect(sel,dim){if(!sel||sel.dataset.filled)return;const vocab=(E()&&E().VOCAB[dim])||[];let h='<option value="">'+esc(sel.dataset.label||dim)+': All</option>';
   vocab.forEach(v=>{h+='<option value="'+esc(v)+'">'+esc(v)+'</option>';});sel.innerHTML=h;sel.dataset.filled='1';}
 function readFilters(prefix,dims){const spec={};dims.forEach(d=>{const el=document.getElementById(prefix+'-'+d);if(el&&el.value)spec[d]=el.value;});return spec;}
@@ -1130,22 +1168,13 @@ function renderSameBookTrend(){
 ['sb-f-income','sb-f-nationality','sb-f-employer'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('change',renderSameBookTrend);});
 
 
-function renderNotesWithFilters(){
-  fillSelect(document.getElementById('notes-f-employer'),'employer');fillSelect(document.getElementById('notes-f-income'),'income');fillSelect(document.getElementById('notes-f-nationality'),'nationality');
-  const spec=readFilters('notes-f',['employer','income','nationality']);
-  const active=Object.keys(spec).length>0;
-  if(!active){renderNotes();return;}
-  const agg=E().notesAggregate(spec);
-  renderNotes(agg);
-}
-['notes-f-employer','notes-f-income','notes-f-nationality'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('change',renderNotesWithFilters);});
 function renderNewCards(){
   if(!window.__engine||!window.__engine.dimDailyTrend)return;
   try{
     if(document.getElementById('c-demo-trend'))renderDemoTrend();
     if(document.getElementById('c-emp-trend'))renderEmpTrend();
     if(document.getElementById('c-referreasons-trend'))renderReferReasonsTrend();
-    if(document.getElementById('notes-f-employer'))renderNotesWithFilters();
+    if(document.getElementById('notes-sub-f-employer'))renderNotes();
     if(document.getElementById('c-de-decision'))renderDE();
     if(document.getElementById('c-rate-trend'))renderRateTrend();
     if(document.getElementById('c-dec-trend'))renderDeclineTrend();

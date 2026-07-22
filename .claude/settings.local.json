@@ -72,7 +72,10 @@
       "Bash(grep -n 'function dimDailyTrend' '/c/Users/Emad.Ayyash/OneDrive - tasheelfinance/Documents/EIA Work/AI-Work/Analysis Agent/Acquisition_Command_Dashboard.html')",
       "Bash(awk NR==928,NR==942 '/c/Users/Emad.Ayyash/OneDrive - tasheelfinance/Documents/EIA Work/AI-Work/Analysis Agent/Acquisition_Command_Dashboard.html')",
       "Bash(awk NR==296,NR==300 '/c/Users/Emad.Ayyash/OneDrive - tasheelfinance/Documents/EIA Work/AI-Work/Analysis Agent/Acquisition_Command_Dashboard.html')",
-      "Bash(awk NR==541,NR==600 '/c/Users/Emad.Ayyash/OneDrive - tasheelfinance/Documents/EIA Work/AI-Work/Analysis Agent/Acquisition_Command_Dashboard.html')"
+      "Bash(awk NR==541,NR==600 '/c/Users/Emad.Ayyash/OneDrive - tasheelfinance/Documents/EIA Work/AI-Work/Analysis Agent/Acquisition_Command_Dashboard.html')",
+      "Bash(awk NR==296,NR==301 '/c/Users/Emad.Ayyash/OneDrive - tasheelfinance/Documents/EIA Work/AI-Work/Analysis Agent/Acquisition_Command_Dashboard.html')",
+      "Bash(awk NR==1132,NR==1150 '/c/Users/Emad.Ayyash/OneDrive - tasheelfinance/Documents/EIA Work/AI-Work/Analysis Agent/Acquisition_Command_Dashboard.html')",
+      "Bash(awk NR==570,NR==575 '/c/Users/Emad.Ayyash/OneDrive - tasheelfinance/Documents/EIA Work/AI-Work/Analysis Agent/Acquisition_Command_Dashboard.html')"
     ]
   }
 }
