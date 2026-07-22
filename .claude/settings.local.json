@@ -46,7 +46,14 @@
       "Bash(where 7z 7z.exe)",
       "Bash(tar --version)",
       "Bash(tar --help)",
-      "Bash(grep -o 'const FUNNEL_DEFAULT ?= ?{\"meta\": {\"min\": \"[0-9-]*\", \"max\": \"[0-9-]*\"' \"/c/Users/Emad.Ayyash/OneDrive - tasheelfinance/Documents/EIA Work/AI-Work/Analysis Agent/Funnel_Analysis.html\")"
+      "Bash(grep -o 'const FUNNEL_DEFAULT ?= ?{\"meta\": {\"min\": \"[0-9-]*\", \"max\": \"[0-9-]*\"' \"/c/Users/Emad.Ayyash/OneDrive - tasheelfinance/Documents/EIA Work/AI-Work/Analysis Agent/Funnel_Analysis.html\")",
+      "Bash(awk NR==386,NR==440 '/c/Users/Emad.Ayyash/OneDrive - tasheelfinance/Documents/EIA Work/AI-Work/Analysis Agent/Acquisition_Command_Dashboard.html')",
+      "Bash(awk NR==441,NR==444 '/c/Users/Emad.Ayyash/OneDrive - tasheelfinance/Documents/EIA Work/AI-Work/Analysis Agent/Acquisition_Command_Dashboard.html')",
+      "Bash(awk NR==357,NR==365 '/c/Users/Emad.Ayyash/OneDrive - tasheelfinance/Documents/EIA Work/AI-Work/Analysis Agent/Acquisition_Command_Dashboard.html')",
+      "Bash(awk NR==795,NR==900 '/c/Users/Emad.Ayyash/OneDrive - tasheelfinance/Documents/EIA Work/AI-Work/Analysis Agent/Acquisition_Command_Dashboard.html')",
+      "Bash(awk NR==808,NR==900 '/c/Users/Emad.Ayyash/OneDrive - tasheelfinance/Documents/EIA Work/AI-Work/Analysis Agent/Acquisition_Command_Dashboard.html')",
+      "Bash(awk NR==900,NR==960 '/c/Users/Emad.Ayyash/OneDrive - tasheelfinance/Documents/EIA Work/AI-Work/Analysis Agent/Acquisition_Command_Dashboard.html')",
+      "Bash(awk NR==838,NR==866 '/c/Users/Emad.Ayyash/OneDrive - tasheelfinance/Documents/EIA Work/AI-Work/Analysis Agent/Acquisition_Command_Dashboard.html')"
     ]
   }
 }
