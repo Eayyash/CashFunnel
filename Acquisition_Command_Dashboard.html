@@ -219,7 +219,6 @@ select.dd-filter:focus{outline:none;border-color:var(--cyan)}
 <section class="panel-tab on" id="perf">
   <div class="sec-h"><span class="k">KPI</span><h2>Core acquisition metrics</h2><span class="hint" id="perf-hint"></span></div>
   <div class="grid k7" id="kpi-grid"></div>
-  <div class="grid k7" id="kpi-grid-extra" style="margin-top:12px"></div>
   <div class="sec-h"><span class="k">FUNNEL</span><h2>Acquisition funnel</h2><span class="hint">Submitted → Initial → Final → Booked · step conversion</span></div>
   <div class="two">
     <div class="chart-card"><div class="funnel-wrap" id="funnel"></div></div>
@@ -227,6 +226,17 @@ select.dd-filter:focus{outline:none;border-color:var(--cyan)}
   </div>
   <div class="sec-h"><span class="k">TREND</span><h2>Daily volume</h2><span class="hint">selected range · weekends visibly lower</span></div>
   <div class="chart-card"><div class="cwrap tall"><canvas id="trend"></canvas></div></div>
+
+  <div class="sec-h" style="margin-top:20px"><span class="k">TRENDS</span><h2>Initial vs final approval - daily trend</h2><span class="hint">final % of initial - selected range</span></div>
+  <div class="chart-card">
+    <div class="controls"><select id="if-f-income" class="dd-filter" data-label="Income"></select><select id="if-f-nationality" class="dd-filter" data-label="Nationality"></select><select id="if-f-employer" class="dd-filter" data-label="Employer"></select></div>
+    <div class="cwrap tall"><canvas id="c-initfinal-trend"></canvas></div>
+  </div>
+  <div class="sec-h" style="margin-top:20px"><span class="k">TRENDS</span><h2>Submission to booking (same-day) - daily trend</h2><span class="hint">booking % of submission volume - selected range</span></div>
+  <div class="chart-card">
+    <div class="controls"><select id="sb-f-income" class="dd-filter" data-label="Income"></select><select id="sb-f-nationality" class="dd-filter" data-label="Nationality"></select><select id="sb-f-employer" class="dd-filter" data-label="Employer"></select></div>
+    <div class="cwrap tall"><canvas id="c-samebook-trend"></canvas></div>
+  </div>
 </section>
 <section class="panel-tab" id="credit">
   <div class="controls"><div class="seg stage-ctl"><span class="lbl">Stage</span>
@@ -267,7 +277,13 @@ select.dd-filter:focus{outline:none;border-color:var(--cyan)}
         <div><h3>Submit source</h3><p class="cap">UI vs back-office</p><div class="cwrap short"><canvas id="c-source"></canvas></div></div>
         <div><h3>Product</h3><p class="cap">product type</p><div class="cwrap short"><canvas id="c-product"></canvas></div></div></div>
       <div style="margin-top:8px"><h3>Top cities</h3><div class="cwrap short"><canvas id="c-city"></canvas></div></div></div></div>
-  <div class="sec-h"><span class="k">API</span><h2>Employer type · GOSI &amp; MOF verification</h2><span class="hint">respects Stage + date range</span></div>
+  
+  <div class="sec-h" style="margin-top:20px"><span class="k">TRENDS</span><h2>Top cities &amp; region - daily trend</h2><span class="hint">same filters as above - selected range</span></div>
+  <div class="two">
+    <div class="chart-card"><h3>Top cities - daily trend</h3><div class="cwrap tall"><canvas id="c-city-trend"></canvas></div></div>
+    <div class="chart-card"><h3>Region - daily trend</h3><div class="cwrap tall"><canvas id="c-region-trend"></canvas></div></div>
+  </div>
+<div class="sec-h"><span class="k">API</span><h2>Employer type · GOSI &amp; MOF verification</h2><span class="hint">respects Stage + date range</span></div>
   <div class="two">
     <div class="chart-card"><h3>Submissions</h3><p class="cap">GOSI / MOF called (Y vs N) by employer type</p><div class="cwrap"><canvas id="c-mg-sub"></canvas></div></div>
     <div class="chart-card"><h3>Bookings</h3><p class="cap">GOSI / MOF called (Y vs N) by employer type</p><div class="cwrap"><canvas id="c-mg-book"></canvas></div></div></div>
@@ -928,7 +944,24 @@ const RAWSTORE = {"n":226466,"dates":["2026-04-06","2026-04-07","2026-04-08","20
     for(let i=0;i<N;i++){ if(!passFilter2(i,codes))continue; if(!inRange2(sd[i]))continue; const val=VOCAB[dim][col[i]]; tally[val]=(tally[val]||0)+1; }
     return tally;
   }
-  window.__engine={aggFromRaw,DAILY_FULL,setFilter:toggleFilter,clear:clearFilters,N:N,FILTERS:()=>FILTERS,VOCAB,dimDailyTrend,rateDailyTrend,dimBreakdown};
+  function initFinalDailyTrend(spec){
+    const codes=resolveFilterCodes(spec||{}); const sd=RS.sday,flags=RS.flags; const byDate={};
+    for(let i=0;i<N;i++){ if(!passFilter2(i,codes))continue; const di=sd[i]; if(!inRange2(di))continue;
+      const dd=byDate[DTS[di]]||(byDate[DTS[di]]={init:0,final:0}); if(flags[i]&1)dd.init++; if(flags[i]&2)dd.final++; }
+    const dates=[]; for(const d of DTS){if(d>=RANGE.from&&d<=RANGE.to)dates.push(d);}
+    return {dates, init:dates.map(d=>(byDate[d]&&byDate[d].init)||0), final:dates.map(d=>(byDate[d]&&byDate[d].final)||0),
+      rate:dates.map(d=>{const b=byDate[d];return (b&&b.init)?+(100*b.final/b.init).toFixed(1):0;})};
+  }
+  function sameDayBookingTrend(spec){
+    const codes=resolveFilterCodes(spec||{}); const sd=RS.sday,bd=RS.bday,flags=RS.flags; const byDate={};
+    for(let i=0;i<N;i++){ if(!passFilter2(i,codes))continue; const di=sd[i]; if(!inRange2(di))continue;
+      const booked=(flags[i]>>2)&1; const sameDay=booked && bd[i]===di;
+      const dd=byDate[DTS[di]]||(byDate[DTS[di]]={sub:0,book:0}); dd.sub++; if(sameDay)dd.book++; }
+    const dates=[]; for(const d of DTS){if(d>=RANGE.from&&d<=RANGE.to)dates.push(d);}
+    return {dates, sub:dates.map(d=>(byDate[d]&&byDate[d].sub)||0), book:dates.map(d=>(byDate[d]&&byDate[d].book)||0),
+      rate:dates.map(d=>{const b=byDate[d];return (b&&b.sub)?+(100*b.book/b.sub).toFixed(1):0;})};
+  }
+  window.__engine={aggFromRaw,DAILY_FULL,setFilter:toggleFilter,clear:clearFilters,N:N,FILTERS:()=>FILTERS,VOCAB,dimDailyTrend,rateDailyTrend,dimBreakdown,initFinalDailyTrend,sameDayBookingTrend};
   console.log('[interactive engine] ready · '+fmt(N)+' rows decoded');
 })();
 
@@ -961,9 +994,8 @@ function renderEmpTrend(){const r=E().dimDailyTrend('employer',{},6);mkTrend('c-
 function renderDE(){
   fillSelect(document.getElementById('de-f-employer'),'employer');fillSelect(document.getElementById('de-f-nationality'),'nationality');
   const spec=readFilters('de-f',['employer','nationality']);
-  const tally=E().dimBreakdown('de_decision',spec);
-  const e=Object.entries(tally).sort((a,b)=>b[1]-a[1]);
-  mk('c-de-decision',barCfg(e.map(x=>x[0]),e.map(x=>x[1]),GD,false));
+  const r=E().dimDailyTrend('de_decision',spec,6);
+  mkTrend('c-de-decision',r.dates,r.series);
 }
 ['de-f-employer','de-f-nationality'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('change',renderDE);});
 
@@ -990,11 +1022,17 @@ function renderDeclineTrend(){
 }
 ['dec-f-income','dec-f-nationality','dec-f-employer'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('change',renderDeclineTrend);});
 
+function renderGeoTrends(){
+  const spec=readFilters('geo-f',['employer','nationality','income']);
+  const rc=E().dimDailyTrend('city',spec,6); mkTrend('c-city-trend',rc.dates,rc.series);
+  const rr=E().dimDailyTrend('region',spec,6); mkTrend('c-region-trend',rr.dates,rr.series);
+}
 function renderGeoFilters(){
   fillSelect(document.getElementById('geo-f-employer'),'employer');fillSelect(document.getElementById('geo-f-nationality'),'nationality');fillSelect(document.getElementById('geo-f-income'),'income');
   const spec=readFilters('geo-f',['employer','nationality','income']);
   const active=Object.keys(spec).length>0;
   const clr=document.getElementById('geo-f-clear'); if(clr)clr.style.display=active?'':'none';
+  renderGeoTrends();
   if(!active){ if(REG['c-store']&&REG['c-store'].render)REG['c-store'].render(tabState.geo.s); if(REG['c-city']&&REG['c-city'].render)REG['c-city'].render(tabState.geo.s); if(REG['c-region']&&REG['c-region'].render)REG['c-region'].render(tabState.geo.s); return; }
   const storeT=E().dimBreakdown('store',spec); const cityT=E().dimBreakdown('city',spec); const regionT=E().dimBreakdown('region',spec);
   const se=Object.entries(storeT).sort((a,b)=>b[1]-a[1]).slice(0,12);
@@ -1007,25 +1045,47 @@ function renderGeoFilters(){
 ['geo-f-employer','geo-f-nationality','geo-f-income'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('change',renderGeoFilters);});
 (function(){const clr=document.getElementById('geo-f-clear'); if(clr)clr.addEventListener('click',()=>{['geo-f-employer','geo-f-nationality','geo-f-income'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});renderGeoFilters();});})();
 
-function renderExtraKPI(){
-  const k=CUR.cur.k;
-  const initFinalPct=k.init?+(100*k.final/k.init).toFixed(1):0;
-  const subBookPct=k.sub?+(100*k.book/k.sub).toFixed(1):0;
-  const grid=document.getElementById('kpi-grid-extra'); if(!grid)return;
-  grid.innerHTML=
-    '<div class="card kpi rate"><div class="lab">Initial → Final approval</div><div class="big">'+initFinalPct+'%</div><div class="mom-note">'+fmt(k.final)+' of '+fmt(k.init)+' initial approvals</div></div>'+
-    '<div class="card kpi rate"><div class="lab">Submission → Booking</div><div class="big">'+subBookPct+'%</div><div class="mom-note">'+fmt(k.book)+' of '+fmt(k.sub)+' submissions</div></div>';
+function renderInitFinalTrend(){
+  fillSelect(document.getElementById('if-f-income'),'income');fillSelect(document.getElementById('if-f-nationality'),'nationality');fillSelect(document.getElementById('if-f-employer'),'employer');
+  const spec=readFilters('if-f',['income','nationality','employer']);
+  const r=E().initFinalDailyTrend(spec);
+  const labels=r.dates.map(d=>prettyD(d));
+  mk('c-initfinal-trend',{type:'bar',data:{labels,datasets:[
+    {type:'bar',label:'Initial approved',data:r.init,backgroundColor:'rgba(58,154,232,.35)',borderRadius:5,yAxisID:'y',order:3},
+    {type:'bar',label:'Final approved',data:r.final,backgroundColor:'rgba(21,179,163,.45)',borderRadius:5,yAxisID:'y',order:2},
+    {type:'line',label:'Final % of initial',data:r.rate,borderColor:GD,tension:.3,pointRadius:0,borderWidth:2.4,yAxisID:'y2',order:1}]},
+    options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'top',labels:{boxWidth:10,font:{size:10.5}}}},
+      scales:{x:{...AX,ticks:{...AX.ticks,maxRotation:0,autoSkip:true,maxTicksLimit:12,font:{size:10}}},
+        y:{...AX,position:'left'},y2:{grid:{display:false},position:'right',ticks:{color:GD},title:{display:true,text:'%',color:GD,font:{size:10}}}}}});
 }
+['if-f-income','if-f-nationality','if-f-employer'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('change',renderInitFinalTrend);});
+
+function renderSameBookTrend(){
+  fillSelect(document.getElementById('sb-f-income'),'income');fillSelect(document.getElementById('sb-f-nationality'),'nationality');fillSelect(document.getElementById('sb-f-employer'),'employer');
+  const spec=readFilters('sb-f',['income','nationality','employer']);
+  const r=E().sameDayBookingTrend(spec);
+  const labels=r.dates.map(d=>prettyD(d));
+  mk('c-samebook-trend',{type:'bar',data:{labels,datasets:[
+    {type:'bar',label:'Submissions',data:r.sub,backgroundColor:'rgba(58,154,232,.35)',borderRadius:5,yAxisID:'y',order:2},
+    {type:'line',label:'Same-day booking %',data:r.rate,borderColor:GD,tension:.3,pointRadius:0,borderWidth:2.4,yAxisID:'y2',order:1}]},
+    options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'top',labels:{boxWidth:10,font:{size:10.5}}}},
+      scales:{x:{...AX,ticks:{...AX.ticks,maxRotation:0,autoSkip:true,maxTicksLimit:12,font:{size:10}}},
+        y:{...AX,position:'left'},y2:{grid:{display:false},position:'right',ticks:{color:GD},title:{display:true,text:'%',color:GD,font:{size:10}}}}}});
+}
+['sb-f-income','sb-f-nationality','sb-f-employer'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('change',renderSameBookTrend);});
 
 function renderNewCards(){
   if(!window.__engine||!window.__engine.dimDailyTrend)return;
   try{
-    renderExtraKPI();
     if(document.getElementById('c-demo-trend'))renderDemoTrend();
     if(document.getElementById('c-emp-trend'))renderEmpTrend();
     if(document.getElementById('c-de-decision'))renderDE();
     if(document.getElementById('c-rate-trend'))renderRateTrend();
     if(document.getElementById('c-dec-trend'))renderDeclineTrend();
+    if(document.getElementById('c-initfinal-trend'))renderInitFinalTrend();
+    if(document.getElementById('c-samebook-trend'))renderSameBookTrend();
     if(document.getElementById('geo-f-employer'))renderGeoFilters();
   }catch(err){console.error('[new cards] render failed',err);}
 }
