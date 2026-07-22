@@ -295,6 +295,7 @@ select.dd-filter:focus{outline:none;border-color:var(--cyan)}
 </section>
 <section class="panel-tab" id="notes">
   <div class="sec-h"><span class="k">HIGHLIGHTS</span><h2>Key highlights for selected range</h2><span class="hint" id="wk-range"></span></div>
+  <div class="controls" id="notes-filter-row"><select id="notes-f-employer" class="dd-filter" data-label="Employer"></select><select id="notes-f-income" class="dd-filter" data-label="Income"></select><select id="notes-f-nationality" class="dd-filter" data-label="Nationality"></select></div>
   <div id="notes-body"></div>
 </section>
 <section class="panel-tab" id="demo">
@@ -538,11 +539,11 @@ function renderChartTab(tab){const st=tabState[tab];tabCharts[tab].forEach(id=>{
 const DIMLAB={employer:'Employer type',nationality:'Nationality',income:'Income band',risk:'Risk grade'};
 function miniTable(obj){let e=sortDesc(obj);const tot=e.reduce((s,x)=>s+x[1],0)||1;const max=Math.max(...e.map(x=>x[1]),1);
   let h='<table class="dt"><tbody>';e.forEach(([k,v])=>{h+=`<tr><td class="bar-cell"><span class="bfill" style="width:${v/max*100}%"></span><span>${k}</span></td><td class="num">${fmt(v)}</td><td class="num" style="color:var(--faint)">${(100*v/tot).toFixed(0)}%</td></tr>`;});return h+'</tbody></table>';}
-function renderNotes(){
+function renderNotes(override){
   const c=CUR;document.getElementById('wk-range').textContent=`${prettyD(c.from)}–${prettyD(c.to)} · decline Δ vs prior ${daysInRange(c.from,c.to)} days`;
-  const dims=['employer','nationality','income','risk'];const d=c.cur.d;
+  const dims=['employer','nationality','income','risk'];const kk=override?override.k:c.cur.k;const d=override?override.d:c.cur.d;
   const blocks=[['sub','Submissions','What came in the door',null],['init','Initial approved','DE-approved applications',null],
-   ['book','Booked & funded',CONFIG.bookedLabel,{count:c.cur.k.book,avg:c.cur.k.book?c.cur.k.val/c.cur.k.book:0,total:c.cur.k.val}]];
+   ['book','Booked & funded',CONFIG.bookedLabel,{count:kk.book,avg:kk.book?kk.val/kk.book:0,total:kk.val}]];
   let h='';
   blocks.forEach(([key,title,sub,summ])=>{h+=`<div class="note-block"><h3>${title}</h3><div class="nsub">${sub}</div>`;
     if(summ){h+=`<div class="summary-cards">
@@ -550,7 +551,7 @@ function renderNotes(){
       <div class="card money kpi"><div class="lab">Avg loan size</div><div class="big" style="font-size:23px">${money(summ.avg)}</div></div>
       <div class="card money kpi"><div class="lab">Total sales value</div><div class="big" style="font-size:23px">${money(summ.total)}</div></div></div>`;}
     h+='<div class="three">';dims.forEach(dm=>{h+=`<div><div class="nsub" style="margin-bottom:6px;color:var(--ink2);font-weight:600">${DIMLAB[dm]}</div>${miniTable(d[dm][key])}</div>`;});h+='</div></div>';});
-  const dw=c.cur.dec,dp=c.decPrev;const keys=[...new Set([...Object.keys(dw),...Object.keys(dp)])].sort((a,b)=>(dw[b]||0)-(dw[a]||0));
+  const dw=override?override.dec:c.cur.dec,dp=override?override.decPrev:c.decPrev;const keys=[...new Set([...Object.keys(dw),...Object.keys(dp)])].sort((a,b)=>(dw[b]||0)-(dw[a]||0));
   let dh=`<div class="note-block"><h3>Decline reasons — vs prior period</h3><div class="nsub">Submissions declined · ${prettyD(c.from)}–${prettyD(c.to)} vs ${c.pwLabel}</div>`;
   dh+='<table class="dt"><thead><tr><th>Simplified reason</th><th class="num">This period</th><th class="num">Prior</th><th class="num">Δ</th></tr></thead><tbody>';
   keys.forEach(k=>{const a=dw[k]||0,b=dp[k]||0,dd=a-b;const cl=dd>0?'dn':(dd<0?'up':'flat');const ar=dd>0?'▲':(dd<0?'▼':'▬');
@@ -969,7 +970,43 @@ const RAWSTORE = {"n":226466,"dates":["2026-04-06","2026-04-07","2026-04-08","20
     return {dates, sub:dates.map(d=>(byDate[d]&&byDate[d].sub)||0), book:dates.map(d=>(byDate[d]&&byDate[d].book)||0),
       rate:dates.map(d=>{const b=byDate[d];return (b&&b.sub)?+(100*b.book/b.sub).toFixed(1):0;})};
   }
-  window.__engine={aggFromRaw,DAILY_FULL,setFilter:toggleFilter,clear:clearFilters,N:N,FILTERS:()=>FILTERS,VOCAB,dimDailyTrend,rateDailyTrend,dimBreakdown,initFinalDailyTrend,sameMonthBookingTrend};
+  function notesAggregate(spec){
+    const codes=resolveFilterCodes(spec||{});
+    const sd=RS.sday,bd=RS.bday,flags=RS.flags,bval=RS.bval,dec=RS.dec;
+    const dims=['employer','nationality','income','risk'];
+    const dobj=()=>({sub:{},init:{},book:{}});
+    const d={}; for(const dm of dims) d[dm]=dobj();
+    const k={sub:0,init:0,final:0,book:0,val:0};
+    const decCur={}; const decPrev={};
+    const L=daysInRange(RANGE.from,RANGE.to); const pwFrom=addDays(RANGE.from,-L), pwTo=addDays(RANGE.from,-1);
+    let bptr=0;
+    for(let i=0;i<N;i++){
+      const ok=passFilter2(i,codes);
+      const booked=(flags[i]>>2)&1; const bi=bd[i];
+      if(!ok){ if(booked&&bi>=0)bptr++; continue; }
+      const di=sd[i];
+      if(di>=0){
+        const ds=DTS[di];
+        if(ds>=RANGE.from&&ds<=RANGE.to){
+          k.sub++; if(flags[i]&1)k.init++; if(flags[i]&2)k.final++;
+          for(const dm of dims){const val=VOCAB[dm][RS[dm][i]]; d[dm].sub[val]=(d[dm].sub[val]||0)+1; if(flags[i]&1)d[dm].init[val]=(d[dm].init[val]||0)+1;}
+          const dc=dec[i]; if(dc!==0)decCur[DEC[dc]]=(decCur[DEC[dc]]||0)+1;
+        } else if(ds>=pwFrom&&ds<=pwTo){
+          const dc=dec[i]; if(dc!==0)decPrev[DEC[dc]]=(decPrev[DEC[dc]]||0)+1;
+        }
+      }
+      if(booked&&bi>=0){
+        const bs=DTS[bi];
+        if(bs>=RANGE.from&&bs<=RANGE.to){
+          k.book++; const iv=bval[bptr]; if(!isNaN(iv))k.val+=iv;
+          for(const dm of dims){const val=VOCAB[dm][RS[dm][i]]; d[dm].book[val]=(d[dm].book[val]||0)+1;}
+        }
+        bptr++;
+      }
+    }
+    return {k,d,dec:decCur,decPrev};
+  }
+  window.__engine={aggFromRaw,DAILY_FULL,setFilter:toggleFilter,clear:clearFilters,N:N,FILTERS:()=>FILTERS,VOCAB,dimDailyTrend,rateDailyTrend,dimBreakdown,initFinalDailyTrend,sameMonthBookingTrend,notesAggregate};
   console.log('[interactive engine] ready · '+fmt(N)+' rows decoded');
 })();
 
@@ -1092,12 +1129,23 @@ function renderSameBookTrend(){
 }
 ['sb-f-income','sb-f-nationality','sb-f-employer'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('change',renderSameBookTrend);});
 
+
+function renderNotesWithFilters(){
+  fillSelect(document.getElementById('notes-f-employer'),'employer');fillSelect(document.getElementById('notes-f-income'),'income');fillSelect(document.getElementById('notes-f-nationality'),'nationality');
+  const spec=readFilters('notes-f',['employer','income','nationality']);
+  const active=Object.keys(spec).length>0;
+  if(!active){renderNotes();return;}
+  const agg=E().notesAggregate(spec);
+  renderNotes(agg);
+}
+['notes-f-employer','notes-f-income','notes-f-nationality'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('change',renderNotesWithFilters);});
 function renderNewCards(){
   if(!window.__engine||!window.__engine.dimDailyTrend)return;
   try{
     if(document.getElementById('c-demo-trend'))renderDemoTrend();
     if(document.getElementById('c-emp-trend'))renderEmpTrend();
     if(document.getElementById('c-referreasons-trend'))renderReferReasonsTrend();
+    if(document.getElementById('notes-f-employer'))renderNotesWithFilters();
     if(document.getElementById('c-de-decision'))renderDE();
     if(document.getElementById('c-rate-trend'))renderRateTrend();
     if(document.getElementById('c-dec-trend'))renderDeclineTrend();
