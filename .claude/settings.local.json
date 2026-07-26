@@ -77,7 +77,9 @@
       "Bash(awk NR==1132,NR==1150 '/c/Users/Emad.Ayyash/OneDrive - tasheelfinance/Documents/EIA Work/AI-Work/Analysis Agent/Acquisition_Command_Dashboard.html')",
       "Bash(awk NR==570,NR==575 '/c/Users/Emad.Ayyash/OneDrive - tasheelfinance/Documents/EIA Work/AI-Work/Analysis Agent/Acquisition_Command_Dashboard.html')",
       "Bash(git reset *)",
-      "Bash(git check-ignore *)"
+      "Bash(git check-ignore *)",
+      "Bash(sort -t_ -k3)",
+      "Bash(grep -o 'const FUNNEL_DEFAULT ?= ?{\"meta\":{\"min\":\"[0-9-]*\",\"max\":\"[0-9-]*\"' '/c/Users/Emad.Ayyash/OneDrive - tasheelfinance/Documents/EIA Work/AI-Work/Analysis Agent/Funnel_Analysis.html')"
     ]
   }
 }
