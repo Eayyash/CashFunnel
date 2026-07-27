@@ -243,15 +243,26 @@ select.dd-filter:focus{outline:none;border-color:var(--cyan)}
     <div class="cwrap tall"><canvas id="c-samebook-trend"></canvas></div>
   </div>
 
-  <div class="sec-h" style="margin-top:20px"><span class="k">TRENDS</span><h2>Submit source mix &amp; booking rate - daily trend</h2><span class="hint">% share by source, overall booking rate - selected range</span></div>
-  <div class="chart-card">
-    <div class="controls"><select id="src-book-f-employer" class="dd-filter" data-label="Employer"></select></div>
-    <div class="cwrap tall"><canvas id="c-src-book-trend"></canvas></div>
+  <div class="sec-h" style="margin-top:20px"><span class="k">TRENDS</span><h2>Source &amp; employer co-relation</h2><span class="hint">Online % vs employer-type % vs rate - selected range</span></div>
+  <div class="two" style="margin-top:0">
+    <div class="chart-card"><h3>Unlisted / Online / Booking rate</h3><div class="cwrap tall"><canvas id="c-corr-book-0"></canvas></div></div>
+    <div class="chart-card"><h3>Unlisted / Online / Initial approval</h3><div class="cwrap tall"><canvas id="c-corr-init-0"></canvas></div></div>
   </div>
-  <div class="sec-h" style="margin-top:20px"><span class="k">TRENDS</span><h2>Submit source mix &amp; initial approval rate - daily trend</h2><span class="hint">% share by source, overall initial approval rate - selected range</span></div>
-  <div class="chart-card">
-    <div class="controls"><select id="src-init-f-employer" class="dd-filter" data-label="Employer"></select></div>
-    <div class="cwrap tall"><canvas id="c-src-init-trend"></canvas></div>
+  <div class="two" style="margin-top:14px">
+    <div class="chart-card"><h3>Government Entity / Online / Booking rate</h3><div class="cwrap tall"><canvas id="c-corr-book-1"></canvas></div></div>
+    <div class="chart-card"><h3>Government Entity / Online / Initial approval</h3><div class="cwrap tall"><canvas id="c-corr-init-1"></canvas></div></div>
+  </div>
+  <div class="two" style="margin-top:14px">
+    <div class="chart-card"><h3>Private Company / Online / Booking rate</h3><div class="cwrap tall"><canvas id="c-corr-book-2"></canvas></div></div>
+    <div class="chart-card"><h3>Private Company / Online / Initial approval</h3><div class="cwrap tall"><canvas id="c-corr-init-2"></canvas></div></div>
+  </div>
+  <div class="two" style="margin-top:14px">
+    <div class="chart-card"><h3>Military with Grades / Online / Booking rate</h3><div class="cwrap tall"><canvas id="c-corr-book-3"></canvas></div></div>
+    <div class="chart-card"><h3>Military with Grades / Online / Initial approval</h3><div class="cwrap tall"><canvas id="c-corr-init-3"></canvas></div></div>
+  </div>
+  <div class="two" style="margin-top:14px">
+    <div class="chart-card"><h3>Pension / Online / Booking rate</h3><div class="cwrap tall"><canvas id="c-corr-book-4"></canvas></div></div>
+    <div class="chart-card"><h3>Pension / Online / Initial approval</h3><div class="cwrap tall"><canvas id="c-corr-init-4"></canvas></div></div>
   </div>
 </section>
 <section class="panel-tab" id="credit">
@@ -1000,34 +1011,29 @@ const RAWSTORE = {"n":239550,"dates":["2026-04-06","2026-04-07","2026-04-08","20
     }
     return {k,d,dec:decCur,decPrev};
   }
-  function sourceRateTrend(spec,mode){
-    const codes=resolveFilterCodes(spec||{});
-    const sd=RS.sday,bd=RS.bday,flags=RS.flags,srcCol=RS.source;
+  function sourceEmployerCorrelation(){
+    const sd=RS.sday,bd=RS.bday,flags=RS.flags,srcCol=RS.source,empCol=RS.employer;
     const byDate={};
-    const ensure=d=>byDate[d]||(byDate[d]={sub:0,init:0,book:0,src:{}});
+    const ensure=d=>byDate[d]||(byDate[d]={sub:0,init:0,book:0,src:{},emp:{}});
     for(let i=0;i<N;i++){
-      if(!passFilter2(i,codes))continue;
       const di=sd[i];
       if(inRange2(di)){
         const dObj=ensure(DTS[di]);
         dObj.sub++; if(flags[i]&1)dObj.init++;
-        const srcVal=VOCAB.source[srcCol[i]];
-        dObj.src[srcVal]=(dObj.src[srcVal]||0)+1;
+        const srcVal=VOCAB.source[srcCol[i]]; dObj.src[srcVal]=(dObj.src[srcVal]||0)+1;
+        const empVal=VOCAB.employer[empCol[i]]; dObj.emp[empVal]=(dObj.emp[empVal]||0)+1;
       }
       const booked=(flags[i]>>2)&1;
-      if(booked){
-        const bi=bd[i];
-        if(inRange2(bi))ensure(DTS[bi]).book++;
-      }
+      if(booked){ const bi=bd[i]; if(inRange2(bi))ensure(DTS[bi]).book++; }
     }
     const dates=[]; for(const d of DTS){if(d>=RANGE.from&&d<=RANGE.to)dates.push(d);}
-    const sources=VOCAB.source;
-    const srcPct={};
-    for(const s of sources) srcPct[s]=dates.map(d=>{const b=byDate[d]; return (b&&b.sub)?+(100*(b.src[s]||0)/b.sub).toFixed(1):0;});
-    const rate=dates.map(d=>{const b=byDate[d]; if(!b||!b.sub)return 0; return mode==='book'?+(100*b.book/b.sub).toFixed(1):+(100*b.init/b.sub).toFixed(1);});
-    return {dates,srcPct,sources,rate};
+    const onlinePct=dates.map(d=>{const b=byDate[d]; return (b&&b.sub)?+(100*(b.src['UI']||0)/b.sub).toFixed(1):0;});
+    const empPct={}; for(const e of VOCAB.employer) empPct[e]=dates.map(d=>{const b=byDate[d]; return (b&&b.sub)?+(100*(b.emp[e]||0)/b.sub).toFixed(1):0;});
+    const bookRate=dates.map(d=>{const b=byDate[d]; return (b&&b.sub)?+(100*b.book/b.sub).toFixed(1):0;});
+    const initRate=dates.map(d=>{const b=byDate[d]; return (b&&b.sub)?+(100*b.init/b.sub).toFixed(1):0;});
+    return {dates,onlinePct,empPct,bookRate,initRate};
   }
-  window.__engine={aggFromRaw,DAILY_FULL,setFilter:toggleFilter,clear:clearFilters,N:N,FILTERS:()=>FILTERS,VOCAB,dimDailyTrend,rateDailyTrend,dimBreakdown,initFinalDailyTrend,sameMonthBookingTrend,notesAggregate,sourceRateTrend};
+  window.__engine={aggFromRaw,DAILY_FULL,setFilter:toggleFilter,clear:clearFilters,N:N,FILTERS:()=>FILTERS,VOCAB,dimDailyTrend,rateDailyTrend,dimBreakdown,initFinalDailyTrend,sameMonthBookingTrend,notesAggregate,sourceEmployerCorrelation};
   console.log('[interactive engine] ready · '+fmt(N)+' rows decoded');
 })();
 
@@ -1188,31 +1194,25 @@ function renderInitFinalTrend(){
 }
 ['if-f-income','if-f-nationality','if-f-employer'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('change',renderInitFinalTrend);});
 
-function renderSourceBookTrend(){
-  fillSelect(document.getElementById('src-book-f-employer'),'employer');
-  const spec=readFilters('src-book-f',['employer']);
-  const r=E().sourceRateTrend(spec,'book');
+const EMP_TYPES=['Unlisted','Government Entity','Private Company','Military with Grades','Pension'];
+function mkCorrelationChart(canvasId,employerType,r,rateKey,rateLabel){
   const labels=r.dates.map(d=>prettyD(d));
-  const datasets=r.sources.map((s,i)=>({label:s+' %',data:r.srcPct[s],borderColor:PAL[i%PAL.length],backgroundColor:PAL[i%PAL.length]+'22',tension:.3,pointRadius:0,borderWidth:2,fill:false}));
-  datasets.push({label:'Booking rate %',data:r.rate,borderColor:GD,tension:.3,pointRadius:0,borderWidth:2.6,borderDash:[5,3],fill:false});
-  mk('c-src-book-trend',{type:'line',data:{labels,datasets},options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+  const datasets=[
+    {label:'Online %',data:r.onlinePct,borderColor:CY,tension:.3,pointRadius:0,borderWidth:2,fill:false},
+    {label:employerType+' %',data:r.empPct[employerType],borderColor:VI,tension:.3,pointRadius:0,borderWidth:2,fill:false},
+    {label:rateLabel,data:r[rateKey],borderColor:BL,tension:.3,pointRadius:0,borderWidth:2.4,fill:false}
+  ];
+  mk(canvasId,{type:'line',data:{labels,datasets},options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
     plugins:{legend:{position:'top',labels:{boxWidth:10,font:{size:10.5}}}},
     scales:{x:{...AX,ticks:{...AX.ticks,maxRotation:0,autoSkip:true,maxTicksLimit:12,font:{size:10}}},y:{...AX,ticks:{...AX.ticks,callback:v=>v+'%'}}}}});
 }
-['src-book-f-employer'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('change',renderSourceBookTrend);});
-
-function renderSourceInitTrend(){
-  fillSelect(document.getElementById('src-init-f-employer'),'employer');
-  const spec=readFilters('src-init-f',['employer']);
-  const r=E().sourceRateTrend(spec,'init');
-  const labels=r.dates.map(d=>prettyD(d));
-  const datasets=r.sources.map((s,i)=>({label:s+' %',data:r.srcPct[s],borderColor:PAL[i%PAL.length],backgroundColor:PAL[i%PAL.length]+'22',tension:.3,pointRadius:0,borderWidth:2,fill:false}));
-  datasets.push({label:'Initial approval rate %',data:r.rate,borderColor:GD,tension:.3,pointRadius:0,borderWidth:2.6,borderDash:[5,3],fill:false});
-  mk('c-src-init-trend',{type:'line',data:{labels,datasets},options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-    plugins:{legend:{position:'top',labels:{boxWidth:10,font:{size:10.5}}}},
-    scales:{x:{...AX,ticks:{...AX.ticks,maxRotation:0,autoSkip:true,maxTicksLimit:12,font:{size:10}}},y:{...AX,ticks:{...AX.ticks,callback:v=>v+'%'}}}}});
+function renderCorrelationCharts(){
+  const r=E().sourceEmployerCorrelation();
+  EMP_TYPES.forEach((emp,idx)=>{
+    if(document.getElementById('c-corr-book-'+idx))mkCorrelationChart('c-corr-book-'+idx,emp,r,'bookRate','Booking rate %');
+    if(document.getElementById('c-corr-init-'+idx))mkCorrelationChart('c-corr-init-'+idx,emp,r,'initRate','Initial approval rate %');
+  });
 }
-['src-init-f-employer'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('change',renderSourceInitTrend);});
 
 function renderSameBookTrend(){
   fillSelect(document.getElementById('sb-f-income'),'income');fillSelect(document.getElementById('sb-f-nationality'),'nationality');fillSelect(document.getElementById('sb-f-employer'),'employer');
@@ -1243,8 +1243,7 @@ function renderNewCards(){
     if(document.getElementById('c-dec-trend'))renderDeclineTrend();
     if(document.getElementById('c-initfinal-trend'))renderInitFinalTrend();
     if(document.getElementById('c-samebook-trend'))renderSameBookTrend();
-    if(document.getElementById('c-src-book-trend'))renderSourceBookTrend();
-    if(document.getElementById('c-src-init-trend'))renderSourceInitTrend();
+    if(document.getElementById('c-corr-book-0'))renderCorrelationCharts();
     if(document.getElementById('geo-f-employer'))renderGeoFilters();
   }catch(err){console.error('[new cards] render failed',err);}
 }
