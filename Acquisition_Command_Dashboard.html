@@ -208,15 +208,37 @@ select.dd-filter:focus{outline:none;border-color:var(--cyan)}
 </header>
 
 <nav class="tabs" id="tabs">
-  <button class="tab on" data-tab="perf"><span class="n">01</span>Performance</button>
-  <button class="tab" data-tab="credit"><span class="n">02</span>Credit &amp; Risk</button>
-  <button class="tab" data-tab="geo"><span class="n">03</span>Sales &amp; Geography</button>
-  <button class="tab" data-tab="notes"><span class="n">04</span>Notes &amp; Quality</button>
-  <button class="tab" data-tab="demo"><span class="n">05</span>Demographic</button>
-  <button class="tab" data-tab="appr"><span class="n">06</span>Approved Criteria</button>
+  <button class="tab on" data-tab="summary"><span class="n">01</span>Summary</button>
+  <button class="tab" data-tab="perf"><span class="n">02</span>Performance</button>
+  <button class="tab" data-tab="credit"><span class="n">03</span>Credit &amp; Risk</button>
+  <button class="tab" data-tab="geo"><span class="n">04</span>Sales &amp; Geography</button>
+  <button class="tab" data-tab="notes"><span class="n">05</span>Notes &amp; Quality</button>
+  <button class="tab" data-tab="demo"><span class="n">06</span>Demographic</button>
+  <button class="tab" data-tab="appr"><span class="n">07</span>Approved Criteria</button>
 </nav>
 <main>
-<section class="panel-tab on" id="perf">
+<section class="panel-tab on" id="summary">
+  <div class="sec-h"><span class="k">SUMMARY</span><h2>Key highlights</h2><span class="hint" id="sum-hint">auto-generated for the selected range</span></div>
+
+  <div class="sec-h" style="margin-top:8px"><span class="k">01</span><h2>Best &amp; worst days</h2><span class="hint">by submitted applications - selected range</span></div>
+  <div class="two">
+    <div class="chart-card" id="sum-best-day"></div>
+    <div class="chart-card" id="sum-worst-day"></div>
+  </div>
+
+  <div class="sec-h" style="margin-top:20px"><span class="k">02</span><h2>Top performing segments</h2><span class="hint">highest submissions with highest conversion - combined rank - selected range</span></div>
+  <div class="two">
+    <div class="chart-card" id="sum-top-employer"></div>
+    <div class="chart-card" id="sum-top-nationality"></div>
+  </div>
+
+  <div class="sec-h" style="margin-top:20px"><span class="k">03</span><h2>Major drop-offs</h2><span class="hint">last 7 days vs prior 7 days</span></div>
+  <div class="chart-card" id="sum-dropoff"></div>
+
+  <div class="sec-h" style="margin-top:20px"><span class="k">04</span><h2>Funnel vs last month</h2><span class="hint">selected range vs same calendar dates, one month back</span></div>
+  <div class="chart-card" id="sum-mom"></div>
+</section>
+<section class="panel-tab" id="perf">
   <div class="sec-h"><span class="k">KPI</span><h2>Core acquisition metrics</h2><span class="hint" id="perf-hint"></span></div>
   <div class="grid k7" id="kpi-grid"></div>
   <div class="sec-h"><span class="k">FUNNEL</span><h2>Acquisition funnel</h2><span class="hint">Submitted → Initial → Final → Booked · step conversion</span></div>
@@ -1033,7 +1055,110 @@ const RAWSTORE = {"n":239550,"dates":["2026-04-06","2026-04-07","2026-04-08","20
     const initRate=dates.map(d=>{const b=byDate[d]; return (b&&b.sub)?+(100*b.init/b.sub).toFixed(1):0;});
     return {dates,onlinePct,empPct,bookRate,initRate};
   }
-  window.__engine={aggFromRaw,DAILY_FULL,setFilter:toggleFilter,clear:clearFilters,N:N,FILTERS:()=>FILTERS,VOCAB,dimDailyTrend,rateDailyTrend,dimBreakdown,initFinalDailyTrend,sameMonthBookingTrend,notesAggregate,sourceEmployerCorrelation};
+  function summaryDailyExtremes(){
+    const sd=RS.sday,flags=RS.flags; const byDate={};
+    for(let i=0;i<N;i++){ const di=sd[i]; if(!inRange2(di))continue;
+      const dd=byDate[DTS[di]]||(byDate[DTS[di]]={sub:0,init:0,final:0,book:0});
+      dd.sub++; if(flags[i]&1)dd.init++; if(flags[i]&2)dd.final++; if((flags[i]>>2)&1)dd.book++; }
+    const dates=[]; for(const d of DTS){if(d>=RANGE.from&&d<=RANGE.to)dates.push(d);}
+    const rows=dates.map(d=>{const b=byDate[d]||{sub:0,init:0,final:0,book:0};
+      return {date:d,sub:b.sub,init:b.init,final:b.final,book:b.book,
+        initRate:b.sub?+(100*b.init/b.sub).toFixed(1):0,
+        finalRate:b.init?+(100*b.final/b.init).toFixed(1):0,
+        bookRate:b.sub?+(100*b.book/b.sub).toFixed(1):0};});
+    const withSub=rows.filter(r=>r.sub>0);
+    if(!withSub.length)return {max:null,min:null};
+    const max=withSub.reduce((a,b)=>b.sub>a.sub?b:a);
+    const min=withSub.reduce((a,b)=>b.sub<a.sub?b:a);
+    return {max,min};
+  }
+  function topSegments(){
+    const sd=RS.sday,flags=RS.flags;
+    const dims=['employer','nationality'];
+    const out={};
+    dims.forEach(dm=>{
+      const col=RS[dm],vocabArr=VOCAB[dm];
+      const tally={};
+      for(let i=0;i<N;i++){ const di=sd[i]; if(!inRange2(di))continue;
+        const val=vocabArr[col[i]]; const t=tally[val]||(tally[val]={sub:0,book:0});
+        t.sub++; if((flags[i]>>2)&1)t.book++; }
+      const arr=Object.entries(tally).filter(x=>x[1].sub>0).map(x=>({name:x[0],sub:x[1].sub,book:x[1].book,rate:+(100*x[1].book/x[1].sub).toFixed(1)}));
+      const byVol=[...arr].sort((a,b)=>b.sub-a.sub);
+      const byRate=[...arr].sort((a,b)=>b.rate-a.rate);
+      const rankVol={},rankRate={};
+      byVol.forEach((r,idx)=>rankVol[r.name]=idx);
+      byRate.forEach((r,idx)=>rankRate[r.name]=idx);
+      arr.forEach(r=>r.combined=rankVol[r.name]+rankRate[r.name]);
+      arr.sort((a,b)=>a.combined-b.combined);
+      out[dm]=arr[0]||null;
+    });
+    return out;
+  }
+  function windowMetrics(fromA,toA){
+    const sd=RS.sday,bd=RS.bday,flags=RS.flags,bval=RS.bval;
+    let sub=0,book=0,val=0; let bptr=0;
+    const segTally={employer:{},nationality:{},income:{}};
+    for(let i=0;i<N;i++){
+      const di=sd[i];
+      if(di>=0 && DTS[di]>=fromA && DTS[di]<=toA) sub++;
+      const booked=(flags[i]>>2)&1; const bi=bd[i];
+      if(booked && bi>=0){
+        const bs=DTS[bi];
+        if(bs>=fromA && bs<=toA){
+          book++; const v=bval[bptr];
+          if(!isNaN(v)){ val+=v;
+            for(const dm of ['employer','nationality','income']){ const vv=VOCAB[dm][RS[dm][i]]; const t=segTally[dm][vv]||(segTally[dm][vv]={count:0,val:0}); t.count++; t.val+=v; }
+          }
+        }
+        bptr++;
+      }
+    }
+    return {sub,book,val,avgTicket:book?val/book:0,rate:sub?100*book/sub:0,seg:segTally};
+  }
+  function dropoffAnalysis(){
+    const toA=RANGE.to;
+    const last7From=addDays(toA,-6), last7To=toA;
+    const priorFrom=addDays(toA,-13), priorTo=addDays(toA,-7);
+    const last7=windowMetrics(last7From,last7To);
+    const prior7=windowMetrics(priorFrom,priorTo);
+    const drivers={};
+    ['employer','nationality','income'].forEach(dm=>{
+      const keys=new Set([...Object.keys(last7.seg[dm]),...Object.keys(prior7.seg[dm])]);
+      let worst=null;
+      keys.forEach(k=>{
+        const a=last7.seg[dm][k]||{count:0,val:0};
+        const b=prior7.seg[dm][k]||{count:0,val:0};
+        const deltaVal=a.val-b.val, deltaCount=a.count-b.count;
+        if(!worst||deltaVal<worst.deltaVal) worst={name:k,deltaVal,deltaCount,last7Val:a.val,prior7Val:b.val};
+      });
+      drivers[dm]=worst;
+    });
+    return {last7:{...last7,from:last7From,to:last7To},prior7:{...prior7,from:priorFrom,to:priorTo},drivers};
+  }
+  function windowMetricsFull(fromA,toA){
+    const sd=RS.sday,bd=RS.bday,flags=RS.flags,bval=RS.bval;
+    let sub=0,init=0,final=0,book=0,val=0; let bptr=0;
+    for(let i=0;i<N;i++){
+      const di=sd[i];
+      if(di>=0 && DTS[di]>=fromA && DTS[di]<=toA){ sub++; if(flags[i]&1)init++; if(flags[i]&2)final++; }
+      const booked=(flags[i]>>2)&1; const bi=bd[i];
+      if(booked && bi>=0){
+        const bs=DTS[bi];
+        if(bs>=fromA && bs<=toA){ book++; const v=bval[bptr]; if(!isNaN(v))val+=v; }
+        bptr++;
+      }
+    }
+    return {sub,init,final,book,val,avgTicket:book?val/book:0,
+      initRate:sub?100*init/sub:0, finalRate:init?100*final/init:0, bookRate:sub?100*book/sub:0};
+  }
+  function shiftMonth(dstr,n){ const d=parseD(dstr); const day=d.getDate(); d.setMonth(d.getMonth()+n); if(d.getDate()!==day){ d.setDate(0);} return ymd(d);}
+  function momComparison(){
+    const prevFrom=shiftMonth(RANGE.from,-1), prevTo=shiftMonth(RANGE.to,-1);
+    const cur=windowMetricsFull(RANGE.from,RANGE.to);
+    const prev=windowMetricsFull(prevFrom,prevTo);
+    return {cur:{...cur,from:RANGE.from,to:RANGE.to},prev:{...prev,from:prevFrom,to:prevTo}};
+  }
+  window.__engine={aggFromRaw,DAILY_FULL,setFilter:toggleFilter,clear:clearFilters,N:N,FILTERS:()=>FILTERS,VOCAB,dimDailyTrend,rateDailyTrend,dimBreakdown,initFinalDailyTrend,sameMonthBookingTrend,notesAggregate,sourceEmployerCorrelation,summaryDailyExtremes,topSegments,dropoffAnalysis,momComparison};
   console.log('[interactive engine] ready · '+fmt(N)+' rows decoded');
 })();
 
@@ -1231,6 +1356,71 @@ function renderSameBookTrend(){
 ['sb-f-income','sb-f-nationality','sb-f-employer'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('change',renderSameBookTrend);});
 
 
+function renderSummaryTab(){
+  const eng=E(); if(!eng||!eng.summaryDailyExtremes)return;
+  const ext=eng.summaryDailyExtremes();
+  const dayCard=(r,label)=>{
+    if(!r)return '<h3>'+label+'</h3><p class="cap">No data in range.</p>';
+    return '<h3>'+label+' — '+prettyD(r.date)+'</h3>'+
+      '<div class="summary-cards"><div class="card money kpi"><div class="lab">Submitted</div><div class="big" style="font-size:22px">'+fmt(r.sub)+'</div></div>'+
+      '<div class="card money kpi"><div class="lab">Initial approval</div><div class="big" style="font-size:22px">'+r.initRate+'%</div></div>'+
+      '<div class="card money kpi"><div class="lab">Final approval</div><div class="big" style="font-size:22px">'+r.finalRate+'%</div></div>'+
+      '<div class="card money kpi"><div class="lab">Booking rate</div><div class="big" style="font-size:22px">'+r.bookRate+'%</div></div></div>';
+  };
+  document.getElementById('sum-best-day').innerHTML=dayCard(ext.max,'Highest volume day');
+  document.getElementById('sum-worst-day').innerHTML=dayCard(ext.min,'Lowest volume day');
+
+  const top=eng.topSegments();
+  const segCard=(r,label)=>{
+    if(!r)return '<h3>'+label+'</h3><p class="cap">No data in range.</p>';
+    return '<h3>'+label+'</h3><div class="summary-cards"><div class="card money kpi"><div class="lab">Segment</div><div class="big" style="font-size:17px">'+esc(r.name)+'</div></div>'+
+      '<div class="card money kpi"><div class="lab">Submitted</div><div class="big" style="font-size:22px">'+fmt(r.sub)+'</div></div>'+
+      '<div class="card money kpi"><div class="lab">Booking rate</div><div class="big" style="font-size:22px">'+r.rate+'%</div></div></div>';
+  };
+  document.getElementById('sum-top-employer').innerHTML=segCard(top.employer,'Top employer type');
+  document.getElementById('sum-top-nationality').innerHTML=segCard(top.nationality,'Top nationality flag');
+
+  const dr=eng.dropoffAnalysis();
+  const rateDelta=+(dr.last7.rate-dr.prior7.rate).toFixed(1);
+  const ticketDelta=dr.last7.avgTicket-dr.prior7.avgTicket;
+  const valDelta=dr.last7.val-dr.prior7.val;
+  const arrow=v=>v<0?'▼':(v>0?'▲':'▬');
+  const cls=v=>v<0?'dn':(v>0?'up':'flat');
+  let dh='<h3>Last 7 days ('+prettyD(dr.last7.from)+String.fromCharCode(8211)+prettyD(dr.last7.to)+') vs prior 7 days ('+prettyD(dr.prior7.from)+String.fromCharCode(8211)+prettyD(dr.prior7.to)+')</h3>';
+  dh+='<div class="summary-cards">'+
+    '<div class="card money kpi"><div class="lab">Booking rate</div><div class="big" style="font-size:20px">'+dr.last7.rate.toFixed(1)+'% <span class="deltac '+cls(rateDelta)+'" style="font-size:12.5px">'+arrow(rateDelta)+' '+Math.abs(rateDelta)+'pp</span></div></div>'+
+    '<div class="card money kpi"><div class="lab">Avg ticket size</div><div class="big" style="font-size:20px">'+money(dr.last7.avgTicket)+' <span class="deltac '+cls(ticketDelta)+'" style="font-size:12.5px">'+arrow(ticketDelta)+' '+money(Math.abs(ticketDelta))+'</span></div></div>'+
+    '<div class="card money kpi"><div class="lab">Total sales value</div><div class="big" style="font-size:20px">'+money(dr.last7.val)+' <span class="deltac '+cls(valDelta)+'" style="font-size:12.5px">'+arrow(valDelta)+' '+money(Math.abs(valDelta))+'</span></div></div></div>';
+  dh+='<div class="three" style="margin-top:12px">';
+  ['employer','nationality','income'].forEach(dm=>{
+    const d=dr.drivers[dm];
+    dh+='<div><div class="nsub" style="margin-bottom:6px;color:var(--ink2);font-weight:600">'+DIMLAB[dm]+' driving the drop</div>';
+    if(d && d.deltaVal<0){ dh+='<div class="callout" style="border-left-color:var(--red)">'+esc(d.name)+': '+money(d.prior7Val)+' → '+money(d.last7Val)+' ('+money(d.deltaVal)+')</div>'; }
+    else { dh+='<p class="cap">No segment declined.</p>'; }
+    dh+='</div>';
+  });
+  dh+='</div>';
+  document.getElementById('sum-dropoff').innerHTML=dh;
+
+  const mm=eng.momComparison();
+  const row=(label,curV,prevV,fmtFn,pp)=>{
+    const delta=curV-prevV;
+    const cl2=delta>0?'up':(delta<0?'dn':'flat');
+    const ar2=delta>0?'▲':(delta<0?'▼':'▬');
+    const dstr=pp?(delta>=0?'+':'')+delta.toFixed(1)+'pp':(delta>=0?'+':'-')+fmtFn(Math.abs(delta));
+    return '<tr><td>'+label+'</td><td class="num">'+fmtFn(curV)+'</td><td class="num" style="color:var(--faint)">'+fmtFn(prevV)+'</td><td class="num deltac '+cl2+'">'+ar2+' '+dstr+'</td></tr>';
+  };
+  let mh='<h3>'+prettyD(mm.cur.from)+String.fromCharCode(8211)+prettyD(mm.cur.to)+' vs '+prettyD(mm.prev.from)+String.fromCharCode(8211)+prettyD(mm.prev.to)+'</h3>';
+  mh+='<table class="dt"><thead><tr><th>Metric</th><th class="num">Selected range</th><th class="num">Last month</th><th class="num">Change</th></tr></thead><tbody>';
+  mh+=row('Submitted apps',mm.cur.sub,mm.prev.sub,fmt,false);
+  mh+=row('Initial approval rate',mm.cur.initRate,mm.prev.initRate,v=>v.toFixed(1)+'%',true);
+  mh+=row('Final approval rate',mm.cur.finalRate,mm.prev.finalRate,v=>v.toFixed(1)+'%',true);
+  mh+=row('Booking rate',mm.cur.bookRate,mm.prev.bookRate,v=>v.toFixed(1)+'%',true);
+  mh+=row('Avg ticket size',mm.cur.avgTicket,mm.prev.avgTicket,money,false);
+  mh+=row('Total sales value',mm.cur.val,mm.prev.val,money,false);
+  mh+='</tbody></table>';
+  document.getElementById('sum-mom').innerHTML=mh;
+}
 function renderNewCards(){
   if(!window.__engine||!window.__engine.dimDailyTrend)return;
   try{
@@ -1245,6 +1435,7 @@ function renderNewCards(){
     if(document.getElementById('c-samebook-trend'))renderSameBookTrend();
     if(document.getElementById('c-corr-book-0'))renderCorrelationCharts();
     if(document.getElementById('geo-f-employer'))renderGeoFilters();
+    if(document.getElementById('sum-mom'))renderSummaryTab();
   }catch(err){console.error('[new cards] render failed',err);}
 }
 const _origRenderAll=renderAll;
