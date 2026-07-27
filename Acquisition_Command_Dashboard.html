@@ -448,6 +448,7 @@ const ymd=d=>`${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;
 const parseD=s=>{const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);};
 const addDays=(s,n)=>{const d=parseD(s);d.setDate(d.getDate()+n);return ymd(d);};
 const daysInRange=(f,t)=>Math.round((parseD(t)-parseD(f))/864e5)+1;
+const capToYesterday=mx=>{const y=new Date();y.setHours(0,0,0,0);y.setDate(y.getDate()-1);const yStr=ymd(y);return mx<yStr?mx:yStr;};
 const prettyD=s=>parseD(s).toLocaleDateString('en',{month:'short',day:'numeric'});
 const MONTH=s=>parseD(s).toLocaleString('en',{month:'long'});
 
@@ -464,7 +465,7 @@ function mergeDay(a,day){
 function sumRange(from,to){const a=freshAcc();let n=0;for(const d of cD.dates){if(d>=from&&d<=to){mergeDay(a,cD.days[d]);n++;}}a._days=n;return a;}
 function presentDays(from,to){let n=0;for(const d of cD.dates)if(d>=from&&d<=to)n++;return n;}
 
-let RANGE={from:cD.meta.min,to:cD.meta.max};
+let RANGE={from:cD.meta.min,to:capToYesterday(cD.meta.max)};
 let CUR=null;
 function computeCUR(){
   const {from,to}=RANGE;
@@ -732,14 +733,15 @@ function updateChips(){
 function setDateInputs(){const f=document.getElementById('d-from'),t=document.getElementById('d-to');
   f.min=t.min=cD.meta.min;f.max=t.max=cD.meta.max;f.value=RANGE.from;t.value=RANGE.to;}
 function defaultRange(){const mx=parseD(cD.meta.max);const first=ymd(new Date(mx.getFullYear(),mx.getMonth(),1));
-  RANGE={from:first<cD.meta.min?cD.meta.min:first,to:cD.meta.max};}
+  RANGE={from:first<cD.meta.min?cD.meta.min:first,to:capToYesterday(cD.meta.max)};}
 
 /* ============ presets & pickers ============ */
 function applyPreset(r){const mn=cD.meta.min,mx=cD.meta.max,mxD=parseD(mx);
-  if(r==='mtd'){const first=ymd(new Date(mxD.getFullYear(),mxD.getMonth(),1));RANGE={from:first<mn?mn:first,to:mx};}
+  const mxCap=capToYesterday(mx);
+  if(r==='mtd'){const first=ymd(new Date(mxD.getFullYear(),mxD.getMonth(),1));RANGE={from:first<mn?mn:first,to:mxCap};}
   else if(r==='prev'){const pm=new Date(mxD.getFullYear(),mxD.getMonth()-1,1);const from=ymd(pm),to=ymd(new Date(pm.getFullYear(),pm.getMonth()+1,0));RANGE={from:from<mn?mn:from,to:to>mx?mx:to};}
-  else if(r==='7d'){RANGE={from:addDays(mx,-6)<mn?mn:addDays(mx,-6),to:mx};}
-  else RANGE={from:mn,to:mx};
+  else if(r==='7d'){RANGE={from:addDays(mxCap,-6)<mn?mn:addDays(mxCap,-6),to:mxCap};}
+  else RANGE={from:mn,to:mxCap};
   setDateInputs();renderAll();}
 document.querySelectorAll('#presets button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('#presets button').forEach(x=>x.classList.remove('on'));b.classList.add('on');applyPreset(b.dataset.r);}));
@@ -1056,13 +1058,23 @@ const RAWSTORE = {"n":239550,"dates":["2026-04-06","2026-04-07","2026-04-08","20
     return {dates,onlinePct,empPct,bookRate,initRate};
   }
   function summaryDailyExtremes(){
-    const sd=RS.sday,flags=RS.flags; const byDate={};
-    for(let i=0;i<N;i++){ const di=sd[i]; if(!inRange2(di))continue;
-      const dd=byDate[DTS[di]]||(byDate[DTS[di]]={sub:0,init:0,final:0,book:0});
-      dd.sub++; if(flags[i]&1)dd.init++; if(flags[i]&2)dd.final++; if((flags[i]>>2)&1)dd.book++; }
+    const sd=RS.sday,bd=RS.bday,flags=RS.flags,bval=RS.bval; const byDate={};
+    let bptr=0;
+    for(let i=0;i<N;i++){
+      const di=sd[i]; const inR=inRange2(di);
+      const booked=(flags[i]>>2)&1; const bi=bd[i];
+      if(inR){
+        const dd=byDate[DTS[di]]||(byDate[DTS[di]]={sub:0,init:0,final:0,book:0,val:0});
+        dd.sub++; if(flags[i]&1)dd.init++; if(flags[i]&2)dd.final++; if(booked)dd.book++;
+      }
+      if(booked && bi>=0){
+        if(inR){ const v=bval[bptr]; if(!isNaN(v))byDate[DTS[di]].val+=v; }
+        bptr++;
+      }
+    }
     const dates=[]; for(const d of DTS){if(d>=RANGE.from&&d<=RANGE.to)dates.push(d);}
-    const rows=dates.map(d=>{const b=byDate[d]||{sub:0,init:0,final:0,book:0};
-      return {date:d,sub:b.sub,init:b.init,final:b.final,book:b.book,
+    const rows=dates.map(d=>{const b=byDate[d]||{sub:0,init:0,final:0,book:0,val:0};
+      return {date:d,sub:b.sub,init:b.init,final:b.final,book:b.book,val:b.val,
         initRate:b.sub?+(100*b.init/b.sub).toFixed(1):0,
         finalRate:b.init?+(100*b.final/b.init).toFixed(1):0,
         bookRate:b.sub?+(100*b.book/b.sub).toFixed(1):0};});
@@ -1365,7 +1377,8 @@ function renderSummaryTab(){
       '<div class="summary-cards"><div class="card money kpi"><div class="lab">Submitted</div><div class="big" style="font-size:22px">'+fmt(r.sub)+'</div></div>'+
       '<div class="card money kpi"><div class="lab">Initial approval</div><div class="big" style="font-size:22px">'+r.initRate+'%</div></div>'+
       '<div class="card money kpi"><div class="lab">Final approval</div><div class="big" style="font-size:22px">'+r.finalRate+'%</div></div>'+
-      '<div class="card money kpi"><div class="lab">Booking rate</div><div class="big" style="font-size:22px">'+r.bookRate+'%</div></div></div>';
+      '<div class="card money kpi"><div class="lab">Booking rate</div><div class="big" style="font-size:22px">'+r.bookRate+'%</div></div>'+
+      '<div class="card money kpi"><div class="lab">Booked amount</div><div class="big" style="font-size:22px">'+money(r.val)+'</div></div></div>';
   };
   document.getElementById('sum-best-day').innerHTML=dayCard(ext.max,'Highest volume day');
   document.getElementById('sum-worst-day').innerHTML=dayCard(ext.min,'Lowest volume day');
