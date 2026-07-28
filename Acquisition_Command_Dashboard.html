@@ -221,7 +221,7 @@ select.dd-filter:focus{outline:none;border-color:var(--cyan)}
 <section class="panel-tab on" id="summary">
   <div class="sec-h"><span class="k">SUMMARY</span><h2>Key highlights</h2><span class="hint" id="sum-hint">auto-generated for the selected range</span></div>
 
-  <div class="sec-h" style="margin-top:8px"><span class="k">01</span><h2>Best &amp; worst days</h2><span class="hint">by submitted applications - selected range</span></div>
+  <div class="sec-h" style="margin-top:8px"><span class="k">01</span><h2>Best &amp; worst days</h2><span class="hint">by submitted applications - this month, not affected by date filter</span></div>
   <div class="two">
     <div class="chart-card" id="sum-best-day"></div>
     <div class="chart-card" id="sum-worst-day"></div>
@@ -1060,10 +1060,14 @@ const RAWSTORE = {"n":242074,"dates":["2026-04-06","2026-04-07","2026-04-08","20
     return {dates,onlinePct,empPct,bookRate,initRate};
   }
   function summaryDailyExtremes(){
+    const capMax=capToYesterday(cD.meta.max);
+    const mxD=parseD(cD.meta.max);
+    const first=ymd(new Date(mxD.getFullYear(),mxD.getMonth(),1));
+    const monthFrom=first<cD.meta.min?cD.meta.min:first, monthTo=capMax;
     const sd=RS.sday,bd=RS.bday,flags=RS.flags,bval=RS.bval; const byDate={};
     let bptr=0;
     for(let i=0;i<N;i++){
-      const di=sd[i]; const inR=inRange2(di);
+      const di=sd[i]; const inR=di>=0 && DTS[di]>=monthFrom && DTS[di]<=monthTo;
       const booked=(flags[i]>>2)&1; const bi=bd[i];
       if(inR){
         const dd=byDate[DTS[di]]||(byDate[DTS[di]]={sub:0,init:0,final:0,book:0,val:0});
@@ -1074,7 +1078,7 @@ const RAWSTORE = {"n":242074,"dates":["2026-04-06","2026-04-07","2026-04-08","20
         bptr++;
       }
     }
-    const dates=[]; for(const d of DTS){if(d>=RANGE.from&&d<=RANGE.to)dates.push(d);}
+    const dates=[]; for(const d of DTS){if(d>=monthFrom&&d<=monthTo)dates.push(d);}
     const rows=dates.map(d=>{const b=byDate[d]||{sub:0,init:0,final:0,book:0,val:0};
       return {date:d,sub:b.sub,init:b.init,final:b.final,book:b.book,val:b.val,
         initRate:b.sub?+(100*b.init/b.sub).toFixed(1):0,
