@@ -177,8 +177,51 @@ main canvas{cursor:pointer}
 
 select.dd-filter{appearance:none;border:1px solid var(--line2);background:var(--panel);color:var(--ink2);font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:12px;padding:6px 10px;border-radius:8px;cursor:pointer;margin-right:6px}
 select.dd-filter:focus{outline:none;border-color:var(--cyan)}
+#login-gate{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
+#login-gate .box{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:32px 30px;max-width:380px;width:100%;box-shadow:0 10px 40px -12px rgba(20,30,50,.25);text-align:center}
+#login-gate .logo{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--gold),var(--gold-d));margin:0 auto 14px}
+#login-gate h1{font-size:17px;margin:0 0 4px;color:var(--ink)}
+#login-gate p{font-size:12.5px;color:var(--muted);margin:0 0 20px}
+#login-gate input{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--line2);border-radius:9px;background:var(--panel2);color:var(--ink);font-family:'Space Grotesk',sans-serif;font-size:13.5px;margin-bottom:10px}
+#login-gate input:focus{outline:none;border-color:var(--cyan)}
+#login-gate button{width:100%;padding:10px 12px;border:none;border-radius:9px;background:linear-gradient(var(--gold),var(--gold-d));color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:'Space Grotesk',sans-serif}
+#login-gate .err{color:#c0392b;font-size:12px;margin-top:10px;display:none}
+#login-gate.hidden{display:none}
+body.gate-locked>*:not(#login-gate){display:none!important}
 </style></head>
-<body>
+<body class="gate-locked">
+<div id="login-gate">
+  <div class="box">
+    <div class="logo"></div>
+    <h1>Acquisition Command</h1>
+    <p>Enter your Tasheel Finance email to view this dashboard.</p>
+    <input type="email" id="gate-email" placeholder="name@tasheelfinance.com" autocomplete="email">
+    <button id="gate-btn">Continue</button>
+    <div class="err" id="gate-err">That email isn't on the access list. Contact Emad Ayyash for access.</div>
+  </div>
+</div>
+<script>
+(function(){
+  var ALLOWED=['emad.ayyash@tasheelfinance.com','muhammad.akram@tasheelfinance.com','omar.hassan@tasheelfinance.com','mostafa.ashour@tasheelfinance.com','abdallah.elmasry@tasheelfinance.com'];
+  var LSKEY='tasheel_acq_gate_email';
+  function unlock(){document.body.classList.remove('gate-locked');document.getElementById('login-gate').classList.add('hidden');}
+  function tryEmail(raw){
+    var e=(raw||'').trim().toLowerCase();
+    if(ALLOWED.indexOf(e)!==-1){try{localStorage.setItem(LSKEY,e);}catch(err){}unlock();return true;}
+    return false;
+  }
+  var saved=null;
+  try{saved=localStorage.getItem(LSKEY);}catch(err){}
+  if(saved && tryEmail(saved)){/* unlocked */}
+  document.getElementById('gate-btn').addEventListener('click',function(){
+    var val=document.getElementById('gate-email').value;
+    if(!tryEmail(val)){document.getElementById('gate-err').style.display='block';}
+  });
+  document.getElementById('gate-email').addEventListener('keydown',function(e){
+    if(e.key==='Enter')document.getElementById('gate-btn').click();
+  });
+})();
+</script>
 <header>
   <div class="hrow">
     <div class="brand"><div class="logo"></div>
