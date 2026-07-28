@@ -196,7 +196,8 @@ select.dd-filter:focus{outline:none;border-color:var(--cyan)}
     <div class="dfield"><label>From</label><input type="date" id="d-from"></div>
     <div class="dfield"><label>To</label><input type="date" id="d-to"></div>
     <div class="presets" id="presets">
-      <button data-r="mtd" class="on">This month</button>
+      <button data-r="yesterday" class="on">Yesterday</button>
+      <button data-r="mtd">This month</button>
       <button data-r="prev">Prev month</button>
       <button data-r="7d">Last 7 days</button>
       <button data-r="all">All</button>
@@ -465,7 +466,7 @@ function mergeDay(a,day){
 function sumRange(from,to){const a=freshAcc();let n=0;for(const d of cD.dates){if(d>=from&&d<=to){mergeDay(a,cD.days[d]);n++;}}a._days=n;return a;}
 function presentDays(from,to){let n=0;for(const d of cD.dates)if(d>=from&&d<=to)n++;return n;}
 
-let RANGE={from:cD.meta.min,to:capToYesterday(cD.meta.max)};
+let RANGE={from:capToYesterday(cD.meta.max)<cD.meta.min?cD.meta.min:capToYesterday(cD.meta.max),to:capToYesterday(cD.meta.max)};
 let CUR=null;
 function computeCUR(){
   const {from,to}=RANGE;
@@ -732,13 +733,14 @@ function updateChips(){
 }
 function setDateInputs(){const f=document.getElementById('d-from'),t=document.getElementById('d-to');
   f.min=t.min=cD.meta.min;f.max=t.max=cD.meta.max;f.value=RANGE.from;t.value=RANGE.to;}
-function defaultRange(){const mx=parseD(cD.meta.max);const first=ymd(new Date(mx.getFullYear(),mx.getMonth(),1));
-  RANGE={from:first<cD.meta.min?cD.meta.min:first,to:capToYesterday(cD.meta.max)};}
+function defaultRange(){const y=capToYesterday(cD.meta.max);const from=y<cD.meta.min?cD.meta.min:y;
+  RANGE={from,to:y};}
 
 /* ============ presets & pickers ============ */
 function applyPreset(r){const mn=cD.meta.min,mx=cD.meta.max,mxD=parseD(mx);
   const mxCap=capToYesterday(mx);
-  if(r==='mtd'){const first=ymd(new Date(mxD.getFullYear(),mxD.getMonth(),1));RANGE={from:first<mn?mn:first,to:mxCap};}
+  if(r==='yesterday'){const from=mxCap<mn?mn:mxCap;RANGE={from,to:mxCap};}
+  else if(r==='mtd'){const first=ymd(new Date(mxD.getFullYear(),mxD.getMonth(),1));RANGE={from:first<mn?mn:first,to:mxCap};}
   else if(r==='prev'){const pm=new Date(mxD.getFullYear(),mxD.getMonth()-1,1);const from=ymd(pm),to=ymd(new Date(pm.getFullYear(),pm.getMonth()+1,0));RANGE={from:from<mn?mn:from,to:to>mx?mx:to};}
   else if(r==='7d'){RANGE={from:addDays(mxCap,-6)<mn?mn:addDays(mxCap,-6),to:mxCap};}
   else RANGE={from:mn,to:mxCap};
