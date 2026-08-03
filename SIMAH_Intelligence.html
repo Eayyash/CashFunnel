@@ -260,6 +260,9 @@ header button:hover{filter:brightness(1.15);}
     <label style="font-size:.8rem;color:var(--muted);">Year
       <select id="filter-year" style="margin-left:4px;padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:var(--card);color:var(--text);font-size:.8rem;"></select>
     </label>
+    <label style="font-size:.8rem;color:var(--muted);">Month
+      <select id="filter-month" style="margin-left:4px;padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:var(--card);color:var(--text);font-size:.8rem;"></select>
+    </label>
     <label style="font-size:.8rem;color:var(--muted);">Product
       <select id="filter-product" style="margin-left:4px;padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:var(--card);color:var(--text);font-size:.8rem;"></select>
     </label>
@@ -414,22 +417,27 @@ const pct = (a,b) => b>0 ? Math.round(a/b*100) : 0;
 const COLORS = ['#22c55e','#3b82f6','#f59e0b','#ef4444','#a855f7','#ec4899','#06b6d4','#f97316'];
 const OUTCOME_COLORS = {sub:'#3b82f6',approved:'#22c55e',booked:'#a855f7',stp:'#06b6d4'};
 
-let gEnqType='all', gYear='all', gProduct='all';
+let gEnqType='all', gYear='all', gMonth='all', gProduct='all';
+const MONTH_NAMES=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 function initFilters(){
   const typeSelect=document.getElementById('filter-enqType');
   const yearSelect=document.getElementById('filter-year');
+  const monthSelect=document.getElementById('filter-month');
   const prodSelect=document.getElementById('filter-product');
 
   typeSelect.innerHTML='<option value="all">All Types</option>'+
     Object.entries(D.typeNames||{}).map(([c,n])=>'<option value="'+c+'">'+n+'</option>').join('');
   yearSelect.innerHTML='<option value="all">All Years</option>'+
     (D.allYears||[]).map(y=>'<option value="'+y+'">'+y+'</option>').join('');
+  monthSelect.innerHTML='<option value="all">All Months</option>'+
+    MONTH_NAMES.map((m,i)=>'<option value="'+i+'">'+m+'</option>').join('');
   prodSelect.innerHTML='<option value="all">All Products</option>'+
     Object.entries(D.productNames||{}).sort((a,b)=>a[1].localeCompare(b[1])).map(([c,n])=>'<option value="'+c+'">'+n+' ('+c+')</option>').join('');
 
   typeSelect.onchange=()=>{gEnqType=typeSelect.value;renderFiltered();};
   yearSelect.onchange=()=>{gYear=yearSelect.value;renderFiltered();};
+  monthSelect.onchange=()=>{gMonth=monthSelect.value;renderFiltered();};
   prodSelect.onchange=()=>{gProduct=prodSelect.value;renderFiltered();};
 }
 
@@ -439,6 +447,7 @@ function renderFiltered(){
   const parts=[];
   if(gEnqType!=='all') parts.push('Type: '+(D.typeNames[gEnqType]||gEnqType));
   if(gYear!=='all') parts.push('Year: '+gYear);
+  if(gMonth!=='all') parts.push('Month: '+MONTH_NAMES[+gMonth]);
   if(gProduct!=='all') parts.push('Product: '+(D.productNames[gProduct]||gProduct));
   document.getElementById('filter-status').textContent=parts.length?parts.join(' · '):'Showing all enquiries';
 }
@@ -447,6 +456,7 @@ function getFilteredEnqs(r){
   return (r.eq||[]).filter(e=>{
     if(gEnqType!=='all'&&e[2]!==gEnqType) return false;
     if(gYear!=='all'&&e[3]!==gYear) return false;
+    if(gMonth!=='all'&&e[4]){const d=new Date(e[4]);if(!isNaN(d)&&d.getMonth()!==+gMonth) return false;}
     if(gProduct!=='all'&&e[1]!==gProduct) return false;
     return true;
   });
