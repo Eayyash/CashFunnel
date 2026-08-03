@@ -270,7 +270,7 @@ body.gate-locked>*:not(#login-gate){display:none!important}
     <div class="chart-card" id="sum-worst-day"></div>
   </div>
 
-  <div class="sec-h" style="margin-top:20px"><span class="k">02</span><h2>Top performing segments</h2><span class="hint">highest submissions with highest conversion - combined rank - selected range</span></div>
+  <div class="sec-h" style="margin-top:20px"><span class="k">02</span><h2>Top performing segments</h2><span class="hint">highest submissions with highest conversion - combined rank - this month, not affected by date filter</span></div>
   <div class="two">
     <div class="chart-card" id="sum-top-employer"></div>
     <div class="chart-card" id="sum-top-nationality"></div>
@@ -1107,26 +1107,12 @@ const RAWSTORE = {"n":242074,"dates":["2026-04-06","2026-04-07","2026-04-08","20
     const mxD=parseD(cD.meta.max);
     const first=ymd(new Date(mxD.getFullYear(),mxD.getMonth(),1));
     const monthFrom=first<cD.meta.min?cD.meta.min:first, monthTo=capMax;
-    const sd=RS.sday,bd=RS.bday,flags=RS.flags,bval=RS.bval; const byDate={};
-    let bptr=0;
-    for(let i=0;i<N;i++){
-      const di=sd[i]; const inR=di>=0 && DTS[di]>=monthFrom && DTS[di]<=monthTo;
-      const booked=(flags[i]>>2)&1; const bi=bd[i];
-      if(inR){
-        const dd=byDate[DTS[di]]||(byDate[DTS[di]]={sub:0,init:0,final:0,book:0,val:0});
-        dd.sub++; if(flags[i]&1)dd.init++; if(flags[i]&2)dd.final++; if(booked)dd.book++;
-      }
-      if(booked && bi>=0){
-        if(inR){ const v=bval[bptr]; if(!isNaN(v))byDate[DTS[di]].val+=v; }
-        bptr++;
-      }
-    }
-    const dates=[]; for(const d of DTS){if(d>=monthFrom&&d<=monthTo)dates.push(d);}
-    const rows=dates.map(d=>{const b=byDate[d]||{sub:0,init:0,final:0,book:0,val:0};
-      return {date:d,sub:b.sub,init:b.init,final:b.final,book:b.book,val:b.val,
-        initRate:b.sub?+(100*b.init/b.sub).toFixed(1):0,
-        finalRate:b.init?+(100*b.final/b.init).toFixed(1):0,
-        bookRate:b.sub?+(100*b.book/b.sub).toFixed(1):0};});
+    const monthDates=cD.dates.filter(d=>d>=monthFrom&&d<=monthTo);
+    const rows=monthDates.map(d=>{const k=cD.days[d]?cD.days[d].k:{sub:0,init:0,final:0,book:0,val:0};
+      return {date:d,sub:k.sub,init:k.init,final:k.final,book:k.book,val:k.val,
+        initRate:k.sub?+(100*k.init/k.sub).toFixed(1):0,
+        finalRate:k.init?+(100*k.final/k.init).toFixed(1):0,
+        bookRate:k.sub?+(100*k.book/k.sub).toFixed(1):0};});
     const withSub=rows.filter(r=>r.sub>0);
     if(!withSub.length)return {max:null,min:null};
     const max=withSub.reduce((a,b)=>b.sub>a.sub?b:a);
@@ -1134,15 +1120,22 @@ const RAWSTORE = {"n":242074,"dates":["2026-04-06","2026-04-07","2026-04-08","20
     return {max,min};
   }
   function topSegments(){
-    const sd=RS.sday,flags=RS.flags;
+    const capMax=capToYesterday(cD.meta.max);
+    const mxD=parseD(cD.meta.max);
+    const mFirst=ymd(new Date(mxD.getFullYear(),mxD.getMonth(),1));
+    const monthFrom=mFirst<cD.meta.min?cD.meta.min:mFirst, monthTo=capMax;
+    const monthDates=cD.dates.filter(d=>d>=monthFrom&&d<=monthTo);
     const dims=['employer','nationality'];
     const out={};
     dims.forEach(dm=>{
-      const col=RS[dm],vocabArr=VOCAB[dm];
       const tally={};
-      for(let i=0;i<N;i++){ const di=sd[i]; if(!inRange2(di))continue;
-        const val=vocabArr[col[i]]; const t=tally[val]||(tally[val]={sub:0,book:0});
-        t.sub++; if((flags[i]>>2)&1)t.book++; }
+      monthDates.forEach(d=>{
+        const dd=cD.days[d]&&cD.days[d].d&&cD.days[d].d[dm];
+        if(!dd)return;
+        const subMap=dd.sub||{}, bookMap=dd.book||{};
+        for(const val in subMap){ const t=tally[val]||(tally[val]={sub:0,book:0}); t.sub+=subMap[val]; }
+        for(const val in bookMap){ const t=tally[val]||(tally[val]={sub:0,book:0}); t.book+=bookMap[val]; }
+      });
       const arr=Object.entries(tally).filter(x=>x[1].sub>0).map(x=>({name:x[0],sub:x[1].sub,book:x[1].book,rate:+(100*x[1].book/x[1].sub).toFixed(1)}));
       const byVol=[...arr].sort((a,b)=>b.sub-a.sub);
       const byRate=[...arr].sort((a,b)=>b.rate-a.rate);
