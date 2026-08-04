@@ -223,17 +223,21 @@ if (fs.existsSync(COST_HTML)) {
   rows.forEach(r => {
     const cid = String(r.CivilID || '').trim();
     if (!cid) return;
-    const sd = toYMD(r['submitted']);
-    if (!sd) return;
     const isLocal = cid.startsWith('1');
     const booked = BOOKED_SET.has(String(r.Altitudestatus || ''));
     const amount = parseFloat(r.ItemValue) || 0;
-    costTotal++;
-    const b = costBucket(sd);
     if (booked) {
+      const bd = toYMD(r[CONFIG.bookCol]);
+      if (!bd) return;
+      costTotal++;
+      const b = costBucket(bd);
       if (isLocal) { b.bl++; b.bv += Math.round(amount); if (amount >= 50000) b.bn69++; else b.bn35++; }
       else { b.be++; b.bev += Math.round(amount); if (amount >= 50000) b.be69++; else b.be35++; }
     } else {
+      const sd = toYMD(r['submitted']);
+      if (!sd) return;
+      costTotal++;
+      const b = costBucket(sd);
       if (isLocal) b.nl++; else b.ne++;
     }
   });
