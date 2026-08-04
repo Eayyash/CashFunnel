@@ -40,8 +40,8 @@ header .s{font-size:.7rem;color:var(--muted)}
 .filter-bar .reset:hover{background:var(--accent-soft);border-color:var(--accent)}
 .filter-bar .range-info{font-size:.72rem;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-left:auto}
 
-.kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:28px}
-@media(max-width:1060px){.kpi-strip{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}}
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px}
+@media(max-width:900px){.kpi-strip{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}}
 .kpi{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:20px 22px;box-shadow:var(--shadow);position:relative;overflow:hidden;transition:box-shadow .2s,transform .2s}
 .kpi:hover{box-shadow:var(--shadow-lg);transform:translateY(-1px)}
 .kpi::before{content:"";position:absolute;top:0;left:0;width:4px;bottom:0;border-radius:4px 0 0 4px}
@@ -190,7 +190,6 @@ function render(from,to){
   const avgB=totalBooked?bTable.grand/totalBooked:0;
   const avgNB=totalNotBooked?nbTable.grand/totalNotBooked:0;
   const totalCost=bTable.grand+nbTable.grand;
-  const costPerOutcome=totalBooked?totalCost/totalBooked:0;
 
   document.getElementById('content').innerHTML=`
   <div class="kpi-strip">
@@ -198,7 +197,6 @@ function render(from,to){
     <div class="kpi k2"><div class="label">Total API Cost</div><div class="val">SAR ${fmt(totalCost)}</div><div class="sub">Booked: ${fmt(bTable.grand)} · Not: ${fmt(nbTable.grand)}</div></div>
     <div class="kpi k3"><div class="label">Avg Cost / Booked App</div><div class="val">SAR ${fmt(avgB)}</div><div class="sub">${fmtI(totalBooked)} booked applications</div></div>
     <div class="kpi k4"><div class="label">Avg Cost / Not-Booked App</div><div class="val">SAR ${fmt(avgNB)}</div><div class="sub">${fmtI(totalNotBooked)} not-booked applications</div></div>
-    <div class="kpi k5"><div class="label">Cost per Booked Outcome</div><div class="val">SAR ${fmt(costPerOutcome)}</div><div class="sub">Total cost ÷ booked count</div></div>
   </div>
 
   <div class="section">
