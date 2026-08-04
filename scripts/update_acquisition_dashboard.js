@@ -219,8 +219,8 @@ if (fs.existsSync(COST_HTML)) {
   const costBucket = d => costDays[d] || (costDays[d] = {
     bl: 0, bn69: 0, bn35: 0, bv: 0,  // booked local: count, nafith69, nafith35, totalVal
     be: 0, be69: 0, be35: 0, bev: 0,  // booked expat
-    bg: 0, bm: 0,                      // booked GOSI-eligible, MOF-eligible
-    nl: 0, ne: 0, ng: 0, nm: 0         // not-booked local, expat, GOSI, MOF
+    bgl: 0, bge: 0, bml: 0, bme: 0,  // booked GOSI/MOF split by local/expat
+    nl: 0, ne: 0, ng: 0, nm: 0        // not-booked local, expat, GOSI, MOF
   });
   let costTotal = 0;
   rows.forEach(r => {
@@ -239,7 +239,8 @@ if (fs.existsSync(COST_HTML)) {
       const b = costBucket(bd);
       if (isLocal) { b.bl++; b.bv += Math.round(amount); if (amount >= 50000) b.bn69++; else b.bn35++; }
       else { b.be++; b.bev += Math.round(amount); if (amount >= 50000) b.be69++; else b.be35++; }
-      if (isGosi) b.bg++; if (isMof) b.bm++;
+      if (isGosi) { if (isLocal) b.bgl++; else b.bge++; }
+      if (isMof) { if (isLocal) b.bml++; else b.bme++; }
     } else {
       const sd = toYMD(r['submitted']);
       if (!sd) return;
