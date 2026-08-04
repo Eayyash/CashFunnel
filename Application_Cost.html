@@ -386,7 +386,7 @@ function render(from,to){
     let html=`<div class="section"><div class="section-head"><h2>${title}</h2><span class="badge ${groupClass}">${badge}</span></div>`;
     html+='<div class="status-matrix"><table><thead><tr><th>Status</th><th style="text-align:right">Count</th>';
     svcs.forEach(sv=>{html+=`<th class="rotate">${sv.name}</th>`;});
-    html+='<th class="right" style="min-width:90px">Est. Cost</th></tr></thead><tbody>';
+    html+='<th class="right" style="min-width:90px">Cost / App</th><th class="right" style="min-width:100px">Total Cost</th></tr></thead><tbody>';
     let groupTotal=0;
     statusNames.forEach(s=>{
       const st=statuses[s];
@@ -395,6 +395,8 @@ function render(from,to){
       svcs.forEach(sv=>{
         if(cfg[sv.id]==='Y') rowCost+=sv.cost*(st[sv.cntKey]||0);
       });
+      const count=st[countKey]||0;
+      const costPerApp=count?rowCost/count:0;
       groupTotal+=rowCost;
       html+=`<tr><td>${s}</td><td class="right mono">${fmtI(st[countKey])}</td>`;
       svcs.forEach(sv=>{
@@ -402,9 +404,9 @@ function render(from,to){
         const cls=val==='Y'?'yes':'no';
         html+=`<td><select class="${cls}" data-status="${s}" data-svc="${sv.id}"><option value="Y"${val==='Y'?' selected':''}>Yes</option><option value="N"${val==='N'?' selected':''}>No</option></select></td>`;
       });
-      html+=`<td class="right mono" style="font-weight:600">${fmt(rowCost)}</td></tr>`;
+      html+=`<td class="right mono">${fmt(costPerApp)}</td><td class="right mono" style="font-weight:600">${fmt(rowCost)}</td></tr>`;
     });
-    html+=`<tr class="totrow"><td colspan="2">Subtotal</td><td colspan="${svcs.length}"></td><td class="right mono">${fmt(groupTotal)}</td></tr>`;
+    html+=`<tr class="totrow"><td colspan="2">Subtotal</td><td colspan="${svcs.length+1}"></td><td class="right mono">${fmt(groupTotal)}</td></tr>`;
     html+='</tbody></table></div></div>';
     return {html,total:groupTotal};
   }
