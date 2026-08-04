@@ -214,10 +214,13 @@ const COST_HTML = path.join(ROOT, 'Application_Cost.html');
 if (fs.existsSync(COST_HTML)) {
   console.log('Computing application cost data…');
   const costDays = {};
+  const MOF_SECTORS = new Set(['Government Entity', 'Military with Grades', 'Pension']);
+  const GOSI_SECTORS = new Set(['Private Company']);
   const costBucket = d => costDays[d] || (costDays[d] = {
     bl: 0, bn69: 0, bn35: 0, bv: 0,  // booked local: count, nafith69, nafith35, totalVal
     be: 0, be69: 0, be35: 0, bev: 0,  // booked expat
-    nl: 0, ne: 0                        // not-booked local, expat
+    bg: 0, bm: 0,                      // booked GOSI-eligible, MOF-eligible
+    nl: 0, ne: 0, ng: 0, nm: 0         // not-booked local, expat, GOSI, MOF
   });
   let costTotal = 0;
   rows.forEach(r => {
@@ -226,6 +229,9 @@ if (fs.existsSync(COST_HTML)) {
     const isLocal = cid.startsWith('1');
     const booked = BOOKED_SET.has(String(r.Altitudestatus || ''));
     const amount = parseFloat(r.ItemValue) || 0;
+    const emp = String(r.FinalEmployerType || '').trim();
+    const isGosi = GOSI_SECTORS.has(emp);
+    const isMof = MOF_SECTORS.has(emp);
     if (booked) {
       const bd = toYMD(r[CONFIG.bookCol]);
       if (!bd) return;
@@ -233,12 +239,14 @@ if (fs.existsSync(COST_HTML)) {
       const b = costBucket(bd);
       if (isLocal) { b.bl++; b.bv += Math.round(amount); if (amount >= 50000) b.bn69++; else b.bn35++; }
       else { b.be++; b.bev += Math.round(amount); if (amount >= 50000) b.be69++; else b.be35++; }
+      if (isGosi) b.bg++; if (isMof) b.bm++;
     } else {
       const sd = toYMD(r['submitted']);
       if (!sd) return;
       costTotal++;
       const b = costBucket(sd);
       if (isLocal) b.nl++; else b.ne++;
+      if (isGosi) b.ng++; if (isMof) b.nm++;
     }
   });
   const costDates = Object.keys(costDays).sort();
