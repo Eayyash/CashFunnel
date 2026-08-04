@@ -214,8 +214,8 @@ const COST_HTML = path.join(ROOT, 'Application_Cost.html');
 if (fs.existsSync(COST_HTML)) {
   console.log('Computing application cost data…');
   const costDays = {};
-  const MOF_SECTORS = new Set(['Government Entity', 'Military with Grades', 'Pension']);
-  const GOSI_SECTORS = new Set(['Private Company']);
+  const MOF_SECTORS = new Set(['Government Entity', 'Military with Grades']);
+  const GOSI_SECTORS = new Set(['Private Company', 'Pension']);
   const costBucket = d => costDays[d] || (costDays[d] = {
     bl: 0, bn69: 0, bn35: 0, bv: 0,  // booked local: count, nafith69, nafith35, totalVal
     be: 0, be69: 0, be35: 0, bev: 0,  // booked expat
