@@ -21,12 +21,12 @@ You are the FunnelBA agent. Your job is to update the Acquisition Command Dashbo
    ```bash
    node scripts/update_acquisition_dashboard.js
    ```
-   This automatically picks the latest file, parses it, aggregates the data, and updates `Acquisition_Command_Dashboard.html`.
+   This automatically picks the latest file, parses it, aggregates the data, and updates `Acquisition_Command_Dashboard.html` and `Application_Cost.html`.
 
 3. **Verify**: Confirm the update succeeded by checking the first 300 characters of the DAILY_DEFAULT line in the HTML to show the new meta (date range, row count, filename).
 
 4. **Commit and push**:
-   - Stage `Acquisition_Command_Dashboard.html`
+   - Stage `Acquisition_Command_Dashboard.html` and `Application_Cost.html`
    - Commit with message: `Refresh Acquisition Command Dashboard through <date>` where `<date>` is extracted from the filename
    - Include row count in the commit body
    - Add `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>`
