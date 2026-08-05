@@ -205,8 +205,188 @@ if (startIdx === -1) {
 }
 const lineStart = html.lastIndexOf('\n', startIdx) + 1;
 const lineEnd = html.indexOf('\n', startIdx);
-const replaced = html.slice(0, lineStart) + newLine + html.slice(lineEnd);
-fs.writeFileSync(HTML_FILE, replaced, 'utf-8');
+let updatedHtml = html.slice(0, lineStart) + newLine + html.slice(lineEnd);
+console.log(`DAILY_DEFAULT updated.`);
+
+// --- Build RAWSTORE (columnar binary for the trend engine) ---
+console.log('Building RAWSTORE…');
+const zlib = require('zlib');
+
+const DIMCOL_MAP = {
+  employer: 'FinalEmployerType', nationality: 'Nationality_Flag',
+  income: 'DeclaredIncomeBand', risk: 'RiskRating', simah: 'SC_RiskGrade',
+  age: 'AgeBand', gender: 'Gender', marital: 'MaritalStatus',
+  product: 'Product_type', source: 'SubmitSource', scoreband: 'AppScoreBand',
+  dbr: 'CurrentDBRBand'
+};
+const LONGCOL_MAP = { store: 'StoreName', city: 'CITY', natdetail: 'NATIONALITY' };
+const EXTRA_DIMS = { de_decision: 'DE_Decision', referreasons: 'referreasons', gosi: 'Is_GOSI_Called', mof: 'Is_MOF_Called', dec: 'SimplifiedDeclinedReason' };
+
+// Count values for LONGCOL to pick top 20
+const longCnt = {};
+for (const k in LONGCOL_MAP) longCnt[k] = {};
+rows.forEach(r => {
+  for (const k in LONGCOL_MAP) {
+    const v = gv(r, LONGCOL_MAP[k]);
+    longCnt[k][v] = (longCnt[k][v] || 0) + 1;
+  }
+});
+const longTop = {};
+for (const k in longCnt) {
+  longTop[k] = new Set(
+    Object.entries(longCnt[k]).sort((a, b) => b[1] - a[1]).slice(0, 20).map(x => x[0])
+  );
+}
+
+// Build vocab and collect all dates
+const allDims = { ...DIMCOL_MAP, ...LONGCOL_MAP, ...EXTRA_DIMS };
+// region is special (derived from Region + is_panda)
+const vocabSets = { region: new Set() };
+for (const k in allDims) vocabSets[k] = new Set();
+const dateSet = new Set();
+
+rows.forEach(r => {
+  const sd = toYMD(r['submitted']);
+  if (sd) dateSet.add(sd);
+  const booked = BOOKED_SET.has(String(r['Altitudestatus']));
+  if (booked) { const bd = toYMD(r[CONFIG.bookCol]); if (bd) dateSet.add(bd); }
+  // region
+  const reg = (r['is_panda'] == 1 || r['is_panda'] === '1') ? 'Panda' : gv(r, 'Region');
+  vocabSets.region.add(reg);
+  // standard dims
+  for (const k in DIMCOL_MAP) vocabSets[k].add(gv(r, DIMCOL_MAP[k]));
+  // long dims (top 20 + Other)
+  for (const k in LONGCOL_MAP) {
+    const v = gv(r, LONGCOL_MAP[k]);
+    vocabSets[k].add(longTop[k].has(v) ? v : 'Other');
+  }
+  // extra dims
+  for (const k in EXTRA_DIMS) {
+    const v = gv(r, EXTRA_DIMS[k]);
+    vocabSets[k].add(v);
+  }
+});
+
+const dates = [...dateSet].sort();
+const dateIdx = {};
+dates.forEach((d, i) => dateIdx[d] = i);
+
+const vocab = {};
+for (const k in vocabSets) {
+  vocab[k] = [...vocabSets[k]];
+}
+const vocabIdx = {};
+for (const k in vocab) {
+  vocabIdx[k] = {};
+  vocab[k].forEach((v, i) => vocabIdx[k][v] = i);
+}
+
+// Build columnar arrays
+const N = rows.length;
+const flags = new Uint8Array(N);
+const sday = new Uint16Array(N);
+const bday = new Uint16Array(N);
+const dimCols = {};
+for (const k in vocabSets) dimCols[k] = new Uint8Array(N);
+const bookedRows = [];
+
+rows.forEach((r, i) => {
+  const init = r['Approvalflag'] === 'Y';
+  const fin = r['FinalApprovalFlag'] === 'Y';
+  flags[i] = (init ? 1 : 0) | (fin ? 2 : 0);
+
+  const sd = toYMD(r['submitted']);
+  sday[i] = sd && dateIdx[sd] !== undefined ? dateIdx[sd] : 65535;
+
+  const booked = BOOKED_SET.has(String(r['Altitudestatus']));
+  if (booked) {
+    const bd = toYMD(r[CONFIG.bookCol]);
+    bday[i] = bd && dateIdx[bd] !== undefined ? dateIdx[bd] : 65535;
+    bookedRows.push(i);
+  } else {
+    bday[i] = 65535;
+  }
+
+  // region
+  const reg = (r['is_panda'] == 1 || r['is_panda'] === '1') ? 'Panda' : gv(r, 'Region');
+  dimCols.region[i] = vocabIdx.region[reg] || 0;
+
+  // standard dims
+  for (const k in DIMCOL_MAP) {
+    dimCols[k][i] = vocabIdx[k][gv(r, DIMCOL_MAP[k])] || 0;
+  }
+  // long dims
+  for (const k in LONGCOL_MAP) {
+    const v = gv(r, LONGCOL_MAP[k]);
+    dimCols[k][i] = vocabIdx[k][longTop[k].has(v) ? v : 'Other'] || 0;
+  }
+  // extra dims
+  for (const k in EXTRA_DIMS) {
+    dimCols[k][i] = vocabIdx[k][gv(r, EXTRA_DIMS[k])] || 0;
+  }
+});
+
+// Build booked-only float64 arrays
+const bval = new Float64Array(bookedRows.length);
+const bten = new Float64Array(bookedRows.length);
+const blim = new Float64Array(bookedRows.length);
+bookedRows.forEach((ri, j) => {
+  const r = rows[ri];
+  bval[j] = parseFloat(r['ItemValue']) || 0;
+  bten[j] = parseFloat(r['TENURE']) || 0;
+  blim[j] = parseFloat(r['CREDIT_LIMIT']) || 0;
+});
+
+// Assemble binary buffer
+const BSZ = { b: 1, h: 2, d: 8 };
+const header = {};
+let offset = 0;
+function addCol(name, arr, type) {
+  header[name] = { off: offset, len: arr.length, t: type };
+  offset += arr.length * BSZ[type];
+}
+addCol('flags', flags, 'b');
+addCol('sday', sday, 'h');
+addCol('bday', bday, 'h');
+const dimOrder = ['region', 'employer', 'nationality', 'income', 'risk', 'simah', 'age', 'gender', 'marital', 'product', 'source', 'scoreband', 'dbr', 'store', 'city', 'natdetail', 'de_decision', 'referreasons', 'gosi', 'mof', 'dec'];
+dimOrder.forEach(k => addCol(k, dimCols[k], 'b'));
+addCol('bval', bval, 'd');
+addCol('bten', bten, 'd');
+addCol('blim', blim, 'd');
+
+const totalBytes = offset;
+const buf = Buffer.alloc(totalBytes);
+let pos = 0;
+function writeBuf(arr) {
+  Buffer.from(arr.buffer, arr.byteOffset, arr.byteLength).copy(buf, pos);
+  pos += arr.byteLength;
+}
+writeBuf(flags);
+writeBuf(sday);
+writeBuf(bday);
+dimOrder.forEach(k => writeBuf(dimCols[k]));
+writeBuf(bval);
+writeBuf(bten);
+writeBuf(blim);
+
+const compressed = zlib.deflateSync(buf, { level: 9 });
+const b64 = compressed.toString('base64');
+
+const rawStore = { n: N, dates, vocab, header, b64 };
+const rawLine = `const RAWSTORE = ${JSON.stringify(rawStore)};`;
+
+const rawMarker = 'const RAWSTORE = {';
+const ri = updatedHtml.indexOf(rawMarker);
+if (ri !== -1) {
+  const rls = updatedHtml.lastIndexOf('\n', ri) + 1;
+  const rle = updatedHtml.indexOf('\n', ri);
+  updatedHtml = updatedHtml.slice(0, rls) + rawLine + updatedHtml.slice(rle);
+  console.log(`RAWSTORE updated — ${N.toLocaleString()} rows, ${dates.length} dates, ${b64.length.toLocaleString()} chars b64.`);
+} else {
+  console.warn('WARN: RAWSTORE marker not found — skipping columnar update.');
+}
+
+fs.writeFileSync(HTML_FILE, updatedHtml, 'utf-8');
 console.log(`Done — dashboard updated with ${rows.length.toLocaleString()} rows (${result.meta.min} → ${result.meta.max}).`);
 
 // --- Application Cost scorecard ---
