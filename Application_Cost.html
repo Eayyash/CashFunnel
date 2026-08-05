@@ -339,13 +339,13 @@ function render(from,to){
 
   // --- Application Statuses tab ---
   const LOCAL_SVCS=[
+    {id:'gosi_l',name:'GOSI',cost:4.8645,cntKey:'gl'},
+    {id:'mof_l',name:'MOF',cost:10.35,cntKey:'ml'},
+    {id:'simah_l',name:'SIMAH',cost:18.4,cntKey:'l'},
+    {id:'qarar_l',name:'Qarar',cost:5.98,cntKey:'l'},
     {id:'yaqeen_local',name:'Yaqeen',cost:3.34,cntKey:'l'},
     {id:'citc_l',name:'CITC',cost:2.3,cntKey:'l'},
     {id:'national_address_l',name:'Nat. Address',cost:2.3,cntKey:'l'},
-    {id:'simah_l',name:'SIMAH',cost:18.4,cntKey:'l'},
-    {id:'gosi_l',name:'GOSI',cost:4.8645,cntKey:'gl'},
-    {id:'mof_l',name:'MOF',cost:10.35,cntKey:'ml'},
-    {id:'qarar_l',name:'Qarar',cost:5.98,cntKey:'l'},
     {id:'sayen_l',name:'Sayen',cost:6.9,cntKey:'l'},
     {id:'emdha_l',name:'Emdha',cost:8.21,cntKey:'l'},
     {id:'nafath_l',name:'Nafath',cost:3.45,cntKey:'l'},
@@ -353,14 +353,14 @@ function render(from,to){
     {id:'nafith_35_l',name:'Nafith <50K',cost:35,cntKey:'ln35'},
   ];
   const EXPAT_SVCS=[
+    {id:'gosi_e',name:'GOSI',cost:4.8645,cntKey:'ge'},
+    {id:'mof_e',name:'MOF',cost:10.35,cntKey:'me'},
+    {id:'simah_e',name:'SIMAH',cost:18.4,cntKey:'e'},
+    {id:'qarar_e',name:'Qarar',cost:5.98,cntKey:'e'},
     {id:'yaqeen_expat_legal',name:'Yaqeen Legal',cost:3.45,cntKey:'e'},
     {id:'yaqeen_expat_iqama',name:'Yaqeen Iqama',cost:3.22,cntKey:'e'},
     {id:'citc_e',name:'CITC',cost:2.3,cntKey:'e'},
     {id:'national_address_e',name:'Nat. Address',cost:2.3,cntKey:'e'},
-    {id:'simah_e',name:'SIMAH',cost:18.4,cntKey:'e'},
-    {id:'gosi_e',name:'GOSI',cost:4.8645,cntKey:'ge'},
-    {id:'mof_e',name:'MOF',cost:10.35,cntKey:'me'},
-    {id:'qarar_e',name:'Qarar',cost:5.98,cntKey:'e'},
     {id:'sayen_e',name:'Sayen',cost:6.9,cntKey:'e'},
     {id:'emdha_e',name:'Emdha',cost:8.21,cntKey:'e'},
     {id:'nafath_e',name:'Nafath',cost:3.45,cntKey:'e'},
@@ -368,18 +368,51 @@ function render(from,to){
     {id:'nafith_35_e',name:'Nafith <50K',cost:35,cntKey:'en35'},
   ];
 
-  const LS_KEY='tasheel_status_cost_v2';
+  // Master defaults from sheet: [gosi/mof, simah, qarar, yaqeen, citc, na, sayen, emdha, nafath, nafith]
+  const MD={
+    'Completed [C]':        [1,1,1,1,1,1,1,1,1,1],
+    'Declined [D]':         [1,1,1,1,1,1,0,0,0,0],
+    'Abandoned [B]':        [1,1,1,1,1,1,0,0,0,0],
+    'Incomplete [I]':       [1,1,1,1,1,1,0,0,0,0],
+    'Sales Vetting':        [0,1,1,1,1,1,0,0,0,0],
+    'Offered [F]':          [1,1,1,1,1,1,0,0,0,0],
+    'Cancelled [X]':        [0,1,1,1,1,1,0,0,0,0],
+    'Referred [R]':         [1,1,1,1,1,1,0,0,0,0],
+    'Pending Final Approval':[1,1,1,1,1,1,0,0,0,0],
+    'Approved [P]':         [1,1,1,1,1,1,0,0,0,0],
+    'Withdrawn [W]':        [1,1,1,1,1,1,0,0,0,0],
+    'Pending Nafath Authorization':[1,1,1,1,1,1,0,0,0,0],
+    'Policy Team':          [0,1,1,1,1,1,0,0,0,0],
+    'Pending Contract Signature [G]':[1,1,1,1,1,1,1,1,1,0],
+    'Pre-Approval [E]':     [1,1,1,1,1,1,0,0,0,0],
+    'Pending Electronic Promissory Note Confirmation [J]':[1,1,1,1,1,1,1,1,1,1],
+    'Pending STP Verification':[1,1,1,1,1,1,1,1,1,1],
+    'Second Loan on Hold':  [1,1,1,1,1,1,0,0,0,0],
+  };
+  // Map sheet columns to service IDs
+  const COL_L=[['gosi_l','mof_l'],['simah_l'],['qarar_l'],['yaqeen_local'],['citc_l'],['national_address_l'],['sayen_l'],['emdha_l'],['nafath_l'],['nafith_69_l','nafith_35_l']];
+  const COL_E=[['gosi_e','mof_e'],['simah_e'],['qarar_e'],['yaqeen_expat_legal','yaqeen_expat_iqama'],['citc_e'],['national_address_e'],['sayen_e'],['emdha_e'],['nafath_e'],['nafith_69_e','nafith_35_e']];
+  function buildDefaults(status){
+    const bits=MD[status]; if(!bits) return {};
+    const d={};
+    COL_L.forEach((ids,i)=>ids.forEach(id=>{d[id]=bits[i]?'Y':'N';}));
+    COL_E.forEach((ids,i)=>ids.forEach(id=>{d[id]=bits[i]?'Y':'N';}));
+    return d;
+  }
+
+  const LS_KEY='tasheel_status_cost_v3';
   function loadConfig(){try{return JSON.parse(localStorage.getItem(LS_KEY))||{};}catch(e){return {};}}
   function saveConfig(c){try{localStorage.setItem(LS_KEY,JSON.stringify(c));}catch(e){}}
 
   const statuses=COST_DATA.statuses;
   if(!statuses||!Object.keys(statuses).length) return;
 
-  const statusNames=Object.keys(statuses).sort((a,b)=>statuses[b].n-statuses[a].n);
+  const statusNames=Object.keys(MD).filter(s=>statuses[s]).sort((a,b)=>(statuses[b]?.n||0)-(statuses[a]?.n||0));
   const config=loadConfig();
   statusNames.forEach(s=>{
+    const defaults=buildDefaults(s);
     if(!config[s]) config[s]={};
-    LOCAL_SVCS.concat(EXPAT_SVCS).forEach(sv=>{if(config[s][sv.id]==null) config[s][sv.id]='N';});
+    LOCAL_SVCS.concat(EXPAT_SVCS).forEach(sv=>{if(config[s][sv.id]==null) config[s][sv.id]=defaults[sv.id]||'N';});
   });
 
   function buildGroup(title,badge,svcs,countKey,groupClass){
