@@ -4,14 +4,14 @@
 <title>Tasheel · Business Performance View</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0f1117;--panel:#181b23;--panel2:#1e2130;--line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.14);
- --ink:#e8ecf4;--ink2:#b0bdd0;--muted:#7b8ba0;--faint:#4e5a6e;
- --cyan:#22d3b7;--cyan-bg:rgba(34,211,183,.12);--cyan-d:#0e9e90;
- --gold:#f5a623;--gold-bg:rgba(245,166,35,.12);
- --red:#ef4444;--red-bg:rgba(239,68,68,.12);
- --violet:#8b5cf6;--violet-bg:rgba(139,92,246,.12);
- --green:#22c55e;--green-bg:rgba(34,197,94,.12);
- --blue:#3b82f6;--blue-bg:rgba(59,130,246,.12)}
+:root{--bg:#eef1f7;--panel:#fff;--panel2:#f4f6fa;--line:rgba(30,45,75,.08);--line2:rgba(30,45,75,.14);
+ --ink:#141c2b;--ink2:#3a475e;--muted:#5b6b83;--faint:#8493a8;
+ --cyan:#0e9e90;--cyan-bg:rgba(14,158,144,.10);--cyan-d:#0b7d72;
+ --gold:#bd7d12;--gold-bg:rgba(189,125,18,.10);
+ --red:#dc2626;--red-bg:rgba(220,38,38,.08);
+ --violet:#6f5be0;--violet-bg:rgba(111,91,224,.10);
+ --green:#16a34a;--green-bg:rgba(22,163,74,.08);
+ --blue:#2563eb;--blue-bg:rgba(37,99,235,.08)}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
 h1,h2,h3,.disp{font-family:'Space Grotesk',sans-serif}
@@ -19,8 +19,8 @@ h1,h2,h3,.disp{font-family:'Space Grotesk',sans-serif}
 
 /* Header */
 header{padding:20px 28px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--line)}
-.logo{width:36px;height:36px;border-radius:10px;position:relative;background:conic-gradient(from 210deg,var(--cyan),var(--gold),var(--cyan));box-shadow:0 6px 20px -6px rgba(34,211,183,.45)}
-.logo::after{content:"";position:absolute;inset:4px;border-radius:7px;background:var(--bg)}
+.logo{width:36px;height:36px;border-radius:10px;position:relative;background:conic-gradient(from 210deg,var(--cyan),var(--gold),var(--cyan));box-shadow:0 6px 20px -6px rgba(14,158,144,.35)}
+.logo::after{content:"";position:absolute;inset:4px;border-radius:7px;background:#fff}
 .logo::before{content:"↗";position:absolute;inset:0;display:grid;place-items:center;z-index:2;font-family:'Space Grotesk';font-weight:700;color:var(--cyan);font-size:17px}
 .brand .t{font-weight:700;font-size:16px;font-family:'Space Grotesk'}
 .brand .s{font-size:10px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-top:1px}
@@ -51,7 +51,9 @@ header a.home:hover{color:var(--cyan)}
 .kpi .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
 .kpi .val{font-family:'Space Grotesk';font-weight:700;font-size:24px}
 .kpi .sub{font-size:11px;color:var(--muted);margin-top:3px;font-family:'JetBrains Mono'}
-.kpi.accent{border-color:rgba(34,211,183,.25);background:linear-gradient(135deg,rgba(34,211,183,.06),transparent)}
+.kpi{box-shadow:0 1px 3px rgba(20,30,50,.06)}
+.card{box-shadow:0 1px 3px rgba(20,30,50,.06)}
+.kpi.accent{border-color:rgba(14,158,144,.25);background:linear-gradient(135deg,rgba(14,158,144,.06),transparent)}
 .kpi .val.cyan{color:var(--cyan)}.kpi .val.gold{color:var(--gold)}.kpi .val.green{color:var(--green)}.kpi .val.red{color:var(--red)}
 
 /* Cards grid */
@@ -258,8 +260,8 @@ function renderTab(tab){
 }
 
 // ═══════════════════════ CHART DEFAULTS ═══════════════════════
-Chart.defaults.color='#7b8ba0';
-Chart.defaults.borderColor='rgba(255,255,255,0.06)';
+Chart.defaults.color='#5b6b83';
+Chart.defaults.borderColor='rgba(30,45,75,0.08)';
 Chart.defaults.font.family='Inter';
 Chart.defaults.font.size=11;
 
