@@ -221,6 +221,69 @@ function calcSegmentCost(count,isLocal,gosiCount,mofCount,nafith69,nafith35){
   return cost;
 }
 
+// Master defaults: [gosi/mof, simah, qarar, yaqeen, citc, na, sayen, emdha, nafath, nafith]
+const MASTER_DEF={
+  'Completed [C]':        [1,1,1,1,1,1,1,1,1,1],
+  'Declined [D]':         [1,1,1,1,1,1,0,0,0,0],
+  'Abandoned [B]':        [1,1,1,1,1,1,0,0,0,0],
+  'Incomplete [I]':       [1,1,1,1,1,1,0,0,0,0],
+  'Sales Vetting':        [0,1,1,1,1,1,0,0,0,0],
+  'Offered [F]':          [1,1,1,1,1,1,0,0,0,0],
+  'Cancelled [X]':        [0,1,1,1,1,1,0,0,0,0],
+  'Referred [R]':         [1,1,1,1,1,1,0,0,0,0],
+  'Pending Final Approval':[1,1,1,1,1,1,0,0,0,0],
+  'Approved [P]':         [1,1,1,1,1,1,0,0,0,0],
+  'Withdrawn [W]':        [1,1,1,1,1,1,0,0,0,0],
+  'Pending Nafath Authorization':[1,1,1,1,1,1,0,0,0,0],
+  'Policy Team':          [0,1,1,1,1,1,0,0,0,0],
+  'Pending Contract Signature [G]':[1,1,1,1,1,1,1,1,1,0],
+  'Pre-Approval [E]':     [1,1,1,1,1,1,0,0,0,0],
+  'Pending Electronic Promissory Note Confirmation [J]':[1,1,1,1,1,1,1,1,1,1],
+  'Pending STP Verification':[1,1,1,1,1,1,1,1,1,1],
+  'Second Loan on Hold':  [1,1,1,1,1,1,0,0,0,0],
+};
+const BOOKED_STATUSES=new Set(['Completed [C]','Pending Final Approval']);
+// Service costs indexed by master column: [gosi/mof, simah, qarar, yaqeen, citc, na, sayen, emdha, nafath, nafith]
+const NB_LOCAL_COSTS=[
+  [{cost:4.8645,k:'gl'},{cost:10.35,k:'ml'}], // gosi/mof
+  [{cost:18.4,k:'l'}],       // simah
+  [{cost:5.98,k:'l'}],       // qarar
+  [{cost:3.34,k:'l'}],       // yaqeen
+  [{cost:2.3,k:'l'}],        // citc
+  [{cost:2.3,k:'l'}],        // na
+  [{cost:6.9,k:'l'}],        // sayen
+  [{cost:8.21,k:'l'}],       // emdha
+  [{cost:3.45,k:'l'}],       // nafath
+  [{cost:69,k:'ln69'},{cost:35,k:'ln35'}], // nafith
+];
+const NB_EXPAT_COSTS=[
+  [{cost:4.8645,k:'ge'},{cost:10.35,k:'me'}],
+  [{cost:18.4,k:'e'}],
+  [{cost:5.98,k:'e'}],
+  [{cost:3.45,k:'e'},{cost:3.22,k:'e'}], // yaqeen legal + iqama
+  [{cost:2.3,k:'e'}],
+  [{cost:2.3,k:'e'}],
+  [{cost:6.9,k:'e'}],
+  [{cost:8.21,k:'e'}],
+  [{cost:3.45,k:'e'}],
+  [{cost:69,k:'en69'},{cost:35,k:'en35'}],
+];
+function calcNotBookedCost(){
+  const sts=COST_DATA.statuses; if(!sts) return {local:0,expat:0,total:0};
+  let lc=0, ec=0;
+  for(const s in sts){
+    if(BOOKED_STATUSES.has(s)) continue;
+    const bits=MASTER_DEF[s]; if(!bits) continue;
+    const st=sts[s];
+    for(let i=0;i<10;i++){
+      if(!bits[i]) continue;
+      NB_LOCAL_COSTS[i].forEach(sv=>{lc+=sv.cost*(st[sv.k]||0);});
+      NB_EXPAT_COSTS[i].forEach(sv=>{ec+=sv.cost*(st[sv.k]||0);});
+    }
+  }
+  return {local:lc,expat:ec,total:lc+ec};
+}
+
 function render(from,to){
   const D=aggregate(from,to);
   const bL=D.booked.local, bE=D.booked.expat;
@@ -239,6 +302,7 @@ function render(from,to){
   const bTable=buildTable(true,bL.count,bE.count,bL.nafith69+bE.nafith69,bL.nafith35+bE.nafith35,D.booked.gosi,D.booked.mof);
   const localCost=calcSegmentCost(bL.count,true,bL.gosi,bL.mof,bL.nafith69,bL.nafith35);
   const expatCost=calcSegmentCost(bE.count,false,bE.gosi,bE.mof,bE.nafith69,bE.nafith35);
+  const nbCost=calcNotBookedCost();
 
   document.getElementById('content').innerHTML=`
   <div class="kpi-strip">
@@ -268,7 +332,11 @@ function render(from,to){
       <div class="summary-grid">
         <div class="summary-item"><div class="num">${fmtI(nL.count)}</div><div class="lbl">Local (Saudi)</div></div>
         <div class="summary-item"><div class="num">${fmtI(nE.count)}</div><div class="lbl">Expat</div></div>
+        <div class="summary-item"><div class="num">SAR ${fmt(nbCost.local)}</div><div class="lbl">Local API Cost</div></div>
+        <div class="summary-item"><div class="num">SAR ${fmt(nbCost.expat)}</div><div class="lbl">Expat API Cost</div></div>
       </div>
+      <div class="note" style="font-weight:600;color:var(--orange)">Total Not-Booked API Cost: SAR ${fmt(nbCost.total)}</div>
+      <div class="note">Cost calculated per status using the master service mapping from the Application Statuses tab. Excludes Completed [C] and Pending Final Approval.</div>
     </div>
   </div>
 
@@ -368,32 +436,11 @@ function render(from,to){
     {id:'nafith_35_e',name:'Nafith <50K',cost:35,cntKey:'en35'},
   ];
 
-  // Master defaults from sheet: [gosi/mof, simah, qarar, yaqeen, citc, na, sayen, emdha, nafath, nafith]
-  const MD={
-    'Completed [C]':        [1,1,1,1,1,1,1,1,1,1],
-    'Declined [D]':         [1,1,1,1,1,1,0,0,0,0],
-    'Abandoned [B]':        [1,1,1,1,1,1,0,0,0,0],
-    'Incomplete [I]':       [1,1,1,1,1,1,0,0,0,0],
-    'Sales Vetting':        [0,1,1,1,1,1,0,0,0,0],
-    'Offered [F]':          [1,1,1,1,1,1,0,0,0,0],
-    'Cancelled [X]':        [0,1,1,1,1,1,0,0,0,0],
-    'Referred [R]':         [1,1,1,1,1,1,0,0,0,0],
-    'Pending Final Approval':[1,1,1,1,1,1,0,0,0,0],
-    'Approved [P]':         [1,1,1,1,1,1,0,0,0,0],
-    'Withdrawn [W]':        [1,1,1,1,1,1,0,0,0,0],
-    'Pending Nafath Authorization':[1,1,1,1,1,1,0,0,0,0],
-    'Policy Team':          [0,1,1,1,1,1,0,0,0,0],
-    'Pending Contract Signature [G]':[1,1,1,1,1,1,1,1,1,0],
-    'Pre-Approval [E]':     [1,1,1,1,1,1,0,0,0,0],
-    'Pending Electronic Promissory Note Confirmation [J]':[1,1,1,1,1,1,1,1,1,1],
-    'Pending STP Verification':[1,1,1,1,1,1,1,1,1,1],
-    'Second Loan on Hold':  [1,1,1,1,1,1,0,0,0,0],
-  };
   // Map sheet columns to service IDs
   const COL_L=[['gosi_l','mof_l'],['simah_l'],['qarar_l'],['yaqeen_local'],['citc_l'],['national_address_l'],['sayen_l'],['emdha_l'],['nafath_l'],['nafith_69_l','nafith_35_l']];
   const COL_E=[['gosi_e','mof_e'],['simah_e'],['qarar_e'],['yaqeen_expat_legal','yaqeen_expat_iqama'],['citc_e'],['national_address_e'],['sayen_e'],['emdha_e'],['nafath_e'],['nafith_69_e','nafith_35_e']];
   function buildDefaults(status){
-    const bits=MD[status]; if(!bits) return {};
+    const bits=MASTER_DEF[status]; if(!bits) return {};
     const d={};
     COL_L.forEach((ids,i)=>ids.forEach(id=>{d[id]=bits[i]?'Y':'N';}));
     COL_E.forEach((ids,i)=>ids.forEach(id=>{d[id]=bits[i]?'Y':'N';}));
@@ -407,7 +454,7 @@ function render(from,to){
   const statuses=COST_DATA.statuses;
   if(!statuses||!Object.keys(statuses).length) return;
 
-  const statusNames=Object.keys(MD).filter(s=>statuses[s]).sort((a,b)=>(statuses[b]?.n||0)-(statuses[a]?.n||0));
+  const statusNames=Object.keys(MASTER_DEF).filter(s=>statuses[s]).sort((a,b)=>(statuses[b]?.n||0)-(statuses[a]?.n||0));
   const config=loadConfig();
   statusNames.forEach(s=>{
     const defaults=buildDefaults(s);
