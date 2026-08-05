@@ -101,6 +101,14 @@ tr:hover td{background:var(--accent-soft)}
 .status-matrix select{padding:2px 4px;font-size:.72rem;border:1px solid var(--border);border-radius:4px;background:#fff;color:var(--text);cursor:pointer;font-family:inherit}
 .status-matrix select.yes{background:var(--green-bg);color:var(--green);border-color:var(--green-border)}
 .status-matrix select.no{background:var(--bg2);color:var(--muted)}
+.status-matrix tr.parent-row{cursor:pointer}
+.status-matrix tr.parent-row td:first-child{position:relative;padding-left:22px}
+.status-matrix tr.parent-row td:first-child::before{content:'▶';position:absolute;left:6px;top:50%;transform:translateY(-50%);font-size:.55rem;color:var(--muted);transition:transform .15s}
+.status-matrix tr.parent-row.open td:first-child::before{transform:translateY(-50%) rotate(90deg)}
+.status-matrix tr.sub-row{display:none;background:var(--bg2)}
+.status-matrix tr.sub-row.visible{display:table-row}
+.status-matrix tr.sub-row td:first-child{padding-left:30px;font-weight:500;font-size:.72rem;color:var(--muted)}
+.status-matrix tr.sub-row td{font-size:.72rem}
 
 .status-cost-result{margin-top:20px}
 </style>
@@ -490,15 +498,37 @@ function render(from,to){
     return agg;
   }
 
+  // Sub-row definitions: GOSI and MOF with their count keys per group
+  const SUB_ROWS={
+    l:[{label:'GOSI',key:'gosi',cntKey:'gl',gosiKey:'gl',mofKey:'ml',n69Key:'ln69',n35Key:'ln35'},
+       {label:'MOF',key:'mof',cntKey:'ml',gosiKey:'gl',mofKey:'ml',n69Key:'ln69',n35Key:'ln35'}],
+    e:[{label:'GOSI',key:'gosi',cntKey:'ge',gosiKey:'ge',mofKey:'me',n69Key:'en69',n35Key:'en35'},
+       {label:'MOF',key:'mof',cntKey:'me',gosiKey:'ge',mofKey:'me',n69Key:'en69',n35Key:'en35'}]
+  };
+  // Map each service to what count key it should use for a sub-row
+  function subCntKey(sv,sub){
+    // GOSI/MOF service columns use the sub-row's own count
+    if(sv.id.startsWith('gosi')) return sub.gosiKey;
+    if(sv.id.startsWith('mof')) return sub.mofKey;
+    // Nafith uses the sub-row's n69/n35 proportionally — but sub-rows don't have separate nafith counts
+    // so we use the sub-row's main count for all other services
+    if(sv.id.startsWith('nafith_69')) return sub.n69Key;
+    if(sv.id.startsWith('nafith_35')) return sub.n35Key;
+    // All other services (SIMAH, Qarar, etc.) use the sub-row count
+    return sub.cntKey;
+  }
+
   function buildGroup(title,badge,svcs,countKey,groupClass,statuses){
+    const subs=SUB_ROWS[countKey]||[];
     let html=`<div class="section"><div class="section-head"><h2>${title}</h2><span class="badge ${groupClass}">${badge}</span></div>`;
     html+='<div class="status-matrix"><table><thead><tr><th>Status</th><th style="text-align:right">Count</th>';
     svcs.forEach(sv=>{html+=`<th class="rotate">${sv.name}</th>`;});
     html+='<th class="right" style="min-width:90px">Cost / App</th><th class="right" style="min-width:100px">Total Cost</th></tr></thead><tbody>';
     let groupTotal=0;
-    statusNames.forEach(s=>{
+    statusNames.forEach((s,si)=>{
       const st=statuses[s]; if(!st) return;
       const cfg=config[s]||{};
+      // Parent row cost
       let rowCost=0;
       svcs.forEach(sv=>{
         if(cfg[sv.id]==='Y') rowCost+=sv.cost*(st[sv.cntKey]||0);
@@ -506,13 +536,33 @@ function render(from,to){
       const count=st[countKey]||0;
       const costPerApp=count?rowCost/count:0;
       groupTotal+=rowCost;
-      html+=`<tr><td>${s}</td><td class="right mono">${fmtI(st[countKey])}</td>`;
+      const pid=groupClass+'-'+si;
+      html+=`<tr class="parent-row" data-pid="${pid}"><td>${s}</td><td class="right mono">${fmtI(count)}</td>`;
       svcs.forEach(sv=>{
         const val=cfg[sv.id]||'N';
         const cls=val==='Y'?'yes':'no';
         html+=`<td><select class="${cls}" data-status="${s}" data-svc="${sv.id}"><option value="Y"${val==='Y'?' selected':''}>Yes</option><option value="N"${val==='N'?' selected':''}>No</option></select></td>`;
       });
       html+=`<td class="right mono">${fmt(costPerApp)}</td><td class="right mono" style="font-weight:600">${fmt(rowCost)}</td></tr>`;
+      // Sub-rows for GOSI / MOF
+      subs.forEach(sub=>{
+        const subCount=st[sub.cntKey]||0;
+        const subCfgKey=s+'__'+sub.key;
+        if(!config[subCfgKey]){config[subCfgKey]={};svcs.forEach(sv=>{config[subCfgKey][sv.id]=cfg[sv.id]||'N';});}
+        const scfg=config[subCfgKey];
+        let subCost=0;
+        svcs.forEach(sv=>{
+          if(scfg[sv.id]==='Y') subCost+=sv.cost*(st[subCntKey(sv,sub)]||0);
+        });
+        const subCpa=subCount?subCost/subCount:0;
+        html+=`<tr class="sub-row" data-parent="${pid}"><td>↳ ${sub.label}</td><td class="right mono">${fmtI(subCount)}</td>`;
+        svcs.forEach(sv=>{
+          const val=scfg[sv.id]||'N';
+          const cls=val==='Y'?'yes':'no';
+          html+=`<td><select class="${cls}" data-status="${subCfgKey}" data-svc="${sv.id}"><option value="Y"${val==='Y'?' selected':''}>Yes</option><option value="N"${val==='N'?' selected':''}>No</option></select></td>`;
+        });
+        html+=`<td class="right mono">${fmt(subCpa)}</td><td class="right mono" style="font-weight:600">${fmt(subCost)}</td></tr>`;
+      });
     });
     html+=`<tr class="totrow"><td colspan="2">Subtotal</td><td colspan="${svcs.length+1}"></td><td class="right mono">${fmt(groupTotal)}</td></tr>`;
     html+='</tbody></table></div></div>';
@@ -535,9 +585,20 @@ function render(from,to){
       <div class="kpi k1"><div class="label">Total Estimated Cost</div><div class="val">SAR ${fmt(grand)}</div><div class="sub">${fmtI(totalApps)} applications</div></div>
     </div>`;
     document.getElementById('status-content').innerHTML=html;
+    // Expand/collapse parent rows
+    document.querySelectorAll('.status-matrix tr.parent-row').forEach(pr=>{
+      pr.addEventListener('click',e=>{
+        if(e.target.tagName==='SELECT'||e.target.tagName==='OPTION') return;
+        const pid=pr.dataset.pid;
+        pr.classList.toggle('open');
+        document.querySelectorAll(`.sub-row[data-parent="${pid}"]`).forEach(sr=>sr.classList.toggle('visible'));
+      });
+    });
+    // Yes/No selects for both parent and sub rows
     document.querySelectorAll('.status-matrix select').forEach(sel=>{
       sel.addEventListener('change',()=>{
         const s=sel.dataset.status, sv=sel.dataset.svc;
+        if(!config[s]) config[s]={};
         config[s][sv]=sel.value;
         sel.className=sel.value==='Y'?'yes':'no';
         saveConfig(config);
