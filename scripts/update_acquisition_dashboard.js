@@ -251,8 +251,10 @@ if (fs.existsSync(COST_HTML)) {
     }
   });
 
-  // Per-status counts for the Application Statuses tab
+  // Per-status counts for the Application Statuses tab (total + per-day)
   const statusMap = {};
+  const statusByDay = {};  // { date: { status: {l,e,gl,ge,ml,me,ln69,ln35,en69,en35} } }
+  const emptySD = () => ({ l:0, e:0, gl:0, ge:0, ml:0, me:0, ln69:0, ln35:0, en69:0, en35:0 });
   rows.forEach(r => {
     const cid = String(r.CivilID || '').trim();
     if (!cid) return;
@@ -263,14 +265,22 @@ if (fs.existsSync(COST_HTML)) {
     const isGosi = GOSI_SECTORS.has(emp);
     const isMof = MOF_SECTORS.has(emp);
     const amount = parseFloat(r.ItemValue) || 0;
+    const booked = BOOKED_SET.has(status);
+    const d = booked ? toYMD(r[CONFIG.bookCol]) : toYMD(r['submitted']);
     const s = statusMap[status] || (statusMap[status] = { n: 0, l: 0, e: 0, gl: 0, ge: 0, ml: 0, me: 0, n69: 0, n35: 0, ln69: 0, ln35: 0, en69: 0, en35: 0 });
     s.n++;
     if (isLocal) { s.l++; if (isGosi) s.gl++; if (isMof) s.ml++; if (amount >= 50000) { s.n69++; s.ln69++; } else { s.n35++; s.ln35++; } }
     else { s.e++; if (isGosi) s.ge++; if (isMof) s.me++; if (amount >= 50000) { s.n69++; s.en69++; } else { s.n35++; s.en35++; } }
+    if (d) {
+      const dayMap = statusByDay[d] || (statusByDay[d] = {});
+      const sd = dayMap[status] || (dayMap[status] = emptySD());
+      if (isLocal) { sd.l++; if (isGosi) sd.gl++; if (isMof) sd.ml++; if (amount >= 50000) sd.ln69++; else sd.ln35++; }
+      else { sd.e++; if (isGosi) sd.ge++; if (isMof) sd.me++; if (amount >= 50000) sd.en69++; else sd.en35++; }
+    }
   });
 
   const costDates = Object.keys(costDays).sort();
-  const costData = { days: costDays, dates: costDates, statuses: statusMap, meta: { min: costDates[0], max: costDates[costDates.length - 1], total: costTotal, fileName } };
+  const costData = { days: costDays, dates: costDates, statuses: statusMap, statusByDay, meta: { min: costDates[0], max: costDates[costDates.length - 1], total: costTotal, fileName } };
 
   const costLine = `const COST_DATA = ${JSON.stringify(costData)};`;
   let costHtml = fs.readFileSync(COST_HTML, 'utf-8');
