@@ -109,6 +109,7 @@ tr:hover td{background:var(--accent-soft)}
 .status-matrix tr.sub-row.visible{display:table-row}
 .status-matrix tr.sub-row td:first-child{padding-left:30px;font-weight:500;font-size:.72rem;color:var(--muted)}
 .status-matrix tr.sub-row td{font-size:.72rem}
+.status-matrix select:disabled{opacity:.6;cursor:not-allowed;pointer-events:none}
 
 .status-cost-result{margin-top:20px}
 </style>
@@ -462,7 +463,7 @@ function render(from,to){
     return d;
   }
 
-  const LS_KEY='tasheel_status_cost_v3';
+  const LS_KEY='tasheel_status_cost_v4';
   function loadConfig(){try{return JSON.parse(localStorage.getItem(LS_KEY))||{};}catch(e){return {};}}
   function saveConfig(c){try{localStorage.setItem(LS_KEY,JSON.stringify(c));}catch(e){}}
 
@@ -498,24 +499,41 @@ function render(from,to){
     return agg;
   }
 
-  // Sub-row definitions: GOSI and MOF with their count keys per group
+  // Sub-row definitions: GOSI and MOF are MUTUALLY EXCLUSIVE per application.
+  // An app calls exactly one based on employer type (Private/Pension→GOSI, Gov/Military→MOF).
+  // ownSvcPrefix = the employer service THIS sub-row represents (always Y)
+  // oppSvcPrefix = the opposite employer service (always N, locked)
   const SUB_ROWS={
-    l:[{label:'GOSI',key:'gosi',cntKey:'gl',gosiKey:'gl',mofKey:'ml',n69Key:'ln69',n35Key:'ln35'},
-       {label:'MOF',key:'mof',cntKey:'ml',gosiKey:'gl',mofKey:'ml',n69Key:'ln69',n35Key:'ln35'}],
-    e:[{label:'GOSI',key:'gosi',cntKey:'ge',gosiKey:'ge',mofKey:'me',n69Key:'en69',n35Key:'en35'},
-       {label:'MOF',key:'mof',cntKey:'me',gosiKey:'ge',mofKey:'me',n69Key:'en69',n35Key:'en35'}]
+    l:[{label:'GOSI',key:'gosi',cntKey:'gl',ownSvcPrefix:'gosi',oppSvcPrefix:'mof',n69Key:'ln69',n35Key:'ln35'},
+       {label:'MOF',key:'mof',cntKey:'ml',ownSvcPrefix:'mof',oppSvcPrefix:'gosi',n69Key:'ln69',n35Key:'ln35'}],
+    e:[{label:'GOSI',key:'gosi',cntKey:'ge',ownSvcPrefix:'gosi',oppSvcPrefix:'mof',n69Key:'en69',n35Key:'en35'},
+       {label:'MOF',key:'mof',cntKey:'me',ownSvcPrefix:'mof',oppSvcPrefix:'gosi',n69Key:'en69',n35Key:'en35'}]
   };
-  // Map each service to what count key it should use for a sub-row
-  function subCntKey(sv,sub){
-    // GOSI/MOF service columns use the sub-row's own count
-    if(sv.id.startsWith('gosi')) return sub.gosiKey;
-    if(sv.id.startsWith('mof')) return sub.mofKey;
-    // Nafith uses the sub-row's n69/n35 proportionally — but sub-rows don't have separate nafith counts
-    // so we use the sub-row's main count for all other services
-    if(sv.id.startsWith('nafith_69')) return sub.n69Key;
-    if(sv.id.startsWith('nafith_35')) return sub.n35Key;
-    // All other services (SIMAH, Qarar, etc.) use the sub-row count
-    return sub.cntKey;
+  // Is this service the sub-row's OWN employer service?
+  function isOwnSvc(sv,sub){ return sv.id.startsWith(sub.ownSvcPrefix); }
+  // Is this service the OPPOSITE employer service (must be locked N)?
+  function isOppSvc(sv,sub){ return sv.id.startsWith(sub.oppSvcPrefix); }
+  // Get the effective count for a service in a sub-row.
+  // Nafith counts (ln69/ln35/en69/en35) are totals not split by employer type,
+  // so we proportion them by the GOSI/MOF ratio.
+  function subSvcCount(sv,sub,st){
+    if(sv.id.startsWith('nafith_69')||sv.id.startsWith('nafith_35')){
+      const nKey=sv.id.startsWith('nafith_69')?sub.n69Key:sub.n35Key;
+      const total=st[nKey]||0;
+      if(!total) return 0;
+      // proportion: this sub-row's employer count / total employer count
+      const gosiK=sub.ownSvcPrefix==='gosi'?sub.cntKey: // find the other sub's cntKey
+        (sub.cntKey.startsWith('g')?sub.cntKey.replace('g','m'):sub.cntKey.replace('m','g')); // won't happen, use oppKey
+      // Simpler: get both employer counts from st
+      const isLocal=sub.cntKey.endsWith('l')||sub.cntKey==='gl'||sub.cntKey==='ml';
+      const gosiCnt=st[isLocal?'gl':'ge']||0, mofCnt=st[isLocal?'ml':'me']||0;
+      const denom=gosiCnt+mofCnt;
+      if(!denom) return 0;
+      const myShare=st[sub.cntKey]||0;
+      return total*myShare/denom;
+    }
+    // All other services use the sub-row's employer count
+    return st[sub.cntKey]||0;
   }
 
   function buildGroup(title,badge,svcs,countKey,groupClass,statuses){
@@ -544,22 +562,40 @@ function render(from,to){
         html+=`<td><select class="${cls}" data-status="${s}" data-svc="${sv.id}"><option value="Y"${val==='Y'?' selected':''}>Yes</option><option value="N"${val==='N'?' selected':''}>No</option></select></td>`;
       });
       html+=`<td class="right mono">${fmt(costPerApp)}</td><td class="right mono" style="font-weight:600">${fmt(rowCost)}</td></tr>`;
-      // Sub-rows for GOSI / MOF
+      // Sub-rows for GOSI / MOF (mutually exclusive)
       subs.forEach(sub=>{
         const subCount=st[sub.cntKey]||0;
         const subCfgKey=s+'__'+sub.key;
-        if(!config[subCfgKey]){config[subCfgKey]={};svcs.forEach(sv=>{config[subCfgKey][sv.id]=cfg[sv.id]||'N';});}
+        if(!config[subCfgKey]){
+          config[subCfgKey]={};
+          svcs.forEach(sv=>{
+            if(isOwnSvc(sv,sub)) config[subCfgKey][sv.id]=cfg[sv.id]||'N'; // inherit parent's own svc (locked)
+            else if(isOppSvc(sv,sub)) config[subCfgKey][sv.id]='N';         // opposite always N (locked)
+            else config[subCfgKey][sv.id]=cfg[sv.id]||'N';                  // inherit parent for rest
+          });
+        }
+        // Always sync locked values from parent (enforce mutual exclusivity)
+        svcs.forEach(sv=>{
+          if(isOwnSvc(sv,sub)) config[subCfgKey][sv.id]=cfg[sv.id]||'N';
+          else if(isOppSvc(sv,sub)) config[subCfgKey][sv.id]='N';
+        });
         const scfg=config[subCfgKey];
         let subCost=0;
         svcs.forEach(sv=>{
-          if(scfg[sv.id]==='Y') subCost+=sv.cost*(st[subCntKey(sv,sub)]||0);
+          if(scfg[sv.id]==='Y') subCost+=sv.cost*subSvcCount(sv,sub,st);
         });
         const subCpa=subCount?subCost/subCount:0;
         html+=`<tr class="sub-row" data-parent="${pid}"><td>↳ ${sub.label}</td><td class="right mono">${fmtI(subCount)}</td>`;
         svcs.forEach(sv=>{
           const val=scfg[sv.id]||'N';
           const cls=val==='Y'?'yes':'no';
-          html+=`<td><select class="${cls}" data-status="${subCfgKey}" data-svc="${sv.id}"><option value="Y"${val==='Y'?' selected':''}>Yes</option><option value="N"${val==='N'?' selected':''}>No</option></select></td>`;
+          const locked=isOwnSvc(sv,sub)||isOppSvc(sv,sub);
+          if(locked){
+            // Locked: show value but disable interaction
+            html+=`<td><select class="${cls}" disabled data-status="${subCfgKey}" data-svc="${sv.id}"><option value="${val}">${val==='Y'?'Yes':'No'}</option></select></td>`;
+          } else {
+            html+=`<td><select class="${cls}" data-status="${subCfgKey}" data-svc="${sv.id}"><option value="Y"${val==='Y'?' selected':''}>Yes</option><option value="N"${val==='N'?' selected':''}>No</option></select></td>`;
+          }
         });
         html+=`<td class="right mono">${fmt(subCpa)}</td><td class="right mono" style="font-weight:600">${fmt(subCost)}</td></tr>`;
       });

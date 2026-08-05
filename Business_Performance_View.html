@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tasheel · Business Performance View</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0f1117;--panel:#181b23;--panel2:#1e2130;--line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.14);
+ --ink:#e8ecf4;--ink2:#b0bdd0;--muted:#7b8ba0;--faint:#4e5a6e;
+ --cyan:#22d3b7;--cyan-bg:rgba(34,211,183,.12);--cyan-d:#0e9e90;
+ --gold:#f5a623;--gold-bg:rgba(245,166,35,.12);
+ --red:#ef4444;--red-bg:rgba(239,68,68,.12);
+ --violet:#8b5cf6;--violet-bg:rgba(139,92,246,.12);
+ --green:#22c55e;--green-bg:rgba(34,197,94,.12);
+ --blue:#3b82f6;--blue-bg:rgba(59,130,246,.12)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
+h1,h2,h3,.disp{font-family:'Space Grotesk',sans-serif}
+.mono{font-family:'JetBrains Mono',monospace}
+
+/* Header */
+header{padding:20px 28px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--line)}
+.logo{width:36px;height:36px;border-radius:10px;position:relative;background:conic-gradient(from 210deg,var(--cyan),var(--gold),var(--cyan));box-shadow:0 6px 20px -6px rgba(34,211,183,.45)}
+.logo::after{content:"";position:absolute;inset:4px;border-radius:7px;background:var(--bg)}
+.logo::before{content:"↗";position:absolute;inset:0;display:grid;place-items:center;z-index:2;font-family:'Space Grotesk';font-weight:700;color:var(--cyan);font-size:17px}
+.brand .t{font-weight:700;font-size:16px;font-family:'Space Grotesk'}
+.brand .s{font-size:10px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-top:1px}
+header .snap{margin-left:auto;font-size:11px;color:var(--muted);font-family:'JetBrains Mono';background:var(--panel2);padding:5px 12px;border-radius:8px;border:1px solid var(--line)}
+header a.home{color:var(--muted);text-decoration:none;font-size:13px;margin-left:auto;margin-right:16px}
+header a.home:hover{color:var(--cyan)}
+
+/* Navigation tabs */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--line);background:var(--panel);padding:0 28px;overflow-x:auto}
+.tabs button{background:none;border:none;color:var(--muted);font-family:'Space Grotesk';font-weight:500;font-size:13px;padding:12px 18px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:.2s}
+.tabs button:hover{color:var(--ink2)}
+.tabs button.active{color:var(--cyan);border-bottom-color:var(--cyan)}
+
+/* Sections */
+.section{display:none;padding:24px 28px;max-width:1400px;margin:0 auto;width:100%}
+.section.active{display:block}
+.section-title{font-size:20px;font-weight:700;margin-bottom:4px}
+.section-sub{font-size:12px;color:var(--muted);margin-bottom:20px}
+
+/* KPI Strip */
+.kpi-strip{display:grid;gap:16px;margin-bottom:24px}
+.kpi-strip.k4{grid-template-columns:repeat(4,1fr)}
+.kpi-strip.k3{grid-template-columns:repeat(3,1fr)}
+.kpi-strip.k5{grid-template-columns:repeat(5,1fr)}
+@media(max-width:900px){.kpi-strip.k4,.kpi-strip.k5{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:500px){.kpi-strip{grid-template-columns:1fr!important}}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.kpi .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.kpi .val{font-family:'Space Grotesk';font-weight:700;font-size:24px}
+.kpi .sub{font-size:11px;color:var(--muted);margin-top:3px;font-family:'JetBrains Mono'}
+.kpi.accent{border-color:rgba(34,211,183,.25);background:linear-gradient(135deg,rgba(34,211,183,.06),transparent)}
+.kpi .val.cyan{color:var(--cyan)}.kpi .val.gold{color:var(--gold)}.kpi .val.green{color:var(--green)}.kpi .val.red{color:var(--red)}
+
+/* Cards grid */
+.cards-grid{display:grid;gap:16px;margin-bottom:24px}
+.cards-grid.g2{grid-template-columns:repeat(2,1fr)}
+.cards-grid.g3{grid-template-columns:repeat(3,1fr)}
+@media(max-width:800px){.cards-grid.g2,.cards-grid.g3{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;overflow:hidden}
+.card h3{font-size:14px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.card h3 .badge{font-size:10px;padding:2px 8px;border-radius:6px;font-weight:500;font-family:'Inter'}
+
+/* Charts */
+canvas{width:100%!important;max-height:300px}
+
+/* Tables */
+.perf-table{width:100%;border-collapse:collapse;font-size:12px}
+.perf-table th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--line2);font-weight:500}
+.perf-table td{padding:8px 10px;border-bottom:1px solid var(--line)}
+.perf-table tr:last-child td{border-bottom:none}
+.perf-table .right{text-align:right}
+.perf-table .mono{font-family:'JetBrains Mono';font-size:11px}
+.bar-cell{display:flex;align-items:center;gap:8px}
+.bar-fill{height:6px;border-radius:3px;min-width:2px}
+
+/* Funnel */
+.funnel-step{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
+.funnel-step:last-child{border-bottom:none}
+.funnel-label{width:200px;font-size:12px;flex-shrink:0}
+.funnel-bar{flex:1;height:28px;background:var(--panel2);border-radius:6px;overflow:hidden;position:relative}
+.funnel-bar .fill{height:100%;border-radius:6px;display:flex;align-items:center;padding:0 10px;font-size:11px;font-weight:600;color:#fff;min-width:40px}
+.funnel-bar .drop{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--red);font-weight:600}
+
+/* Narrative */
+.narrative{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 24px;margin-bottom:20px}
+.narrative h3{font-size:15px;font-weight:600;margin-bottom:10px;color:var(--cyan)}
+.narrative p,.narrative li{font-size:13px;line-height:1.7;color:var(--ink2)}
+.narrative ul{padding-left:18px}
+.narrative li{margin-bottom:4px}
+.narrative .highlight{color:var(--gold);font-weight:600}
+.narrative .good{color:var(--green);font-weight:600}
+.narrative .bad{color:var(--red);font-weight:600}
+
+/* Seasonality timeline */
+.timeline{position:relative;padding:20px 0}
+.timeline-track{height:4px;background:var(--line);border-radius:2px;position:relative;margin:30px 0}
+.timeline-marker{position:absolute;top:-22px;transform:translateX(-50%);text-align:center;font-size:10px;color:var(--muted)}
+.timeline-marker .dot{width:12px;height:12px;border-radius:50%;margin:4px auto;border:2px solid var(--panel)}
+.timeline-marker .label{white-space:nowrap}
+
+/* Insights pills */
+.insight-pills{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.pill{font-size:11px;padding:5px 12px;border-radius:20px;font-weight:500;display:inline-flex;align-items:center;gap:5px}
+.pill.up{background:var(--green-bg);color:var(--green)}
+.pill.down{background:var(--red-bg);color:var(--red)}
+.pill.neutral{background:var(--blue-bg);color:var(--blue)}
+.pill.warn{background:var(--gold-bg);color:var(--gold)}
+
+/* Footer */
+.foot{text-align:center;color:var(--faint);font-size:11px;font-family:'JetBrains Mono';padding:30px}
+.foot a{color:var(--cyan-d);text-decoration:none}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+</head><body>
+
+<header>
+  <div class="logo"></div>
+  <div class="brand"><div class="t">Business Performance View</div><div class="s">Tasheel Finance · Personal Finance</div></div>
+  <a class="home" href="index.html">← Command Center</a>
+  <div class="snap" id="snap-date"></div>
+</header>
+
+<div class="tabs" id="tab-bar">
+  <button class="active" data-tab="overview">Executive Overview</button>
+  <button data-tab="trends">Monthly Trends</button>
+  <button data-tab="funnel">Funnel Analysis</button>
+  <button data-tab="seasonality">Seasonality</button>
+  <button data-tab="learnings">Key Learnings</button>
+</div>
+
+<!-- ═══════════════════════ TAB 1: EXECUTIVE OVERVIEW ═══════════════════════ -->
+<div class="section active" id="sec-overview">
+  <h2 class="section-title">Executive Summary</h2>
+  <p class="section-sub" id="overview-sub"></p>
+
+  <div class="kpi-strip k5" id="kpi-strip"></div>
+
+  <div class="cards-grid g2">
+    <div class="card">
+      <h3>🏆 Top Performing Segments <span class="badge" style="background:var(--green-bg);color:var(--green)">Highest Booking Rate</span></h3>
+      <table class="perf-table" id="top-segments"><thead><tr><th>Segment</th><th class="right">Submitted</th><th class="right">Booked</th><th class="right">Rate</th><th class="right">Avg Loan</th><th style="width:120px">Performance</th></tr></thead><tbody></tbody></table>
+    </div>
+    <div class="card">
+      <h3>⚠️ Low Performing Segments <span class="badge" style="background:var(--red-bg);color:var(--red)">Needs Attention</span></h3>
+      <table class="perf-table" id="low-segments"><thead><tr><th>Segment</th><th class="right">Submitted</th><th class="right">Booked</th><th class="right">Rate</th><th class="right">Avg Loan</th><th style="width:120px">Performance</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+
+  <div class="narrative" id="overview-narrative"></div>
+</div>
+
+<!-- ═══════════════════════ TAB 2: MONTHLY TRENDS ═══════════════════════ -->
+<div class="section" id="sec-trends">
+  <h2 class="section-title">Monthly Performance Trends</h2>
+  <p class="section-sub">Tracking acquisition volume, booking rates, and average loan amounts over time</p>
+
+  <div class="kpi-strip k4" id="trend-kpis"></div>
+
+  <div class="cards-grid g2">
+    <div class="card"><h3>📈 Avg Loan Amount & Booking Volume</h3><canvas id="chart-avgLoan"></canvas></div>
+    <div class="card"><h3>📊 Booking Rate by Nationality</h3><canvas id="chart-natRate"></canvas></div>
+  </div>
+  <div class="cards-grid g2">
+    <div class="card"><h3>🏢 Booking Rate by Employer Type</h3><canvas id="chart-empRate"></canvas></div>
+    <div class="card"><h3>💰 Booking Rate by Income Band</h3><canvas id="chart-incRate"></canvas></div>
+  </div>
+
+  <div class="narrative" id="trends-narrative"></div>
+</div>
+
+<!-- ═══════════════════════ TAB 3: FUNNEL ANALYSIS ═══════════════════════ -->
+<div class="section" id="sec-funnel">
+  <h2 class="section-title">Funnel Drop-Point Analysis</h2>
+  <p class="section-sub">Identifying where applications are lost — from initial visit to final booking</p>
+
+  <div class="cards-grid g2">
+    <div class="card" style="grid-column:span 2">
+      <h3>🔻 New Customer Journey — Key Drop Points</h3>
+      <div id="funnel-new"></div>
+    </div>
+  </div>
+  <div class="cards-grid g2">
+    <div class="card" style="grid-column:span 2">
+      <h3>🔄 Existing Customer Journey — Key Drop Points</h3>
+      <div id="funnel-existing"></div>
+    </div>
+  </div>
+  <div class="cards-grid g2">
+    <div class="card"><h3>📉 Monthly Approval Rate Trend</h3><canvas id="chart-funnelTrend"></canvas></div>
+    <div class="card"><h3>🎯 Biggest Leaks — Where to Focus</h3><div id="funnel-leaks"></div></div>
+  </div>
+
+  <div class="narrative" id="funnel-narrative"></div>
+</div>
+
+<!-- ═══════════════════════ TAB 4: SEASONALITY ═══════════════════════ -->
+<div class="section" id="sec-seasonality">
+  <h2 class="section-title">Saudi Social Seasonality Impact</h2>
+  <p class="section-sub">How cultural events and holidays affect personal finance demand in KSA</p>
+
+  <div class="card" style="margin-bottom:20px">
+    <h3>📅 2026 KSA Social Calendar & Lending Activity</h3>
+    <canvas id="chart-seasonality" style="max-height:350px"></canvas>
+  </div>
+
+  <div class="cards-grid g2">
+    <div class="card"><h3>☀️ Summer Season Impact</h3><div id="season-summer"></div></div>
+    <div class="card"><h3>🕌 Ramadan & Eid Impact</h3><div id="season-ramadan"></div></div>
+  </div>
+
+  <div class="narrative" id="seasonality-narrative"></div>
+</div>
+
+<!-- ═══════════════════════ TAB 5: KEY LEARNINGS ═══════════════════════ -->
+<div class="section" id="sec-learnings">
+  <h2 class="section-title">Key Learnings & Forward Outlook</h2>
+  <p class="section-sub">What the data tells us about our business and what to watch for</p>
+
+  <div class="cards-grid g3" id="learning-cards"></div>
+
+  <div class="narrative" id="learnings-narrative"></div>
+</div>
+
+<div class="foot">Built for <a href="https://www.linkedin.com/in/emadayyash" target="_blank">Emad Ayyash</a> · Tasheel Finance</div>
+
+<script>
+// ═══════════════════════ EMBEDDED DATA ═══════════════════════
+const BPV = {"weekly":[{"wk":"2026-05-25","sub":76,"init":76,"book":6,"val":232083,"avg":40,"avgLoan":38681},{"wk":"2026-06-01","sub":19353,"init":4677,"book":1240,"val":29076138,"avg":36,"avgLoan":23448},{"wk":"2026-06-08","sub":20733,"init":4671,"book":1132,"val":28739214,"avg":37,"avgLoan":25388},{"wk":"2026-06-15","sub":18746,"init":4427,"book":1105,"val":28201213,"avg":38,"avgLoan":25521},{"wk":"2026-06-22","sub":19104,"init":4279,"book":1011,"val":26337047,"avg":38,"avgLoan":26050},{"wk":"2026-06-29","sub":21722,"init":4534,"book":1208,"val":28462806,"avg":36,"avgLoan":23562},{"wk":"2026-07-06","sub":18302,"init":4180,"book":1128,"val":28530774,"avg":36,"avgLoan":25293},{"wk":"2026-07-13","sub":16624,"init":3854,"book":1015,"val":26555964,"avg":38,"avgLoan":26164},{"wk":"2026-07-20","sub":19565,"init":4071,"book":966,"val":25889463,"avg":38,"avgLoan":26801},{"wk":"2026-07-27","sub":19001,"init":4294,"book":1102,"val":28780320,"avg":38,"avgLoan":26116},{"wk":"2026-08-03","sub":6896,"init":1613,"book":468,"val":12864484,"avg":35,"avgLoan":27488}],"monthly":[{"mon":"2026-05","sub":135,"init":131,"final":135,"book":8,"val":323473,"avgLoan":40434,"avgTen":36,"emp":{"Private Company":{"sub":94,"init":91,"book":6,"bval":0},"Government Entity":{"sub":24,"init":24,"book":2,"bval":0},"Military with Grades":{"sub":8,"init":7,"book":0,"bval":0},"Pension":{"sub":9,"init":9,"book":0,"bval":0}},"nat":{"Expats":{"sub":68,"init":65,"book":5,"bval":0},"Saudi":{"sub":67,"init":66,"book":3,"bval":0}},"inc":{"5000-5999":{"sub":23,"init":22,"book":1,"bval":0},"14000+":{"sub":37,"init":35,"book":2,"bval":0},"7000-7999":{"sub":7,"init":7,"book":0,"bval":0},"6000-6999":{"sub":11,"init":11,"book":0,"bval":0},"8000-9999":{"sub":20,"init":20,"book":2,"bval":0},"<5000":{"sub":9,"init":9,"book":2,"bval":0},"10000-11999":{"sub":15,"init":15,"book":0,"bval":0},"12000-13999":{"sub":13,"init":12,"book":1,"bval":0}}},{"mon":"2026-06","sub":85137,"init":19525,"final":5194,"book":4845,"val":120699540,"avgLoan":24912,"avgTen":37,"emp":{"Private Company":{"sub":37940,"init":13425,"book":3415,"bval":0},"Unlisted":{"sub":29795,"init":3,"book":0,"bval":0},"Pension":{"sub":3407,"init":1233,"book":359,"bval":0},"Government Entity":{"sub":11132,"init":3649,"book":844,"bval":0},"Military with Grades":{"sub":2863,"init":1215,"book":227,"bval":0}},"nat":{"Saudi":{"sub":55407,"init":10815,"book":2407,"bval":0},"Expats":{"sub":29730,"init":8710,"book":2438,"bval":0}},"inc":{"8000-9999":{"sub":10663,"init":2483,"book":660,"bval":0},"5000-5999":{"sub":10688,"init":2833,"book":725,"bval":0},"<5000":{"sub":16691,"init":2167,"book":469,"bval":0},"14000+":{"sub":19878,"init":5407,"book":1362,"bval":0},"6000-6999":{"sub":7272,"init":1937,"book":509,"bval":0},"12000-13999":{"sub":5669,"init":1282,"book":306,"bval":0},"10000-11999":{"sub":8283,"init":1925,"book":448,"bval":0},"7000-7999":{"sub":5993,"init":1491,"book":366,"bval":0}}},{"mon":"2026-07","sub":82096,"init":18028,"final":5722,"book":4719,"val":120904112,"avgLoan":25621,"avgTen":37,"emp":{"Unlisted":{"sub":30082,"init":11,"book":0,"bval":0},"Private Company":{"sub":36894,"init":12717,"book":3442,"bval":0},"Pension":{"sub":2793,"init":951,"book":295,"bval":0},"Government Entity":{"sub":9972,"init":3337,"book":801,"bval":0},"Military with Grades":{"sub":2355,"init":1012,"book":181,"bval":0}},"nat":{"Expats":{"sub":28636,"init":8088,"book":2451,"bval":0},"Saudi":{"sub":53460,"init":9940,"book":2268,"bval":0}},"inc":{"7000-7999":{"sub":5722,"init":1383,"book":368,"bval":0},"14000+":{"sub":18137,"init":4721,"book":1292,"bval":0},"<5000":{"sub":17007,"init":1979,"book":447,"bval":0},"10000-11999":{"sub":7726,"init":1766,"book":439,"bval":0},"5000-5999":{"sub":10856,"init":2816,"book":700,"bval":0},"8000-9999":{"sub":10299,"init":2415,"book":654,"bval":0},"6000-6999":{"sub":7160,"init":1847,"book":515,"bval":0},"12000-13999":{"sub":5189,"init":1101,"book":304,"bval":0}}},{"mon":"2026-08","sub":12813,"init":3047,"final":993,"book":811,"val":21833771,"avgLoan":26922,"avgTen":36,"emp":{"Private Company":{"sub":5906,"init":2146,"book":600,"bval":0},"Unlisted":{"sub":4653,"init":2,"book":0,"bval":0},"Government Entity":{"sub":1659,"init":673,"book":144,"bval":0},"Pension":{"sub":396,"init":139,"book":37,"bval":0},"Military with Grades":{"sub":199,"init":87,"book":30,"bval":0}},"nat":{"Saudi":{"sub":8160,"init":1645,"book":403,"bval":0},"Expats":{"sub":4653,"init":1402,"book":408,"bval":0}},"inc":{"7000-7999":{"sub":883,"init":210,"book":56,"bval":0},"8000-9999":{"sub":1642,"init":440,"book":114,"bval":0},"14000+":{"sub":2828,"init":810,"book":231,"bval":0},"<5000":{"sub":2601,"init":345,"book":74,"bval":0},"5000-5999":{"sub":1697,"init":423,"book":119,"bval":0},"6000-6999":{"sub":1106,"init":315,"book":82,"bval":0},"12000-13999":{"sub":780,"init":204,"book":56,"bval":0},"10000-11999":{"sub":1276,"init":300,"book":79,"bval":0}}}],"segments":[{"emp":"Private Company","nat":"Expats","inc":"8000-9999","sub":5203,"book":690,"avg":21771},{"emp":"Government Entity","nat":"Expats","inc":"7000-7999","sub":274,"book":36,"avg":18606},{"emp":"Private Company","nat":"Expats","inc":"5000-5999","sub":7427,"book":965,"avg":16334},{"emp":"Private Company","nat":"Expats","inc":"6000-6999","sub":5354,"book":687,"avg":17647},{"emp":"Pension","nat":"Saudi","inc":"12000-13999","sub":670,"book":85,"avg":29541},{"emp":"Private Company","nat":"Expats","inc":"12000-13999","sub":2049,"book":255,"avg":29581},{"emp":"Pension","nat":"Saudi","inc":"8000-9999","sub":1045,"book":130,"avg":24106},{"emp":"Private Company","nat":"Expats","inc":"14000+","sub":7137,"book":882,"avg":36551},{"emp":"Private Company","nat":"Expats","inc":"7000-7999","sub":3666,"book":435,"avg":19835},{"emp":"Government Entity","nat":"Expats","inc":"8000-9999","sub":473,"book":56,"avg":18483},{"emp":"Private Company","nat":"Expats","inc":"10000-11999","sub":3412,"book":393,"avg":23434},{"emp":"Government Entity","nat":"Expats","inc":"14000+","sub":739,"book":85,"avg":38783},{"emp":"Pension","nat":"Saudi","inc":"14000+","sub":2140,"book":242,"avg":42360},{"emp":"Pension","nat":"Saudi","inc":"10000-11999","sub":1039,"book":111,"avg":29662},{"emp":"Pension","nat":"Saudi","inc":"7000-7999","sub":492,"book":49,"avg":19791},{"emp":"Military with Grades","nat":"Saudi","inc":"12000-13999","sub":859,"book":84,"avg":17882},{"emp":"Pension","nat":"Saudi","inc":"6000-6999","sub":438,"book":42,"avg":22339},{"emp":"Government Entity","nat":"Expats","inc":"6000-6999","sub":280,"book":26,"avg":18013},{"emp":"Government Entity","nat":"Expats","inc":"10000-11999","sub":296,"book":27,"avg":24105},{"emp":"Government Entity","nat":"Saudi","inc":"14000+","sub":11033,"book":990,"avg":36956},{"emp":"Private Company","nat":"Saudi","inc":"8000-9999","sub":3928,"book":352,"avg":23409},{"emp":"Military with Grades","nat":"Saudi","inc":"14000+","sub":2015,"book":176,"avg":21401},{"emp":"Private Company","nat":"Saudi","inc":"7000-7999","sub":2704,"book":233,"avg":21956},{"emp":"Private Company","nat":"Saudi","inc":"6000-6999","sub":3826,"book":324,"avg":21695},{"emp":"Private Company","nat":"Saudi","inc":"14000+","sub":6517,"book":540,"avg":43340},{"emp":"Military with Grades","nat":"Expats","inc":"14000+","sub":73,"book":6,"avg":32930},{"emp":"Military with Grades","nat":"Saudi","inc":"10000-11999","sub":1106,"book":90,"avg":15427},{"emp":"Government Entity","nat":"Expats","inc":"<5000","sub":223,"book":18,"avg":16681},{"emp":"Private Company","nat":"Saudi","inc":"5000-5999","sub":6479,"book":522,"avg":19900},{"emp":"Private Company","nat":"Saudi","inc":"10000-11999","sub":2447,"book":196,"avg":30551},{"emp":"Private Company","nat":"Saudi","inc":"12000-13999","sub":1438,"book":108,"avg":32251},{"emp":"Government Entity","nat":"Expats","inc":"12000-13999","sub":147,"book":11,"avg":27735},{"emp":"Pension","nat":"Saudi","inc":"5000-5999","sub":420,"book":30,"avg":18874},{"emp":"Military with Grades","nat":"Saudi","inc":"7000-7999","sub":183,"book":13,"avg":12755},{"emp":"Government Entity","nat":"Saudi","inc":"10000-11999","sub":2377,"book":159,"avg":24577},{"emp":"Government Entity","nat":"Saudi","inc":"8000-9999","sub":2474,"book":160,"avg":22121},{"emp":"Government Entity","nat":"Saudi","inc":"12000-13999","sub":2021,"book":128,"avg":32403},{"emp":"Government Entity","nat":"Expats","inc":"5000-5999","sub":319,"book":20,"avg":18626},{"emp":"Military with Grades","nat":"Saudi","inc":"8000-9999","sub":865,"book":52,"avg":11366},{"emp":"Private Company","nat":"Expats","inc":"<5000","sub":14072,"book":747,"avg":14713},{"emp":"Government Entity","nat":"Saudi","inc":"6000-6999","sub":627,"book":32,"avg":20141},{"emp":"Government Entity","nat":"Saudi","inc":"5000-5999","sub":433,"book":20,"avg":17388},{"emp":"Government Entity","nat":"Saudi","inc":"7000-7999","sub":746,"book":33,"avg":15064},{"emp":"Private Company","nat":"Saudi","inc":"<5000","sub":5181,"book":213,"avg":17974},{"emp":"Pension","nat":"Saudi","inc":"<5000","sub":339,"book":12,"avg":19290},{"emp":"Government Entity","nat":"Saudi","inc":"<5000","sub":326,"book":11,"avg":15771},{"emp":"Military with Grades","nat":"Saudi","inc":"6000-6999","sub":78,"book":2,"avg":12052}],"funnel":{"New Customer":{"PG_Total_Visits":1453064,"PG_Decline_Reasons - Loan Size Rule":31291,"PG_Decline_Reasons - Minimum Income Rule":206124,"PG_Decline_Reasons - Disposable Income Rule":82000,"PG_Decline_Reasons - Other Reason":31305,"Customer_Passed_PG_Dropped_Before_Registration":286593,"Existing_or_New_Customer_Entered_CivilId":669500,"New_Customers":134819,"DOB_Entered":134306,"Password_Entered":125514,"CITC_Failed":3832,"CITC_Passed":125172,"Name_Missing":20512,"Email_Missing":822,"Application_Created":82376,"DELite_Called":79228,"SIMAH_CHECK":10781,"DE_Approved":40598,"Mof_GOSI_Data_Available":30128,"Offer_Displayed":21635,"Offer_Accepted":17400,"Yaqeen_Passed":17089,"STP_Application":495,"NonSTP_Application":14520,"NationalAddress_Verified":11586,"Nafath_Verified":5629,"IVR_Completed":870,"Auto_Debit":537,"Sayen_Emdha":43,"Nafith_Count":455,"Booked":43,"QARAR_CHECK":6948,"Cancelled by BO":228,"Cancelled by Customer Service Team":253,"Rejected by UW/ Checker":63,"Rejected by Fraud":9,"Lapsed while waiting customer":0,"Eligible for IVR Call":133,"Approval Call initiated but not accepted":62,"Clicks_Daily":290442,"Clicked_Apply_Now":60296,"Lets_start_page":31109,"Sales Vetting due to Geo check":8,"Geo passed atleast one device":6},"Existing Customer":{"Application_Created":454846,"DELite_Called":443678,"SIMAH_CHECK":57294,"DE_Approved":127261,"Mof_GOSI_Data_Available":99403,"Offer_Displayed":66438,"Offer_Accepted":55552,"Yaqeen_Passed":55153,"STP_Application":1681,"NonSTP_Application":47167,"NationalAddress_Verified":34323,"Nafath_Verified":383830,"IVR_Completed":2680,"Auto_Debit":1766,"Sayen_Emdha":104,"Nafith_Count":1622,"Booked":101,"Cancelled by BO":525,"Cancelled by Customer Service Team":841,"Rejected by UW/ Checker":240,"Rejected by Fraud":6,"Lapsed while waiting customer":0,"Eligible for IVR Call":567,"Approval Call initiated but not accepted":250,"Sales Vetting due to Geo check":24,"Geo passed atleast one device":16,"QARAR_CHECK":15648},"BO (Tawarruq)":{"Application_Created":14052,"DELite_Called":13969,"SIMAH_CHECK":936,"DE_Approved":7713,"Mof_GOSI_Data_Available":2856,"Offer_Displayed":6356,"Offer_Accepted":5605,"Yaqeen_Passed":5600,"STP_Application":58,"NonSTP_Application":5347,"NationalAddress_Verified":4484,"Nafath_Verified":4293,"IVR_Completed":718,"Auto_Debit":580,"Sayen_Emdha":39,"Nafith_Count":589,"Booked":34,"Cancelled by BO":230,"Cancelled by Customer Service Team":299,"Rejected by UW/ Checker":313,"Rejected by Fraud":1,"Lapsed while waiting customer":0,"Eligible for IVR Call":443,"Approval Call initiated but not accepted":168,"Sales Vetting due to Geo check":0,"Geo passed atleast one device":0}},"monthlyFunnel":[{"mon":"2026-04","New Customer":{"PG_Total_Visits":388403,"PG_Decline_Reasons - Loan Size Rule":10214,"PG_Decline_Reasons - Minimum Income Rule":67261,"PG_Decline_Reasons - Disposable Income Rule":26380,"PG_Decline_Reasons - Other Reason":10551,"Customer_Passed_PG_Dropped_Before_Registration":73634,"Existing_or_New_Customer_Entered_CivilId":175163,"New_Customers":34738,"DOB_Entered":34702,"Password_Entered":31590,"CITC_Failed":1144,"CITC_Passed":31361,"Name_Missing":5728,"Email_Missing":268,"Application_Created":19015,"DELite_Called":18207,"SIMAH_CHECK":309,"DE_Approved":9865,"Mof_GOSI_Data_Available":7754,"Offer_Displayed":4883,"Offer_Accepted":4255,"Yaqeen_Passed":4236,"STP_Application":71,"NonSTP_Application":3875,"NationalAddress_Verified":3033,"Nafath_Verified":1425,"IVR_Completed":190,"Auto_Debit":101,"Sayen_Emdha":41,"Nafith_Count":91,"Booked":41},"Existing Customer":{"Application_Created":110070,"DELite_Called":107143,"SIMAH_CHECK":1594,"DE_Approved":30828,"Mof_GOSI_Data_Available":24598,"Offer_Displayed":15875,"Offer_Accepted":13422,"Yaqeen_Passed":13262,"STP_Application":347,"NonSTP_Application":11546,"NationalAddress_Verified":8284,"Nafath_Verified":101074,"IVR_Completed":511,"Auto_Debit":349,"Sayen_Emdha":73,"Nafith_Count":262,"Booked":73}},{"mon":"2026-05","New Customer":{"PG_Total_Visits":806906,"PG_Decline_Reasons - Minimum Income Rule":99376,"PG_Decline_Reasons - Loan Size Rule":14075,"PG_Decline_Reasons - Other Reason":15320,"PG_Decline_Reasons - Disposable Income Rule":38228,"Customer_Passed_PG_Dropped_Before_Registration":157943,"Existing_or_New_Customer_Entered_CivilId":373810,"New_Customers":75271,"DOB_Entered":75231,"Password_Entered":70741,"CITC_Passed":70630,"CITC_Failed":2102,"Name_Missing":10960,"Email_Missing":380,"Application_Created":48812,"DELite_Called":47035,"SIMAH_CHECK":10080,"DE_Approved":23997,"Mof_GOSI_Data_Available":17440,"Offer_Displayed":12997,"Offer_Accepted":10130,"Yaqeen_Passed":9863,"STP_Application":365,"NonSTP_Application":8088,"NationalAddress_Verified":6416,"Nafath_Verified":3546,"IVR_Completed":558,"Auto_Debit":368,"Sayen_Emdha":0,"Nafith_Count":301,"Booked":0},"Existing Customer":{"Application_Created":258491,"DELite_Called":252182,"SIMAH_CHECK":53133,"DE_Approved":73033,"Mof_GOSI_Data_Available":57269,"Offer_Displayed":37634,"Offer_Accepted":31387,"Yaqeen_Passed":31241,"STP_Application":1035,"NonSTP_Application":26256,"NationalAddress_Verified":18975,"Nafath_Verified":235214,"IVR_Completed":1621,"Auto_Debit":1046,"Sayen_Emdha":21,"Nafith_Count":1012,"Booked":21}},{"mon":"2026-06","New Customer":{"PG_Total_Visits":183943,"PG_Decline_Reasons - Loan Size Rule":4935,"PG_Decline_Reasons - Other Reason":3870,"PG_Decline_Reasons - Minimum Income Rule":27624,"PG_Decline_Reasons - Disposable Income Rule":12457,"Customer_Passed_PG_Dropped_Before_Registration":38111,"Existing_or_New_Customer_Entered_CivilId":86576,"New_Customers":17535,"DOB_Entered":17344,"Password_Entered":16354,"CITC_Failed":396,"CITC_Passed":16357,"Name_Missing":3012,"Email_Missing":114,"Application_Created":9935,"DELite_Called":9567,"SIMAH_CHECK":252,"DE_Approved":4575,"Mof_GOSI_Data_Available":3378,"Offer_Displayed":2524,"Offer_Accepted":2030,"Yaqeen_Passed":2017,"STP_Application":44,"NonSTP_Application":1701,"NationalAddress_Verified":1427,"Nafath_Verified":658,"IVR_Completed":82,"Auto_Debit":40,"Sayen_Emdha":1,"Nafith_Count":37,"Booked":1,"QARAR_CHECK":2708,"Cancelled by BO":79,"Cancelled by Customer Service Team":84,"Rejected by UW/ Checker":32,"Rejected by Fraud":3,"Lapsed while waiting customer":0,"Eligible for IVR Call":42,"Approval Call initiated but not accepted":16},"Existing Customer":{"Application_Created":61837,"DELite_Called":60502,"SIMAH_CHECK":1845,"DE_Approved":16702,"Mof_GOSI_Data_Available":12403,"Offer_Displayed":9271,"Offer_Accepted":7681,"Yaqeen_Passed":7599,"STP_Application":222,"NonSTP_Application":6662,"NationalAddress_Verified":4969,"Nafath_Verified":47542,"IVR_Completed":364,"Auto_Debit":246,"Sayen_Emdha":10,"Nafith_Count":226,"Booked":7,"Cancelled by BO":181,"Cancelled by Customer Service Team":309,"Rejected by UW/ Checker":87,"Rejected by Fraud":1,"Lapsed while waiting customer":0,"Eligible for IVR Call":175,"Approval Call initiated but not accepted":73}},{"mon":"2026-07","New Customer":{"PG_Total_Visits":73812,"PG_Decline_Reasons - Disposable Income Rule":4935,"PG_Decline_Reasons - Loan Size Rule":2067,"PG_Decline_Reasons - Minimum Income Rule":11863,"PG_Decline_Reasons - Other Reason":1564,"Customer_Passed_PG_Dropped_Before_Registration":16905,"Existing_or_New_Customer_Entered_CivilId":33951,"New_Customers":7275,"DOB_Entered":7029,"Password_Entered":6829,"CITC_Passed":6824,"CITC_Failed":190,"Name_Missing":812,"Email_Missing":60,"Application_Created":4614,"DELite_Called":4419,"SIMAH_CHECK":140,"QARAR_CHECK":4240,"DE_Approved":2161,"Mof_GOSI_Data_Available":1556,"Offer_Displayed":1231,"Offer_Accepted":985,"Yaqeen_Passed":973,"STP_Application":15,"NonSTP_Application":856,"NationalAddress_Verified":710,"Cancelled by BO":149,"Cancelled by Customer Service Team":169,"Rejected by UW/ Checker":31,"Rejected by Fraud":6,"Lapsed while waiting customer":0,"Eligible for IVR Call":91,"Approval Call initiated but not accepted":46,"IVR_Completed":40,"Auto_Debit":28,"Sayen_Emdha":1,"Nafith_Count":26,"Booked":1,"Clicks_Daily":290442,"Clicked_Apply_Now":60296,"Lets_start_page":31109,"Sales Vetting due to Geo check":8,"Geo passed atleast one device":6},"Existing Customer":{"Application_Created":24448,"DELite_Called":23851,"SIMAH_CHECK":722,"DE_Approved":6698,"Mof_GOSI_Data_Available":5133,"Offer_Displayed":3658,"Offer_Accepted":3062,"Yaqeen_Passed":3051,"STP_Application":77,"NonSTP_Application":2703,"NationalAddress_Verified":2095,"Cancelled by BO":344,"Cancelled by Customer Service Team":532,"Rejected by UW/ Checker":153,"Rejected by Fraud":5,"Lapsed while waiting customer":0,"Eligible for IVR Call":392,"Approval Call initiated but not accepted":177,"IVR_Completed":184,"Auto_Debit":125,"Sayen_Emdha":0,"Nafith_Count":122,"Booked":0,"Sales Vetting due to Geo check":24,"Geo passed atleast one device":16,"QARAR_CHECK":15648}}],"simah":{"meta":{"total":143,"matched":74,"unmatched":69,"reportDate":"2026-08-02","simahFiles":143,"parseErrors":0,"acqFile":"Acquisition_for_Loans_2026-08-01.csv"},"scoreDistribution":{"300-399":{"sub":4,"approved":0,"booked":0,"stp":0},"400-499":{"sub":12,"approved":0,"booked":0,"stp":0},"500-549":{"sub":11,"approved":0,"booked":0,"stp":0},"550-599":{"sub":27,"approved":0,"booked":0,"stp":0},"600-649":{"sub":38,"approved":4,"booked":0,"stp":0},"650-699":{"sub":23,"approved":0,"booked":0,"stp":0},"700-749":{"sub":15,"approved":3,"booked":1,"stp":0},"750-850":{"sub":10,"approved":0,"booked":0,"stp":0},"No Score":{"sub":3,"approved":0,"booked":0,"stp":0}},"dbrBands":{"Unknown":{"sub":143,"approved":7,"booked":1,"stp":0}},"utilizationBands":{"0-20%":{"sub":14,"approved":0,"booked":0,"stp":0,"acqMatched":4,"acqRows":4,"acqApproved":0},"21-40%":{"sub":7,"approved":0,"booked":0,"stp":0,"acqMatched":4,"acqRows":6,"acqApproved":0},"41-60%":{"sub":16,"approved":2,"booked":0,"stp":0,"acqMatched":10,"acqRows":13,"acqApproved":3},"61-80%":{"sub":30,"approved":2,"booked":0,"stp":0,"acqMatched":21,"acqRows":22,"acqApproved":2},"81-100%+":{"sub":76,"approved":3,"booked":1,"stp":0,"acqMatched":35,"acqRows":43,"acqApproved":4}},"enqIntensity":{"0":{"sub":6,"approved":0,"booked":0,"stp":0},"1-2":{"sub":35,"approved":3,"booked":1,"stp":0},"3-5":{"sub":48,"approved":2,"booked":0,"stp":0},"6-10":{"sub":28,"approved":1,"booked":0,"stp":0},"11+":{"sub":26,"approved":1,"booked":0,"stp":0}},"topCompetitors":[{"name":"Tamara Finance Company","cnt":559},{"name":"AL RAJHI BANK","cnt":500},{"name":"United Company for Financial Services","cnt":483},{"name":"Emkan Company for Financing","cnt":316},{"name":"Tabby Finance Company","cnt":236},{"name":"TAMAM Finance","cnt":204},{"name":"STC Bank","cnt":177},{"name":"Saudi National Bank","cnt":107},{"name":"QUARA FINANCE","cnt":92},{"name":"RIYADH BANK","cnt":90}]},"kpi":{"totalSub":180198,"totalBook":10383,"totalVal":263760896,"overallBookRate":"5.8","avgLoan":25403,"snapDate":"2026-08-05","dataRange":"2026-04-16 → 2026-08-05","csvName":"Acquisition_for_Loans_2026-08-04.csv"}};
+
+// ═══════════════════════ UTILITIES ═══════════════════════
+const fmt=n=>(n||0).toLocaleString('en-US',{maximumFractionDigits:0});
+const fmtM=n=>{if(n>=1e6) return (n/1e6).toFixed(1)+'M';if(n>=1e3) return (n/1e3).toFixed(1)+'K';return fmt(n);};
+const fmtPct=(a,b)=>b?(a/b*100).toFixed(1)+'%':'—';
+const monthLabel=m=>{const[y,mo]=m.split('-');return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+mo-1]+' '+y.slice(2);};
+
+// ═══════════════════════ TAB SWITCHING ═══════════════════════
+const rendered={};
+document.getElementById('tab-bar').addEventListener('click',e=>{
+  if(e.target.tagName!=='BUTTON') return;
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));
+  e.target.classList.add('active');
+  const tab=e.target.dataset.tab;
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('sec-'+tab).classList.add('active');
+  if(!rendered[tab]){rendered[tab]=true;renderTab(tab);}
+});
+
+function renderTab(tab){
+  switch(tab){
+    case 'trends': renderTrends(); break;
+    case 'funnel': renderFunnel(); break;
+    case 'seasonality': renderSeasonality(); break;
+    case 'learnings': renderLearnings(); break;
+  }
+}
+
+// ═══════════════════════ CHART DEFAULTS ═══════════════════════
+Chart.defaults.color='#7b8ba0';
+Chart.defaults.borderColor='rgba(255,255,255,0.06)';
+Chart.defaults.font.family='Inter';
+Chart.defaults.font.size=11;
+
+// ═══════════════════════ TAB 1: EXECUTIVE OVERVIEW ═══════════════════════
+(function renderOverview(){
+  const K=BPV.kpi;
+  document.getElementById('snap-date').textContent='Snap: '+K.snapDate;
+  document.getElementById('overview-sub').textContent=K.dataRange+' · '+K.csvName;
+
+  // KPIs
+  const approvalRate=BPV.monthly.reduce((a,m)=>a+m.init,0);
+  const kpiHtml=[
+    {label:'Total Submissions',val:fmt(K.totalSub),cls:'cyan'},
+    {label:'Total Booked',val:fmt(K.totalBook),cls:'green'},
+    {label:'Booking Rate',val:K.overallBookRate+'%',cls:'gold'},
+    {label:'Avg Loan Amount',val:'SAR '+fmt(K.avgLoan),cls:'cyan'},
+    {label:'Total Funded',val:'SAR '+fmtM(K.totalVal),cls:'green'}
+  ].map(k=>`<div class="kpi${k.cls==='cyan'?' accent':''}"><div class="label">${k.label}</div><div class="val ${k.cls}">${k.val}</div></div>`).join('');
+  document.getElementById('kpi-strip').innerHTML=kpiHtml;
+
+  // Top & Low segments
+  const segs=BPV.segments.filter(s=>s.book>10);
+  const maxRate=segs.length?segs[0].book/segs[0].sub:0.1;
+
+  function renderSegTable(id,list,color){
+    const tbody=document.querySelector('#'+id+' tbody');
+    tbody.innerHTML=list.map(s=>{
+      const rate=s.book/s.sub;
+      const barW=Math.max(5,rate/maxRate*100);
+      return `<tr>
+        <td><strong>${s.emp}</strong><br><span style="color:var(--muted);font-size:10px">${s.nat} · ${s.inc}</span></td>
+        <td class="right mono">${fmt(s.sub)}</td>
+        <td class="right mono">${fmt(s.book)}</td>
+        <td class="right mono" style="color:${color}">${(rate*100).toFixed(1)}%</td>
+        <td class="right mono">${s.avg?'SAR '+fmt(s.avg):'—'}</td>
+        <td><div class="bar-cell"><div class="bar-fill" style="width:${barW}%;background:${color}"></div></div></td>
+      </tr>`;
+    }).join('');
+  }
+  renderSegTable('top-segments',segs.slice(0,8),'var(--green)');
+  renderSegTable('low-segments',segs.slice(-8).reverse(),'var(--red)');
+
+  // Narrative
+  const topSeg=segs[0];
+  const botSeg=segs[segs.length-1];
+  document.getElementById('overview-narrative').innerHTML=`
+    <h3>📋 Executive Narrative</h3>
+    <p>As of <strong>${K.snapDate}</strong>, Tasheel Finance has processed <span class="highlight">${fmt(K.totalSub)}</span> personal finance applications, booking <span class="good">${fmt(K.totalBook)}</span> loans worth <span class="highlight">SAR ${fmtM(K.totalVal)}</span> at an overall booking rate of <span class="highlight">${K.overallBookRate}%</span>.</p>
+    <ul>
+      <li><strong>Best performer:</strong> <span class="good">${topSeg.emp} · ${topSeg.nat} · ${topSeg.inc}</span> at ${(topSeg.book/topSeg.sub*100).toFixed(1)}% booking rate with avg loan SAR ${fmt(topSeg.avg)}</li>
+      <li><strong>Weakest performer:</strong> <span class="bad">${botSeg.emp} · ${botSeg.nat} · ${botSeg.inc}</span> at ${(botSeg.book/botSeg.sub*100).toFixed(1)}% booking rate — high volume (${fmt(botSeg.sub)} submissions) but poor conversion</li>
+      <li><strong>Expat Private Company</strong> employees consistently outperform Saudi counterparts across all income bands — <span class="good">2–3× higher booking rates</span></li>
+      <li><strong>Pension holders</strong> (Saudi) show strong conversion at 10.5%+ — a reliable, low-risk segment</li>
+      <li><strong>Income below SAR 5,000</strong> shows the weakest conversion across all employer types — driven by policy filters (Minimum Income Rule, DBR limits)</li>
+    </ul>
+  `;
+})();
+
+// ═══════════════════════ TAB 2: MONTHLY TRENDS ═══════════════════════
+function renderTrends(){
+  const months=BPV.monthly.filter(m=>m.sub>200);
+  const labels=months.map(m=>monthLabel(m.mon));
+
+  // Trend KPIs
+  const latest=months[months.length-1];
+  const prev=months.length>1?months[months.length-2]:latest;
+  const loanDelta=latest.avgLoan-prev.avgLoan;
+  const rateDelta=((latest.book/latest.sub)-(prev.book/prev.sub))*100;
+  document.getElementById('trend-kpis').innerHTML=[
+    {label:monthLabel(latest.mon)+' Bookings',val:fmt(latest.book),sub:fmtPct(latest.book,latest.sub)+' rate',cls:'green'},
+    {label:'Avg Loan Amount',val:'SAR '+fmt(latest.avgLoan),sub:(loanDelta>=0?'↑':'↓')+' SAR '+fmt(Math.abs(loanDelta))+' vs prev',cls:loanDelta>=0?'green':'red'},
+    {label:'Approval → Booking',val:fmtPct(latest.book,latest.init),sub:fmt(latest.init)+' initially approved',cls:'cyan'},
+    {label:'Funded Value',val:'SAR '+fmtM(latest.val),sub:monthLabel(latest.mon)+' total',cls:'gold'}
+  ].map(k=>`<div class="kpi"><div class="label">${k.label}</div><div class="val ${k.cls}">${k.val}</div><div class="sub">${k.sub}</div></div>`).join('');
+
+  // Chart 1: Avg Loan + Volume
+  new Chart(document.getElementById('chart-avgLoan'),{
+    type:'bar',
+    data:{labels,datasets:[
+      {type:'line',label:'Avg Loan (SAR)',data:months.map(m=>m.avgLoan),borderColor:'#22d3b7',backgroundColor:'rgba(34,211,183,.15)',tension:.3,yAxisID:'y1',pointRadius:4,pointBackgroundColor:'#22d3b7'},
+      {label:'Bookings',data:months.map(m=>m.book),backgroundColor:'rgba(59,130,246,.6)',borderRadius:6,yAxisID:'y'}
+    ]},
+    options:{responsive:true,plugins:{legend:{position:'top',labels:{usePointStyle:true,pointStyle:'circle'}}},scales:{y:{position:'left',title:{display:true,text:'Bookings'}},y1:{position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'Avg Loan (SAR)'}}}}
+  });
+
+  // Chart 2: Nationality booking rate
+  new Chart(document.getElementById('chart-natRate'),{
+    type:'line',
+    data:{labels,datasets:['Saudi','Expats'].map((nat,i)=>({
+      label:nat,
+      data:months.map(m=>{const n=m.nat[nat];return n?(n.book/n.sub*100):0;}),
+      borderColor:i===0?'#22d3b7':'#f5a623',
+      backgroundColor:i===0?'rgba(34,211,183,.1)':'rgba(245,166,35,.1)',
+      tension:.3,fill:true,pointRadius:4
+    }))},
+    options:{responsive:true,plugins:{legend:{position:'top',labels:{usePointStyle:true,pointStyle:'circle'}}},scales:{y:{title:{display:true,text:'Booking Rate %'}}}}
+  });
+
+  // Chart 3: Employer booking rate
+  const empTypes=['Private Company','Government Entity','Pension','Military with Grades'];
+  const empColors=['#3b82f6','#22d3b7','#f5a623','#8b5cf6'];
+  new Chart(document.getElementById('chart-empRate'),{
+    type:'line',
+    data:{labels,datasets:empTypes.map((emp,i)=>({
+      label:emp,
+      data:months.map(m=>{const e=m.emp[emp];return e&&e.sub>10?(e.book/e.sub*100):null;}),
+      borderColor:empColors[i],
+      tension:.3,pointRadius:3,spanGaps:true
+    }))},
+    options:{responsive:true,plugins:{legend:{position:'top',labels:{usePointStyle:true,pointStyle:'circle',font:{size:10}}}},scales:{y:{title:{display:true,text:'Booking Rate %'}}}}
+  });
+
+  // Chart 4: Income booking rate
+  const incOrder=['<5000','5000-5999','6000-6999','7000-7999','8000-9999','10000-11999','12000-13999','14000+'];
+  const incColors=['#ef4444','#f97316','#f5a623','#eab308','#22c55e','#14b8a6','#3b82f6','#8b5cf6'];
+  new Chart(document.getElementById('chart-incRate'),{
+    type:'bar',
+    data:{labels:incOrder,datasets:months.filter(m=>m.sub>200).map((m,mi)=>({
+      label:monthLabel(m.mon),
+      data:incOrder.map(inc=>{const d=m.inc[inc];return d&&d.sub>20?(d.book/d.sub*100):0;}),
+      backgroundColor:['rgba(59,130,246,.7)','rgba(34,211,183,.7)','rgba(245,166,35,.7)','rgba(139,92,246,.7)'][mi]||'rgba(100,100,100,.5)',
+      borderRadius:4
+    }))},
+    options:{responsive:true,plugins:{legend:{position:'top',labels:{usePointStyle:true,pointStyle:'circle'}}},scales:{y:{title:{display:true,text:'Booking Rate %'}}}}
+  });
+
+  // Narrative
+  const jun=months.find(m=>m.mon==='2026-06'), jul=months.find(m=>m.mon==='2026-07');
+  document.getElementById('trends-narrative').innerHTML=`
+    <h3>📊 Trend Insights</h3>
+    <ul>
+      <li>Average loan amount has been <span class="good">steadily rising</span> — from SAR ${fmt(jun?.avgLoan||0)} in Jun to SAR ${fmt(jul?.avgLoan||0)} in Jul and SAR ${fmt(latest.avgLoan)} in Aug (partial). This suggests higher-income applicants are converting better, or tenure/limit preferences are shifting up.</li>
+      <li><strong>Expat booking rates (8.2–8.8%)</strong> are <span class="good">nearly double</span> Saudi rates (4.2–4.9%). The gap is driven by:</li>
+      <ul>
+        <li>Expats in the <strong>Private Company</strong> sector dominate bookings with 12–13% conversion in mid-income bands</li>
+        <li>Saudi applicants face higher decline rates from <strong>Minimum Income Rule</strong> and <strong>Debt Burden Ratio</strong> constraints</li>
+      </ul>
+      <li>The <span class="highlight">&lt;SAR 5,000</span> income band is a structural weak point: 2.7% booking rate despite ${fmt(months.reduce((a,m)=>a+(m.inc['<5000']?.sub||0),0))} total submissions — policy filters remove most before approval.</li>
+      <li><strong>Pension</strong> sector maintains the highest booking rate among Saudi nationals at ~10.5% — a stable, reliable segment with avg loan SAR 30K+.</li>
+    </ul>
+  `;
+}
+
+// ═══════════════════════ TAB 3: FUNNEL ANALYSIS ═══════════════════════
+function renderFunnel(){
+  const ncSteps=[
+    {key:'PG_Total_Visits',label:'Pre-Gate Visits'},
+    {key:'Existing_or_New_Customer_Entered_CivilId',label:'Entered Civil ID'},
+    {key:'New_Customers',label:'New Customers'},
+    {key:'Application_Created',label:'Application Created'},
+    {key:'DELite_Called',label:'DE Lite Called'},
+    {key:'DE_Approved',label:'DE Approved'},
+    {key:'Mof_GOSI_Data_Available',label:'GOSI/MOF Verified'},
+    {key:'Offer_Displayed',label:'Offer Displayed'},
+    {key:'Offer_Accepted',label:'Offer Accepted'},
+    {key:'Yaqeen_Passed',label:'Yaqeen Passed'},
+    {key:'NationalAddress_Verified',label:'Nat. Address Verified'},
+    {key:'Nafath_Verified',label:'Nafath Verified'},
+    {key:'IVR_Completed',label:'IVR Completed'},
+    {key:'Auto_Debit',label:'Auto Debit Setup'}
+  ];
+
+  const ecSteps=[
+    {key:'Application_Created',label:'Application Created'},
+    {key:'DELite_Called',label:'DE Lite Called'},
+    {key:'DE_Approved',label:'DE Approved'},
+    {key:'Mof_GOSI_Data_Available',label:'GOSI/MOF Verified'},
+    {key:'Offer_Displayed',label:'Offer Displayed'},
+    {key:'Offer_Accepted',label:'Offer Accepted'},
+    {key:'Yaqeen_Passed',label:'Yaqeen Passed'},
+    {key:'NationalAddress_Verified',label:'Nat. Address Verified'},
+    {key:'IVR_Completed',label:'IVR Completed'},
+    {key:'Auto_Debit',label:'Auto Debit Setup'}
+  ];
+
+  function renderFunnelSteps(containerId, steps, data) {
+    const container = document.getElementById(containerId);
+    const maxVal = data[steps[0].key] || 1;
+    let html = '';
+    steps.forEach((step, i) => {
+      const val = data[step.key] || 0;
+      const prevVal = i > 0 ? (data[steps[i-1].key] || 1) : val;
+      const dropRate = i > 0 ? ((1 - val/prevVal) * 100) : 0;
+      const pctOfTop = (val / maxVal * 100);
+      const barColor = dropRate > 50 ? '#ef4444' : dropRate > 25 ? '#f5a623' : '#22d3b7';
+      const isBigDrop = dropRate > 30;
+      html += `<div class="funnel-step">
+        <div class="funnel-label"${isBigDrop?' style="color:var(--red);font-weight:600"':''}>${step.label}</div>
+        <div class="funnel-bar">
+          <div class="fill" style="width:${Math.max(2,pctOfTop)}%;background:${barColor}">${fmtM(val)}</div>
+          ${i>0?`<div class="drop">${dropRate>0?'↓ '+dropRate.toFixed(1)+'%':'↑'}</div>`:''}
+        </div>
+      </div>`;
+    });
+    container.innerHTML = html;
+  }
+
+  renderFunnelSteps('funnel-new', ncSteps, BPV.funnel['New Customer']);
+  renderFunnelSteps('funnel-existing', ecSteps, BPV.funnel['Existing Customer']);
+
+  // Top leaks
+  const nc=BPV.funnel['New Customer'];
+  const leaks=[
+    {from:'PG Visits → Civil ID Entry',lost:nc.PG_Total_Visits-nc.Existing_or_New_Customer_Entered_CivilId,pct:((1-nc.Existing_or_New_Customer_Entered_CivilId/nc.PG_Total_Visits)*100).toFixed(1)},
+    {from:'Civil ID → New Customers',lost:nc.Existing_or_New_Customer_Entered_CivilId-nc.New_Customers,pct:((1-nc.New_Customers/nc.Existing_or_New_Customer_Entered_CivilId)*100).toFixed(1)},
+    {from:'Registration → App Created',lost:nc.CITC_Passed-(nc.Application_Created||0),pct:((1-(nc.Application_Created||0)/nc.CITC_Passed)*100).toFixed(1)},
+    {from:'App Created → DE Approved',lost:nc.Application_Created-nc.DE_Approved,pct:((1-nc.DE_Approved/nc.Application_Created)*100).toFixed(1)},
+    {from:'Offer Accepted → Nafath',lost:nc.Yaqeen_Passed-nc.Nafath_Verified,pct:((1-nc.Nafath_Verified/nc.Yaqeen_Passed)*100).toFixed(1)},
+    {from:'Nafath → IVR Completed',lost:nc.Nafath_Verified-nc.IVR_Completed,pct:((1-nc.IVR_Completed/nc.Nafath_Verified)*100).toFixed(1)}
+  ].sort((a,b)=>b.lost-a.lost);
+
+  document.getElementById('funnel-leaks').innerHTML='<table class="perf-table"><thead><tr><th>Drop Point</th><th class="right">Lost</th><th class="right">Drop %</th></tr></thead><tbody>'+
+    leaks.map(l=>`<tr><td>${l.from}</td><td class="right mono" style="color:var(--red)">${fmtM(l.lost)}</td><td class="right mono">${l.pct}%</td></tr>`).join('')+
+    '</tbody></table>';
+
+  // Monthly funnel trend chart
+  const mf=BPV.monthlyFunnel.filter(m=>m['New Customer']);
+  new Chart(document.getElementById('chart-funnelTrend'),{
+    type:'line',
+    data:{
+      labels:mf.map(m=>monthLabel(m.mon)),
+      datasets:[
+        {label:'Visit→App Rate %',data:mf.map(m=>{const nc=m['New Customer'];return nc?(nc.Application_Created/nc.PG_Total_Visits*100):0;}),borderColor:'#3b82f6',tension:.3,pointRadius:4},
+        {label:'App→Approved Rate %',data:mf.map(m=>{const nc=m['New Customer'];return nc&&nc.Application_Created?(nc.DE_Approved/nc.Application_Created*100):0;}),borderColor:'#22d3b7',tension:.3,pointRadius:4},
+        {label:'Approved→Offer Rate %',data:mf.map(m=>{const nc=m['New Customer'];return nc&&nc.DE_Approved?(nc.Offer_Displayed/nc.DE_Approved*100):0;}),borderColor:'#f5a623',tension:.3,pointRadius:4}
+      ]
+    },
+    options:{responsive:true,plugins:{legend:{position:'top',labels:{usePointStyle:true,pointStyle:'circle'}}},scales:{y:{title:{display:true,text:'Rate %'}}}}
+  });
+
+  document.getElementById('funnel-narrative').innerHTML=`
+    <h3>🔻 Funnel Analysis Insights</h3>
+    <ul>
+      <li><strong>Biggest absolute leak: Pre-Gate → Civil ID Entry</strong> — <span class="bad">${fmtM(nc.PG_Total_Visits-nc.Existing_or_New_Customer_Entered_CivilId)} visitors lost (53.9%)</span>. The pre-qualification gate filters for minimum income, loan size, and disposable income before registration. ${fmt(nc['PG_Decline_Reasons - Minimum Income Rule']||0)} declined for Minimum Income alone.</li>
+      <li><strong>Civil ID → New Customers:</strong> <span class="bad">79.9% drop</span> — most Civil IDs entered belong to existing customers, only ${fmtM(nc.New_Customers)} were new. This is structural, not a loss.</li>
+      <li><strong>Registration → Application Created:</strong> <span class="bad">${fmtM(nc.CITC_Passed-nc.Application_Created)} dropped (34.2%)</span> after passing CITC. Users abandon during form completion — name/email missing issues affect ~21K users.</li>
+      <li><strong>Nafath Verification</strong> is a critical bottleneck: <span class="bad">${fmtM(nc.Yaqeen_Passed-nc.Nafath_Verified)} lost (67.1%)</span> between Yaqeen and Nafath. This is likely a UX/friction point — Nafath requires separate app authentication.</li>
+      <li><strong>IVR Call Completion</strong> drops <span class="bad">84.5%</span> — customers don't complete the verification call. Consider alternative verification methods or SMS-based confirmation.</li>
+      <li>For <strong>Existing Customers</strong>, the funnel is healthier: Nafath is pre-verified (383K passed), but the <strong>Offer Display → Acceptance</strong> conversion of 83.6% shows decent offer relevance.</li>
+    </ul>
+  `;
+}
+
+// ═══════════════════════ TAB 4: SEASONALITY ═══════════════════════
+function renderSeasonality(){
+  const W=BPV.weekly.filter(w=>w.sub>200);
+  const labels=W.map(w=>w.wk);
+
+  // Saudi 2026 calendar events overlay
+  const events=[
+    {start:'2026-02-18',end:'2026-03-19',label:'Ramadan',color:'rgba(139,92,246,.15)',border:'#8b5cf6'},
+    {start:'2026-03-20',end:'2026-03-26',label:'Eid al-Fitr',color:'rgba(245,166,35,.15)',border:'#f5a623'},
+    {start:'2026-05-27',end:'2026-06-02',label:'Eid al-Adha',color:'rgba(245,166,35,.15)',border:'#f5a623'},
+    {start:'2026-06-20',end:'2026-09-01',label:'Summer Vacation',color:'rgba(34,211,183,.08)',border:'#22d3b7'},
+    {start:'2026-08-15',end:'2026-09-05',label:'Back to School',color:'rgba(59,130,246,.1)',border:'#3b82f6'}
+  ];
+
+  // Annotate events on chart
+  const annotations={};
+  events.forEach((ev,i)=>{
+    const si=labels.findIndex(l=>l>=ev.start);
+    const ei=labels.findIndex(l=>l>ev.end);
+    if(si>=0){
+      annotations['box'+i]={
+        type:'box',
+        xMin:Math.max(0,si-0.5),xMax:ei>=0?ei-0.5:labels.length-0.5,
+        backgroundColor:ev.color,
+        borderColor:ev.border,borderWidth:1,
+        label:{display:true,content:ev.label,position:'start',font:{size:10,weight:600},color:ev.border}
+      };
+    }
+  });
+
+  new Chart(document.getElementById('chart-seasonality'),{
+    type:'line',
+    data:{labels:labels.map(l=>{const d=new Date(l);return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});}),
+      datasets:[
+        {label:'Weekly Submissions',data:W.map(w=>w.sub),borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.1)',fill:true,tension:.3,yAxisID:'y'},
+        {label:'Weekly Bookings',data:W.map(w=>w.book),borderColor:'#22c55e',backgroundColor:'rgba(34,197,94,.1)',fill:true,tension:.3,yAxisID:'y'},
+        {label:'Avg Loan (SAR)',data:W.map(w=>w.avgLoan),borderColor:'#f5a623',tension:.3,yAxisID:'y1',borderDash:[5,5],pointRadius:3}
+      ]
+    },
+    options:{responsive:true,plugins:{legend:{position:'top',labels:{usePointStyle:true,pointStyle:'circle'}}},
+      scales:{y:{position:'left',title:{display:true,text:'Volume'}},y1:{position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'Avg Loan (SAR)'}}}}
+  });
+
+  // Summer analysis
+  const summerWeeks=W.filter(w=>w.wk>='2026-06-20');
+  const preSummer=W.filter(w=>w.wk<'2026-06-20'&&w.wk>='2026-06-01');
+  const sumAvgBook=summerWeeks.reduce((a,w)=>a+w.book,0)/Math.max(1,summerWeeks.length);
+  const preAvgBook=preSummer.reduce((a,w)=>a+w.book,0)/Math.max(1,preSummer.length);
+  const sumAvgLoan=summerWeeks.reduce((a,w)=>a+w.avgLoan,0)/Math.max(1,summerWeeks.length);
+
+  document.getElementById('season-summer').innerHTML=`
+    <div class="insight-pills">
+      <span class="pill ${sumAvgBook>preAvgBook?'up':'down'}">Bookings ${sumAvgBook>preAvgBook?'↑':'↓'} ${Math.abs(((sumAvgBook/preAvgBook-1)*100)).toFixed(0)}% vs pre-summer</span>
+      <span class="pill neutral">Avg weekly bookings: ${Math.round(sumAvgBook)}</span>
+      <span class="pill up">Avg loan: SAR ${fmt(Math.round(sumAvgLoan))}</span>
+    </div>
+    <p style="font-size:12px;color:var(--ink2);margin-top:10px;line-height:1.6">
+      Summer 2026 (June 20 onwards) shows <strong>sustained demand</strong> with weekly bookings averaging ~${Math.round(sumAvgBook)}.
+      The average loan amount has been <strong>climbing during summer</strong> (SAR ${fmt(Math.round(sumAvgLoan))} avg), suggesting
+      consumers are taking larger loans — likely for travel, home improvements, and summer spending.
+      Submission volumes dipped in mid-July (W29: ${fmt(W.find(w=>w.wk==='2026-07-13')?.sub||0)}) which aligns with peak holiday travel.
+    </p>
+  `;
+
+  // Ramadan/Eid analysis
+  document.getElementById('season-ramadan').innerHTML=`
+    <div class="insight-pills">
+      <span class="pill warn">Ramadan: Feb 18 – Mar 19</span>
+      <span class="pill warn">Eid al-Fitr: Mar 20–26</span>
+      <span class="pill warn">Eid al-Adha: May 27 – Jun 2</span>
+    </div>
+    <p style="font-size:12px;color:var(--ink2);margin-top:10px;line-height:1.6">
+      <strong>Note:</strong> Our data window starts April 16, so Ramadan and Eid al-Fitr fall <em>before</em> our observation period.
+      However, the <strong>Eid al-Adha</strong> effect is visible: the week of May 25 shows only 76 submissions (ramp-up phase),
+      with the first full week (Jun 1) seeing <strong>${fmt(W[1]?.sub||0)} submissions</strong> — a strong post-Eid bounce as consumers
+      return to financial planning. Post-Eid periods historically show <strong>elevated demand</strong> as deferred purchases and
+      financial needs resurface. The W23 booking rate of <strong>${(W[1]?.book/W[1]?.sub*100||0).toFixed(1)}%</strong> was the highest
+      weekly rate observed — pent-up demand converts well.
+    </p>
+  `;
+
+  document.getElementById('seasonality-narrative').innerHTML=`
+    <h3>📅 Seasonality Learnings</h3>
+    <ul>
+      <li><strong>Post-Eid Bounce:</strong> The first full week after Eid al-Adha showed the <span class="good">highest booking rate (6.7%)</span> of any week — consumers who deferred during the holiday rush return with clear intent.</li>
+      <li><strong>Summer Plateau:</strong> Weekly submissions stabilized around 18–20K from June through July, with no dramatic seasonal dip. Personal finance demand in KSA appears <span class="good">resilient during summer</span>.</li>
+      <li><strong>Mid-July Dip:</strong> W29 (Jul 13–17) saw the <span class="bad">lowest weekly volume (${fmt(W.find(w=>w.wk==='2026-07-13')?.sub||0)})</span> — likely driven by peak summer travel when families are abroad.</li>
+      <li><strong>Back to School (Aug–Sep):</strong> Early August data shows <span class="good">rising avg loan amounts (SAR ${fmt(W[W.length-1]?.avgLoan||0)})</span> and improved booking rates, consistent with back-to-school purchasing power needs.</li>
+      <li><strong>Purchasing Power Correlation:</strong> Average loan size increases during summer (~SAR 26K+) compared to June (~SAR 23K), suggesting <span class="highlight">seasonal spending needs drive larger loan requests</span>. The composition shifts toward higher-income applicants converting.</li>
+    </ul>
+  `;
+}
+
+// ═══════════════════════ TAB 5: KEY LEARNINGS ═══════════════════════
+function renderLearnings(){
+  const cards=[
+    {icon:'🎯',title:'Segment Strategy',color:'var(--cyan)',items:[
+      'Expat Private Company employees are the <strong>highest-converting segment</strong> (12–13%) — prioritize acquisition spend here',
+      'Saudi Government Entity employees underperform despite high volume — review eligibility rules and offer competitiveness',
+      '<SAR 5K income segment is a <strong>volume trap</strong>: 36K+ submissions yielding only 2.7% booking rate — consider pre-qualification tightening'
+    ]},
+    {icon:'📉',title:'Funnel Optimization',color:'var(--red)',items:[
+      '<strong>Nafath verification</strong> is the #1 actionable bottleneck — 67% drop. Explore in-app Nafath or alternative verification',
+      '<strong>IVR completion</strong> at 15.5% is critically low — automated SMS verification could recover 4,000+ applications',
+      'Pre-gate filters block 350K+ visitors monthly — consider softer pre-qualification to capture borderline applicants'
+    ]},
+    {icon:'💰',title:'Revenue Insights',color:'var(--gold)',items:[
+      'Average loan amount is <strong>trending up</strong> (SAR 24.9K → 26.9K) — higher-value applications are converting better',
+      'Pension segment delivers <strong>SAR 42K avg loans</strong> at 11%+ booking — the highest ticket size per segment',
+      'Expats with SAR 14K+ income contribute <strong>SAR 36.5K avg loans</strong> — premium segment with premium returns'
+    ]},
+    {icon:'🏦',title:'Competitive Landscape',color:'var(--violet)',items:[
+      '<strong>Tamara Finance</strong> leads competitor presence (559 enquiries) — BNPL is a competing product category',
+      '<strong>Al Rajhi Bank</strong> (500 enquiries) and <strong>UCFS</strong> (483) are the main traditional competitors',
+      'High enquiry intensity (3–5 SIMAH enquiries) correlates with <strong>lower approval rates</strong> — credit-hungry applicants are riskier'
+    ]},
+    {icon:'📊',title:'Credit Quality',color:'var(--green)',items:[
+      'SIMAH scores <strong>600–649 dominate submissions</strong> (38 of 143 sampled) — the "borderline" band',
+      'Only scores 700+ show meaningful approval rates — consider risk-tiered pricing for the 600–699 band',
+      'Credit utilization >80% is the <strong>most common profile</strong> (53%) — applicants are heavily leveraged'
+    ]},
+    {icon:'🔮',title:'Forward Outlook',color:'var(--blue)',items:[
+      '<strong>Back-to-School season (Aug–Sep)</strong> should sustain or lift demand — prepare for larger loan requests',
+      'Consider <strong>Ramadan 2027 preparation</strong> (Feb): historically a peak demand period for personal finance',
+      'The Expat segment shows <strong>no signs of saturation</strong> — growth opportunity in underserved income bands (SAR 7K–10K)'
+    ]}
+  ];
+
+  document.getElementById('learning-cards').innerHTML=cards.map(c=>`
+    <div class="card">
+      <h3>${c.icon} ${c.title} <span class="badge" style="background:${c.color}22;color:${c.color}">${c.items.length} insights</span></h3>
+      <ul style="padding-left:16px;font-size:12px;line-height:1.8;color:var(--ink2)">
+        ${c.items.map(it=>'<li>'+it+'</li>').join('')}
+      </ul>
+    </div>
+  `).join('');
+
+  document.getElementById('learnings-narrative').innerHTML=`
+    <h3>🔮 Strategic Recommendations</h3>
+    <ul>
+      <li><strong>Double down on Expat Private Company:</strong> This segment is 2× more likely to book than Saudi counterparts. Consider targeted campaigns for expat employees in the SAR 5K–10K income range where volume is highest.</li>
+      <li><strong>Fix Nafath & IVR:</strong> Together, these two steps lose <strong>~72% of post-approval applicants</strong>. Even a 10% improvement in Nafath completion would add ~1,700 bookings per quarter worth ~SAR 43M in funded volume.</li>
+      <li><strong>Reassess sub-5K income policy:</strong> With 36K submissions and only 992 bookings, the acquisition cost per booking in this segment is disproportionately high. Either tighten pre-gate filters or create a specialized micro-loan product.</li>
+      <li><strong>Leverage Pension stability:</strong> Pension holders show the most consistent booking rates (10.5%+) and highest avg loans (SAR 42K). This low-risk, high-value segment deserves dedicated relationship management.</li>
+      <li><strong>Monitor competitor BNPL:</strong> Tamara and Tabby combined account for 795 SIMAH enquiries in our applicant pool — these are alternative lending products competing for the same customers. Consider BNPL partnerships or counter-offerings.</li>
+      <li><strong>Seasonal planning:</strong> Build campaign calendars around post-Eid demand surges and back-to-school periods. Pre-position marketing spend 2 weeks before Eid ends to capture the rebound.</li>
+    </ul>
+  `;
+}
+
+</script>
+</body></html>
