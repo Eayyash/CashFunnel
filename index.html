@@ -12,97 +12,40 @@
 body{min-height:100%;background:radial-gradient(1200px 700px at 82% -12%,rgba(14,158,144,.10),transparent 60%),radial-gradient(1000px 600px at -5% 5%,rgba(189,125,18,.09),transparent 55%),var(--bg);
  color:var(--ink);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;display:flex;flex-direction:column}
 h1,h2,h3,.disp{font-family:'Space Grotesk',sans-serif}
-.mono{font-family:'JetBrains Mono',monospace}
 header{padding:22px 30px;display:flex;align-items:center;gap:13px}
 .logo{width:40px;height:40px;border-radius:11px;position:relative;background:conic-gradient(from 210deg,var(--cyan),var(--gold),var(--cyan));box-shadow:0 8px 26px -8px rgba(14,158,144,.55)}
 .logo::after{content:"";position:absolute;inset:5px;border-radius:7px;background:#fff}
 .logo::before{content:"↗";position:absolute;inset:0;display:grid;place-items:center;z-index:2;font-family:'Space Grotesk';font-weight:700;color:var(--cyan);font-size:20px}
 .brand .t{font-family:'Space Grotesk';font-weight:700;font-size:18px}
 .brand .s{font-size:11px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-top:1px}
-main{flex:1;display:flex;flex-direction:column;justify-content:flex-start;align-items:center;padding:24px 26px 60px;max-width:1180px;margin:0 auto;width:100%}
-.eyebrow{font-family:'JetBrains Mono';font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold-d);margin-bottom:14px}
-.hero-h{font-size:clamp(30px,5vw,50px);line-height:1.05;font-weight:700;letter-spacing:-.5px;margin:0 0 14px;text-align:center}
-.hero-h .u{background:linear-gradient(90deg,var(--cyan),var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
-.lede{font-size:15.5px;color:var(--ink2);max-width:620px;text-align:center;margin:0 0 44px;line-height:1.6}
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:20px;width:100%}
+main{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:24px 26px 60px;max-width:1000px;margin:0 auto;width:100%}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;width:100%}
+@media(max-width:900px){.cards{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.cards{grid-template-columns:1fr}}
 
-.pcard{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:30px 28px 26px;cursor:pointer;
- text-decoration:none;color:inherit;transition:.22s cubic-bezier(.4,0,.2,1);box-shadow:0 2px 4px rgba(20,30,50,.04),0 18px 40px -24px rgba(20,30,50,.4);overflow:hidden}
-.pcard::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px}
-.pcard.pf::before{background:linear-gradient(var(--cyan),var(--cyan-d))}
-.pcard.cc::before{background:linear-gradient(var(--gold),var(--gold-d))}
-.pcard.fa::before{background:linear-gradient(var(--violet),#5546c4)}
-.pcard.fa .ic{background:rgba(111,91,224,.12);color:var(--violet)}
-.pcard.fa .go{color:var(--violet)}
+.pcard{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:32px 24px 28px;cursor:pointer;
+ text-decoration:none;color:inherit;transition:.22s cubic-bezier(.4,0,.2,1);box-shadow:0 2px 4px rgba(20,30,50,.04),0 18px 40px -24px rgba(20,30,50,.4);overflow:hidden;
+ display:flex;flex-direction:column;align-items:center;text-align:center}
 .pcard:hover{transform:translateY(-4px);border-color:var(--line2);box-shadow:0 2px 4px rgba(20,30,50,.04),0 30px 60px -26px rgba(20,30,50,.5)}
-.pcard .ic{width:52px;height:52px;border-radius:14px;display:grid;place-items:center;font-size:25px;margin-bottom:18px}
-.pcard.pf .ic{background:rgba(14,158,144,.12);color:var(--cyan-d)}
-.pcard.cc .ic{background:rgba(189,125,18,.12);color:var(--gold-d)}
-.pcard h2{font-size:21px;margin:0 0 7px;font-weight:600}
-.pcard p{font-size:13px;color:var(--muted);margin:0 0 22px;line-height:1.55;min-height:40px}
-.tagrow{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:22px}
-.tag{font-family:'JetBrains Mono';font-size:10.5px;color:var(--ink2);background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:4px 10px}
-.go{display:inline-flex;align-items:center;gap:9px;font-family:'Space Grotesk';font-weight:600;font-size:13.5px}
-.pcard.pf .go{color:var(--cyan-d)}.pcard.cc .go{color:var(--gold-d)}
-.go .arw{transition:.22s}.pcard:hover .go .arw{transform:translateX(5px)}
-.soon{position:absolute;top:20px;right:20px;font-family:'JetBrains Mono';font-size:10px;letter-spacing:.1em;text-transform:uppercase;
- color:var(--gold-d);background:rgba(189,125,18,.12);border:1px solid rgba(189,125,18,.3);border-radius:999px;padding:4px 10px}
+.pcard .card-icon{width:72px;height:72px;border-radius:18px;display:grid;place-items:center;margin-bottom:18px}
+.pcard .card-icon svg{width:40px;height:40px}
+.pcard h2{font-size:17px;margin:0;font-weight:600;letter-spacing:-.01em}
+
+.pcard.pf .card-icon{background:rgba(14,158,144,.12)}
+.pcard.pf .card-icon svg{color:#0b7d72}
+.pcard.fa .card-icon{background:rgba(111,91,224,.12)}
+.pcard.fa .card-icon svg{color:#6f5be0}
+.pcard.cc .card-icon{background:rgba(189,125,18,.12)}
+.pcard.cc .card-icon svg{color:#9a6410}
+.pcard.si .card-icon{background:rgba(217,119,6,.12)}
+.pcard.si .card-icon svg{color:#b45309}
+.pcard.ac .card-icon{background:rgba(220,38,38,.12)}
+.pcard.ac .card-icon svg{color:#991b1b}
+.pcard.mj .card-icon{background:rgba(47,158,106,.13)}
+.pcard.mj .card-icon svg{color:#1c7d50}
+
 .foot{text-align:center;color:var(--faint);font-size:11px;font-family:'JetBrains Mono';padding:22px}
 .foot a{color:var(--cyan-d);text-decoration:none}
-
-/* --- Mobile Journey card accent --- */
-.pcard.mj::before{background:linear-gradient(#2f9e6a,#1c7d50)}
-.pcard.mj .ic{background:rgba(47,158,106,.13);color:#1c7d50}
-.pcard.mj .go{color:#1c7d50}
-/* --- Application Cost card accent --- */
-.pcard.ac::before{background:linear-gradient(#dc2626,#991b1b)}
-.pcard.ac .ic{background:rgba(220,38,38,.12);color:#991b1b}
-.pcard.ac .go{color:#991b1b}
-/* --- SIMAH Intelligence card accent --- */
-.pcard.si::before{background:linear-gradient(#d97706,#b45309)}
-.pcard.si .ic{background:rgba(217,119,6,.12);color:#b45309}
-.pcard.si .go{color:#b45309}
-/* --- Journey <-> Funnel analysis (scoped jf-) --- */
-.jf-wrap{width:100%}
-.jf-sec-h{display:flex;align-items:baseline;gap:12px;margin:40px 2px 15px;width:100%}
-.jf-sec-h .k{font-family:'JetBrains Mono';font-size:11px;color:var(--gold-d);letter-spacing:.1em}
-.jf-sec-h h2{font-size:19px;font-weight:600;margin:0;font-family:'Space Grotesk'}
-.jf-sec-h .hint{font-size:11.5px;color:var(--faint);margin-left:auto}
-.jf-panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px 22px;box-shadow:0 2px 4px rgba(20,30,50,.04),0 18px 40px -26px rgba(20,30,50,.35);width:100%}
-.jf-lead{font-size:13.5px;color:var(--ink2);margin:0 0 18px;text-align:left}
-.jf-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px;width:100%}
-.jf-kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 15px}
-.jf-kpi .l{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
-.jf-kpi .v{font-family:'JetBrains Mono';font-weight:700;font-size:22px;margin-top:6px;color:var(--ink)}
-.jf-kpi .v.g{color:var(--cyan-d)}.jf-kpi .v.a{color:var(--gold-d)}
-.jf-frow{display:grid;grid-template-columns:200px 1fr;gap:16px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);text-align:left}
-.jf-frow:last-child{border-bottom:none}
-.jf-meta .stg{font-family:'JetBrains Mono';font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
-.jf-meta .cv{font-family:'Space Grotesk';font-weight:600;font-size:13px;display:block;margin-top:2px}
-.jf-meta .cv .pct{color:var(--cyan-d)}.jf-meta .cv .drop{color:#d1443f;font-family:'JetBrains Mono';font-size:11.5px;margin-left:6px}
-.jf-fbar{height:50px;border-radius:9px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;color:#04231f;font-weight:600;min-width:150px}
-.jf-fbar .fn{font-family:'Space Grotesk';font-size:13px}.jf-fbar .fc{font-family:'JetBrains Mono';font-weight:700;font-size:17px}
-.jf-screens{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
-.jf-schip{font-family:'JetBrains Mono';font-size:10px;padding:2px 7px;border-radius:5px;background:var(--bg);color:var(--ink2);border:1px solid var(--line)}
-.jf-addr{font-size:11.5px;color:var(--muted);margin-top:6px}
-.jf-own{font-family:'JetBrains Mono';font-size:10px;padding:2px 7px;border-radius:5px;margin-left:6px}
-.jf-own.ux{background:rgba(111,91,224,.13);color:var(--violet);border:1px solid rgba(111,91,224,.3)}
-.jf-own.ops{background:rgba(189,125,18,.13);color:var(--gold-d);border:1px solid rgba(189,125,18,.3)}
-.jf-own.credit{background:rgba(47,127,206,.12);color:#2f7fce;border:1px solid rgba(47,127,206,.3)}
-.jf-own.pre{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
-.jf-ins-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:20px}
-.jf-ins{border-radius:12px;padding:15px 16px;border:1px solid var(--line);text-align:left}
-.jf-ins.leak{background:rgba(189,125,18,.06);border-color:rgba(189,125,18,.25);border-left:3px solid var(--gold-d)}
-.jf-ins.value{background:rgba(111,91,224,.05);border-color:rgba(111,91,224,.25);border-left:3px solid var(--violet)}
-.jf-ins h4{margin:0 0 6px;font-size:13.5px;font-family:'Space Grotesk'}.jf-ins.leak h4{color:var(--gold-d)}.jf-ins.value h4{color:var(--violet)}
-.jf-ins .big{font-family:'JetBrains Mono';font-weight:700;font-size:18px;color:var(--ink);display:block;margin:2px 0 6px}
-.jf-ins p{margin:0;font-size:12.5px;color:var(--ink2);line-height:1.55}
-.jf-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px}
-.jf-table th{text-align:left;color:var(--muted);font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;padding:9px 11px;border-bottom:1px solid var(--line2)}
-.jf-table td{padding:10px 11px;border-bottom:1px solid var(--line);color:var(--ink2);vertical-align:top}
-.jf-table td.c,.jf-table th.c{text-align:center;font-family:'JetBrains Mono'}
-.jf-note{font-size:12px;color:var(--muted);background:var(--bg);border:1px dashed var(--line2);border-radius:10px;padding:12px 14px;margin-top:16px}
-@media(max-width:760px){.jf-ins-grid{grid-template-columns:1fr}.jf-frow{grid-template-columns:1fr}}
 </style></head>
 <body>
 <header>
@@ -110,118 +53,69 @@ main{flex:1;display:flex;flex-direction:column;justify-content:flex-start;align-
  <div class="brand"><div class="t">Tasheel Command Center</div><div class="s">Digital Products · KSA</div></div>
 </header>
 <main>
- <div class="eyebrow">Analytics Portal</div>
- <h1 class="hero-h">Choose a <span class="u">product line</span></h1>
- <p class="lede">Live acquisition, credit, risk and quality analytics across Tasheel's consumer finance products. Select a line to open its command dashboard.</p>
  <div class="cards">
-   <a class="pcard pf" href="Acquisition_Command_Dashboard.html">
-     <div class="ic">◎</div>
-     <h2>Personal Finance</h2>
-     <p>Tawarruq cash loan origination funnel — performance, credit &amp; risk, geography, demographics and weekly quality highlights.</p>
-     <div class="tagrow"><span class="tag">Funnel</span><span class="tag">Credit &amp; Risk</span><span class="tag">Geography</span><span class="tag">Upload · Date range</span></div>
-     <span class="go">Open dashboard <span class="arw">→</span></span>
-   </a>
-   <a class="pcard fa" href="Funnel_Analysis.html">
-     <div class="ic">⑃</div>
-     <h2>Funnel Analysis</h2>
-     <p>Daily origination funnel across 5 customer journeys — step conversion, drop-off, decline reasons, trends and C-level insights.</p>
-     <div class="tagrow"><span class="tag">5 Journeys</span><span class="tag">Step conversion</span><span class="tag">C-Level</span><span class="tag">Multi-upload</span></div>
-     <span class="go">Open dashboard <span class="arw">→</span></span>
-   </a>
-   <a class="pcard cc" href="Credit_Card_Dashboard.html">
-     <div class="ic">▤</div>
-     <h2>Credit Card</h2>
-     <p>Credit card acquisition funnel — performance, credit &amp; risk, geography, demographics and weekly quality highlights.</p>
-     <div class="tagrow"><span class="tag">Funnel</span><span class="tag">Credit &amp; Risk</span><span class="tag">Geography</span><span class="tag">Upload · Date range</span></div>
-     <span class="go">Open dashboard <span class="arw">→</span></span>
-   </a>
-   <a class="pcard si" href="SIMAH_Intelligence.html">
-     <div class="ic">◈</div>
-     <h2>SIMAH Intelligence</h2>
-     <p>Credit bureau deep-dive — score distribution, enquiry intensity, competitor landscape, utilization, DBR, BNPL impact and applicant profile cards.</p>
-     <div class="tagrow"><span class="tag">Credit Bureau</span><span class="tag">Score Analysis</span><span class="tag">Competitors</span><span class="tag">Profile Cards</span></div>
-     <span class="go">Open dashboard <span class="arw">→</span></span>
-   </a>
-   <a class="pcard ac" href="Application_Cost.html">
-     <div class="ic">﷼</div>
-     <h2>Application Cost</h2>
-     <p>API service cost analysis per application &mdash; Yaqeen, SIMAH, GOSI, MOF, Nafith and more. Booked vs not-booked breakdown with local/expat split.</p>
-     <div class="tagrow"><span class="tag">Cost Analysis</span><span class="tag">API Services</span><span class="tag">Booked vs Not</span><span class="tag">Local / Expat</span></div>
-     <span class="go">Open cost analysis <span class="arw">→</span></span>
-   </a>
-   <a class="pcard mj" href="Mobile_Journey_Source_of_Truth.html">
-     <div class="ic">▦</div>
-     <h2>Mobile Journey</h2>
-     <p>The full origination journey as 20 INVEST stories across 2 patches &mdash; Registration &rarr; Offer &rarr; E-Signature &rarr; Disbursement &rarr; Servicing.</p>
-     <div class="tagrow"><span class="tag">20 Stories</span><span class="tag">2 Patches</span><span class="tag">Source of Truth</span><span class="tag">Latest</span></div>
-     <span class="go">Open source of truth <span class="arw">→</span></span>
-   </a>
- </div>
 
- <div class="jf-wrap">
-   <div class="jf-sec-h"><span class="k">CONNECTING THE DOTS</span><h2>Journey &harr; Funnel</h2><span class="hint">screens overlaid on the Submitted &rarr; Booked funnel &middot; Apr 6 &ndash; Jul 5, 2026</span></div>
-   <div class="jf-kpis">
-     <div class="jf-kpi"><div class="l">Submitted</div><div class="v">182,009</div></div>
-     <div class="jf-kpi"><div class="l">Initial approved</div><div class="v g">41,907</div></div>
-     <div class="jf-kpi"><div class="l">Final approved</div><div class="v g">12,158</div></div>
-     <div class="jf-kpi"><div class="l">Booked &amp; funded</div><div class="v g">10,455</div></div>
-     <div class="jf-kpi"><div class="l">Loan value</div><div class="v a">SAR 248.3M</div></div>
-     <div class="jf-kpi"><div class="l">Booked &divide; submitted</div><div class="v">5.7%</div></div>
-   </div>
-   <div class="jf-panel">
-     <p class="jf-lead">Each funnel stage is owned by a different part of the journey. The customer-facing <b>screens</b> only move the needle where the drop is UX- or process-driven; the two largest leaks sit in <b>credit/policy</b> and <b>vetting</b>, while the smallest &mdash; but <b>most expensive</b> &mdash; leak sits in the <b>e-signature &amp; disbursement</b> screens, where credit has already been spent.</p>
-     <div id="jf-funnel"></div>
-     <div class="jf-ins-grid">
-       <div class="jf-ins leak"><h4>&#9650; Biggest leak &middot; Initial &rarr; Final approval</h4>
-         <span class="big">41,907 &rarr; 12,158 &nbsp;<span style="font-size:13px;color:#d1443f">&minus;71% &middot; ~29,700 lost</span></span>
-         <p>The single largest absolute drop, and it is <b>ops/vetting-addressable</b>: employment verification (GOSI/MOF), Sales Vetting of unlisted companies, manual document collection (CR, bank statement, LOS), and the 2nd SIMAH. Known gaps &mdash; customers don&rsquo;t know what&rsquo;s pending (doc / salary / portal), no proactive detection, no flag for apps aged &gt;48h. Automating company listing (Watheq) and pending-item clarity attacks this stage directly.</p></div>
-       <div class="jf-ins value"><h4>&#9670; Highest cost-per-drop &middot; Final &rarr; Booked</h4>
-         <span class="big">12,158 &rarr; 10,455 &nbsp;<span style="font-size:13px;color:var(--violet)">&minus;14% &middot; ~1,700 lost</span></span>
-         <p>Only 14% drop, but every lost application here is <b>fully credit-approved</b> &mdash; the most expensive abandonment in the funnel. It lives entirely in the Patch-2 screens (approval call &rarr; IBAN &rarr; Mada card &rarr; Sharia docs &rarr; NAFATH &rarr; Nafith). Known gaps &mdash; IBAN not mandatory in back office, no unified calling system, and customers needing active guidance through e-signing. Target: booking-to-final &gt;90%.</p></div>
-     </div>
-   </div>
-   <div class="jf-sec-h"><span class="k">MAP</span><h2>Screen-to-stage reference</h2></div>
-   <div class="jf-panel">
-     <table class="jf-table"><thead><tr><th>Funnel stage</th><th class="c">Count</th><th class="c">Step conv.</th><th>Journey screens</th><th>Owner of the drop</th></tr></thead><tbody id="jf-map"></tbody></table>
-     <div class="jf-note"><b>Reading it:</b> conversion % is each stage &divide; the stage above. Pre-qualification screens sit <i>before</i> Submitted (their drop-off isn&rsquo;t inside the 182,009); servicing sits <i>after</i> Booked. Live, date-filterable versions of every number are in the <a href="Acquisition_Command_Dashboard.html">Personal Finance dashboard</a>.</div>
-   </div>
+   <a class="pcard pf" href="Acquisition_Command_Dashboard.html">
+     <div class="card-icon"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+       <rect x="4" y="6" width="32" height="28" rx="3"/>
+       <line x1="4" y1="14" x2="36" y2="14"/>
+       <polyline points="10,28 16,22 22,25 30,18"/>
+       <circle cx="30" cy="18" r="1.5" fill="currentColor" stroke="none"/>
+     </svg></div>
+     <h2>Personal Finance</h2>
+   </a>
+
+   <a class="pcard fa" href="Funnel_Analysis.html">
+     <div class="card-icon"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+       <path d="M6 8h28L26 20v10l-6 4V20z"/>
+       <line x1="14" y1="14" x2="26" y2="14" stroke-dasharray="2 2" opacity=".5"/>
+       <line x1="16" y1="18" x2="24" y2="18" stroke-dasharray="2 2" opacity=".5"/>
+     </svg></div>
+     <h2>Funnel Analysis</h2>
+   </a>
+
+   <a class="pcard cc" href="Credit_Card_Dashboard.html">
+     <div class="card-icon"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+       <rect x="4" y="9" width="32" height="22" rx="3"/>
+       <line x1="4" y1="17" x2="36" y2="17"/>
+       <rect x="8" y="21" width="8" height="4" rx="1" opacity=".4"/>
+       <line x1="24" y1="25" x2="32" y2="25" opacity=".4"/>
+     </svg></div>
+     <h2>Credit Card</h2>
+   </a>
+
+   <a class="pcard si" href="SIMAH_Intelligence.html">
+     <div class="card-icon"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+       <circle cx="20" cy="20" r="14"/>
+       <path d="M20 10v10l7 7"/>
+       <circle cx="20" cy="20" r="2" fill="currentColor" stroke="none"/>
+       <path d="M10 26a14 14 0 0 1 0-12" opacity=".35" stroke-width="2.5"/>
+       <path d="M30 14a14 14 0 0 1 0 12" opacity=".35" stroke-width="2.5"/>
+     </svg></div>
+     <h2>SIMAH Intelligence</h2>
+   </a>
+
+   <a class="pcard ac" href="Application_Cost.html">
+     <div class="card-icon"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+       <path d="M20 4C12 4 6 8 6 12v16c0 4 6 8 14 8s14-4 14-8V12c0-4-6-8-14-8z"/>
+       <ellipse cx="20" cy="12" rx="14" ry="8"/>
+       <path d="M6 20c0 4 6 8 14 8s14-4 14-8" opacity=".35"/>
+       <path d="M14 16v4M20 17v4M26 16v4" stroke-width="1.5" opacity=".5"/>
+     </svg></div>
+     <h2>Application Cost</h2>
+   </a>
+
+   <a class="pcard mj" href="Mobile_Journey_Source_of_Truth.html">
+     <div class="card-icon"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+       <rect x="11" y="4" width="18" height="32" rx="4"/>
+       <line x1="17" y1="8" x2="23" y2="8" opacity=".4"/>
+       <circle cx="20" cy="32" r="1.2" fill="currentColor" stroke="none"/>
+       <polyline points="16,20 19,23 24,17"/>
+     </svg></div>
+     <h2>Mobile Journey</h2>
+   </a>
+
  </div>
 </main>
 <div class="foot">Built for <a href="https://www.linkedin.com/in/emadayyash" target="_blank">Emad Ayyash</a> · Tasheel Finance</div>
-<script>
-const G=['#35c0b2','#17a99b','#0e9e90','#0b7d72'];
-const STAGES=[
- {stg:'Submitted',count:182009,base:182009,conv:'100%',drop:null,top:true,
-  screens:['12 NID','11 Mobile','9 OTP','10 Password','6 Name','5 Email','7/8 Branch','1 Purpose'],own:'pre',ownLbl:'Registration + Application',
-  addr:'Completed application. In-screen abandonment (OTP friction, mobile name-match, geo/branch) happens here — pre-submission.'},
- {stg:'Initial approved',count:41907,base:182009,conv:'23.0%',drop:'−77%',
-  screens:['2 Approval'],own:'credit',ownLbl:'Credit / policy',
-  addr:'DE decision. Mostly credit-policy driven — but avoidable declines from Watheq company-listing, Yaqeen ±1-day DOB, and geo failures live here.'},
- {stg:'Final approved',count:12158,base:182009,conv:'29.0%',drop:'−71%',
-  screens:['(back-office vetting)','2 Tenure'],own:'ops',ownLbl:'Vetting / verification',
-  addr:'GOSI/MOF, Sales Vetting, document collection, 2nd SIMAH. Biggest absolute leak — ops-addressable via pending-item clarity + proactive follow-up.'},
- {stg:'Booked & funded',count:10455,base:182009,conv:'86.0%',drop:'−14%',
-  screens:['19 Call','16 IBAN','20 Mada','18 Docs','17 NAFATH','21 Nafith'],own:'ux',ownLbl:'E-sign / disbursement',
-  addr:'E-signature + disbursement path. Highest cost-per-drop — mandatory IBAN, unified calling, and active e-sign guidance recover it.'}
-];
-document.getElementById('jf-funnel').innerHTML=STAGES.map((s,i)=>{
- const w=Math.max(11,(s.count/s.base*100)).toFixed(1);
- const cv=s.top?'<span class="stg">top of funnel</span><span class="cv"><span class="pct">100%</span> of submitted</span>'
-   :'<span class="stg">step conversion</span><span class="cv"><span class="pct">'+s.conv+'</span> of submitted <span class="drop">'+s.drop+'</span></span>';
- return '<div class="jf-frow"><div class="jf-meta">'+cv+'</div><div>'+
-   '<div class="jf-fbar" style="width:'+w+'%;background:linear-gradient(90deg,'+G[i]+','+G[i]+'cc)"><span class="fn">'+s.stg+'</span><span class="fc">'+s.count.toLocaleString()+'</span></div>'+
-   '<div class="jf-screens">'+s.screens.map(x=>'<span class="jf-schip">'+x+'</span>').join('')+'<span class="jf-own '+s.own+'">'+s.ownLbl+'</span></div>'+
-   '<div class="jf-addr">'+s.addr+'</div></div></div>';
-}).join('');
-const MAP=[
- ['0 · Pre-qualification','—','pre-submit','15 Welcome · 14 Intro · 13 Eligibility · 3/4 Result','pre','Product / UX','Indicative only; Playground-repetition drop-off'],
- ['1 · Submitted','182,009','100%','12 · 11 · 9 · 10 (Registration) · 6 · 5 · 7/8 · 1 (Application)','pre','Registration + Application',''],
- ['2 · Initial approved','41,907','23.0%','2 Approval / decline','credit','Credit / policy','Watheq · Yaqeen DOB · geo'],
- ['3 · Final approved','12,158','29.0%','2 Tenure · back-office vetting','ops','Vetting / verification','Docs · GOSI/MOF · 2nd SIMAH'],
- ['4 · Booked & funded','10,455','86.0%','19 · 16 · 20 · 18 · 17 · 21 (e-sign + disbursement)','ux','E-sign / disbursement','IBAN mandatory · unified calling'],
- ['5 · Servicing','—','post-book','23 / 22 Current Finance','pre','Loan servicing','Retention · early settlement']
-];
-document.getElementById('jf-map').innerHTML=MAP.map(m=>
- '<tr><td><b>'+m[0]+'</b></td><td class="c">'+m[1]+'</td><td class="c">'+m[2]+'</td><td>'+m[3]+'</td><td><span class="jf-own '+m[4]+'">'+m[5]+'</span>'+(m[6]?'<div style="font-size:11px;color:var(--faint);margin-top:4px">'+m[6]+'</div>':'')+'</td></tr>').join('');
-</script>
 </body></html>
