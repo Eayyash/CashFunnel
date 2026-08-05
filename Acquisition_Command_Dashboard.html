@@ -799,7 +799,8 @@ document.getElementById('d-to').addEventListener('change',onDateChange);
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));t.classList.add('on');const id=t.dataset.tab;
   document.querySelectorAll('.panel-tab').forEach(p=>p.classList.toggle('on',p.id===id));
-  if(!rendered[id]){rendered[id]=true;if(['credit','geo','demo'].includes(id))renderChartTab(id);if(id==='notes')renderNotes();if(id==='appr')renderApproved();}}));
+  if(!rendered[id]){rendered[id]=true;if(['credit','geo','demo'].includes(id))renderChartTab(id);if(id==='notes')renderNotes();if(id==='appr')renderApproved();}
+  if(typeof renderNewCards==='function')setTimeout(renderNewCards,0);}));
 document.querySelectorAll('#credit,#geo,#demo').forEach(sec=>{const tab=sec.id;
   sec.querySelectorAll('.stage-ctl button').forEach(b=>b.addEventListener('click',()=>{
     sec.querySelectorAll('.stage-ctl button').forEach(x=>x.classList.remove('on'));b.classList.add('on');tabState[tab].s=b.dataset.s;renderChartTab(tab);}));});
@@ -1476,6 +1477,7 @@ function renderSummaryTab(){
   mh+='</tbody></table>';
   document.getElementById('sum-mom').innerHTML=mh;
 }
+window.renderNewCards=renderNewCards;
 function renderNewCards(){
   if(!window.__engine||!window.__engine.dimDailyTrend)return;
   try{
