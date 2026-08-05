@@ -551,10 +551,12 @@ function render(from,to){
   sfBar.style.display='flex';
   const sfFrom=document.getElementById('s-date-from');
   const sfTo=document.getElementById('s-date-to');
+  const yd2=new Date();yd2.setDate(yd2.getDate()-1);const yds2=yd2.toISOString().slice(0,10);
+  const defaultDay=yds2<M.min?M.min:yds2>M.max?M.max:yds2;
   sfFrom.min=M.min; sfFrom.max=M.max;
   sfTo.min=M.min; sfTo.max=M.max;
-  sfFrom.value=M.min; sfTo.value=M.max;
-  sFrom=M.min; sTo=M.max;
+  sfFrom.value=defaultDay; sfTo.value=defaultDay;
+  sFrom=defaultDay; sTo=defaultDay;
   sfFrom.addEventListener('change',()=>{sFrom=sfFrom.value;renderStatuses();});
   sfTo.addEventListener('change',()=>{sTo=sfTo.value;renderStatuses();});
   document.getElementById('s-reset-btn').addEventListener('click',()=>{
