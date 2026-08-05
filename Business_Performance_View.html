@@ -122,13 +122,16 @@ canvas{width:100%!important;max-height:300px}
   <div class="logo"></div>
   <div class="brand"><div class="t">Business Performance View</div><div class="s">Tasheel Finance · Personal Finance</div></div>
   <a class="home" href="index.html">← Command Center</a>
-  <div style="display:flex;align-items:center;gap:10px;margin-left:auto">
+  <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap">
     <label style="font-size:11px;color:var(--muted)">From</label>
     <input type="date" id="bpv-from" style="font-size:12px;padding:4px 8px;border:1px solid var(--line2);border-radius:6px;font-family:'JetBrains Mono';background:var(--panel)">
     <label style="font-size:11px;color:var(--muted)">To</label>
     <input type="date" id="bpv-to" style="font-size:12px;padding:4px 8px;border:1px solid var(--line2);border-radius:6px;font-family:'JetBrains Mono';background:var(--panel)">
-    <button id="bpv-thisMonth" style="font-size:11px;padding:4px 10px;border:1px solid var(--line2);border-radius:6px;background:var(--panel);cursor:pointer">This Month</button>
-    <button id="bpv-all" style="font-size:11px;padding:4px 10px;border:1px solid var(--line2);border-radius:6px;background:var(--panel);cursor:pointer">All</button>
+    <button class="bpv-quick" id="bpv-yesterday" style="font-size:11px;padding:4px 10px;border:1px solid var(--line2);border-radius:6px;background:var(--panel);cursor:pointer">Yesterday</button>
+    <button class="bpv-quick" id="bpv-thisMonth" style="font-size:11px;padding:4px 10px;border:1px solid var(--line2);border-radius:6px;background:var(--panel);cursor:pointer">This month</button>
+    <button class="bpv-quick" id="bpv-prevMonth" style="font-size:11px;padding:4px 10px;border:1px solid var(--line2);border-radius:6px;background:var(--panel);cursor:pointer">Prev month</button>
+    <button class="bpv-quick" id="bpv-last7" style="font-size:11px;padding:4px 10px;border:1px solid var(--line2);border-radius:6px;background:var(--panel);cursor:pointer">Last 7 days</button>
+    <button class="bpv-quick" id="bpv-all" style="font-size:11px;padding:4px 10px;border:1px solid var(--line2);border-radius:6px;background:var(--panel);cursor:pointer">All</button>
   </div>
   <div class="snap" id="snap-date"></div>
 </header>
@@ -317,32 +320,67 @@ function destroyChart(id){if(chartInstances[id]){chartInstances[id].destroy();de
   const K=BPV.kpi;
   const allDates=BPV.weekly.map(w=>w.wk).sort();
   const maxDate=allDates[allDates.length-1]||K.snapDate;
-  // Default: current month (~30 days)
-  const now=new Date();
-  const y=now.getFullYear(), mo=String(now.getMonth()+1).padStart(2,'0');
-  const defFrom=y+'-'+mo+'-01';
-  const defTo=maxDate;
   const elFrom=document.getElementById('bpv-from');
   const elTo=document.getElementById('bpv-to');
+
+  // Helper: YYYY-MM-DD from Date (local timezone)
+  function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+
+  // Default: yesterday
+  const now=new Date();
+  const yesterday=new Date(now); yesterday.setDate(yesterday.getDate()-1);
+  const defFrom=ymd(yesterday);
+  const defTo=ymd(yesterday);
   elFrom.value=defFrom; elTo.value=defTo;
   FILTER_FROM=defFrom; FILTER_TO=defTo;
 
-  function applyFilter(){
+  function applyFilter(activeBtn){
     FILTER_FROM=elFrom.value||null;
     FILTER_TO=elTo.value||null;
-    // Re-render all visible tabs
+    // Highlight active quick button
+    document.querySelectorAll('.bpv-quick').forEach(b=>{
+      b.style.background=b===activeBtn?'var(--cyan)':'var(--panel)';
+      b.style.color=b===activeBtn?'#fff':'inherit';
+      b.style.borderColor=b===activeBtn?'var(--cyan)':'';
+    });
     Object.keys(rendered).forEach(k=>rendered[k]=false);
     const activeTab=document.querySelector('.tabs button.active')?.dataset.tab||'overview';
     renderTab(activeTab);
   }
-  elFrom.addEventListener('change',applyFilter);
-  elTo.addEventListener('change',applyFilter);
-  document.getElementById('bpv-thisMonth').addEventListener('click',()=>{
-    elFrom.value=defFrom; elTo.value=defTo; applyFilter();
+
+  elFrom.addEventListener('change',()=>applyFilter(null));
+  elTo.addEventListener('change',()=>applyFilter(null));
+
+  const btnYesterday=document.getElementById('bpv-yesterday');
+  const btnThisMonth=document.getElementById('bpv-thisMonth');
+  const btnPrevMonth=document.getElementById('bpv-prevMonth');
+  const btnLast7=document.getElementById('bpv-last7');
+  const btnAll=document.getElementById('bpv-all');
+
+  btnYesterday.addEventListener('click',()=>{
+    elFrom.value=ymd(yesterday); elTo.value=ymd(yesterday); applyFilter(btnYesterday);
   });
-  document.getElementById('bpv-all').addEventListener('click',()=>{
-    elFrom.value=allDates[0]||''; elTo.value=maxDate; applyFilter();
+  btnThisMonth.addEventListener('click',()=>{
+    const y=now.getFullYear(), mo=String(now.getMonth()+1).padStart(2,'0');
+    elFrom.value=y+'-'+mo+'-01'; elTo.value=maxDate; applyFilter(btnThisMonth);
   });
+  btnPrevMonth.addEventListener('click',()=>{
+    const pm=new Date(now.getFullYear(),now.getMonth()-1,1);
+    const pmEnd=new Date(now.getFullYear(),now.getMonth(),0); // day 0 of current month = last day of prev month
+    elFrom.value=ymd(pm); elTo.value=ymd(pmEnd); applyFilter(btnPrevMonth);
+  });
+  btnLast7.addEventListener('click',()=>{
+    const d7=new Date(now); d7.setDate(d7.getDate()-7);
+    elFrom.value=ymd(d7); elTo.value=ymd(yesterday); applyFilter(btnLast7);
+  });
+  btnAll.addEventListener('click',()=>{
+    elFrom.value=allDates[0]||''; elTo.value=maxDate; applyFilter(btnAll);
+  });
+
+  // Highlight default (Yesterday)
+  btnYesterday.style.background='var(--cyan)';
+  btnYesterday.style.color='#fff';
+  btnYesterday.style.borderColor='var(--cyan)';
 })();
 
 // ═══════════════════════ CHART DEFAULTS ═══════════════════════
