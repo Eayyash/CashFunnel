@@ -945,7 +945,7 @@ const RAWSTORE = {"n":744180,"dates":["2025-10-06","2025-10-07","2025-10-08","20
 
   // ---- filter state + apply ----
   let FILTERS={};
-  const DIMLABEL={region:'Region',employer:'Employer',nationality:'Nationality',income:'Income',risk:'Risk grade',simah:'SIMAH/QARAR',age:'Age',gender:'Gender',marital:'Marital',product:'Product',source:'Source',scoreband:'Score band',dbr:'DBR',store:'Store',city:'City',natdetail:'National Address'};
+  const DIMLABEL={region:'Region',employer:'Employer',nationality:'Nationality',income:'Income',risk:'Risk grade',simah:'SIMAH/QARAR',age:'Age',gender:'Gender',marital:'Marital',product:'Product',source:'Source',scoreband:'Score band',dbr:'DBR',store:'Store',city:'City',natdetail:'Nationality Detail'};
   function activeCount(){let n=0;for(const d in FILTERS)if(FILTERS[d])n+=FILTERS[d].size;return n;}
   function toggleFilter(dim,label){
     const code=V2C[dim]?V2C[dim].get(label):undefined; if(code===undefined){toast('Can’t filter “'+label+'”');return;}

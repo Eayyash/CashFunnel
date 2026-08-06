@@ -1072,7 +1072,7 @@ function renderAI(){
 
   // Dimension analysis — employer/nationality/income are filtered; others are all-time
   const dimNames=['employer','nationality','income','risk','simah','age','region','city','natdetail','source','product','gender','marital','scoreband','dbr','store'];
-  const DIM_LABELS={employer:'Employer',nationality:'Nationality',income:'Income',risk:'Risk',simah:'SIMAH',age:'Age',region:'Region',city:'City',natdetail:'National Address',source:'Source',product:'Product',gender:'Gender',marital:'Marital',scoreband:'Score Band',dbr:'DBR',store:'Store'};
+  const DIM_LABELS={employer:'Employer',nationality:'Nationality',income:'Income',risk:'Risk',simah:'SIMAH',age:'Age',region:'Region',city:'City',natdetail:'Nationality Detail',source:'Source',product:'Product',gender:'Gender',marital:'Marital',scoreband:'Score Band',dbr:'DBR',store:'Store'};
   const minSub = filteredMonths.length<=2 ? 10 : 100; // lower threshold for narrow date ranges
   const dimAnalysis=dimNames.map(dn=>{
     const dim=D[dn]||{};
