@@ -238,7 +238,8 @@ table.dt tr:hover td{background:var(--muted-bg)}
     <div class="dfield"><label>From</label><input type="date" id="d-from"></div>
     <div class="dfield"><label>To</label><input type="date" id="d-to"></div>
     <div class="presets" id="presets">
-      <button data-r="all" class="on">All</button>
+      <button data-r="yesterday" class="on">Yesterday</button>
+      <button data-r="all">All</button>
       <button data-r="30d">Last 30d</button>
       <button data-r="7d">Last 7d</button>
       <button data-r="mtd">This month</button>
@@ -431,7 +432,10 @@ const V=(o,s)=>o[s]||0;
 const rate=(a,b)=>b?+(100*a/b).toFixed(1):0;
 function jdata(agg,j){return j==='ALL'?agg.all:(agg.byJ[j]||{});}
 
-let RANGE={from:cD.meta.min,to:cD.meta.max};
+// Default to yesterday
+const _now=new Date(),_yd=new Date(_now.getFullYear(),_now.getMonth(),_now.getDate()-1);
+const _yds=ymd(_yd);
+let RANGE={from:_yds<=cD.meta.max?_yds:cD.meta.max,to:_yds<=cD.meta.max?_yds:cD.meta.max};
 let JSEL='ALL';
 let CUR=null;
 function computeCUR(){
@@ -787,7 +791,8 @@ function setDateInputs(){const f=document.getElementById('d-from'),t=document.ge
 
 /* ---------- presets / pickers / journey ---------- */
 function applyPreset(r){const mn=cD.meta.min,mx=cD.meta.max;
-  if(r==='all')RANGE={from:mn,to:mx};
+  if(r==='yesterday'){const yd=_yds<=mx?_yds:mx;RANGE={from:yd,to:yd};}
+  else if(r==='all')RANGE={from:mn,to:mx};
   else if(r==='30d')RANGE={from:addDays(mx,-29)<mn?mn:addDays(mx,-29),to:mx};
   else if(r==='7d')RANGE={from:addDays(mx,-6)<mn?mn:addDays(mx,-6),to:mx};
   else if(r==='mtd'){const d=parseD(mx);const first=ymd(new Date(d.getFullYear(),d.getMonth(),1));RANGE={from:first<mn?mn:first,to:mx};}
