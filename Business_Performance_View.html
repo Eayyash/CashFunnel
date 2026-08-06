@@ -264,79 +264,86 @@ canvas{width:100%!important;max-height:300px}
 
 <!-- ═══════════════════════ TAB 6: AI TAB ═══════════════════════ -->
 <div class="section" id="sec-ai">
-  <h2 class="section-title" style="display:flex;align-items:center;gap:10px">🧠 AI-Powered Intelligence <span class="badge" style="background:var(--violet-bg);color:var(--violet);font-size:11px;padding:3px 10px;border-radius:8px">Novel Insights Only</span></h2>
-  <p class="section-sub">Analysis you won't find in other tabs — pipeline decomposition, revenue-per-application economics, and hidden cross-dimensional patterns. <strong>Unlisted employers excluded</strong> from all post-submission metrics.</p>
+  <h2 class="section-title" style="display:flex;align-items:center;gap:10px">🧠 AI Head of Digital Lending <span class="badge" style="background:var(--violet-bg);color:var(--violet);font-size:11px;padding:3px 10px;border-radius:8px">10-Section Intelligence</span></h2>
+  <p class="section-sub">Combining the lens of CPO, CRO, CAO, Growth Lead, and Strategy Consultant. <strong>Unlisted employers excluded</strong> from all post-submission metrics. Data: Loan Booking + SIMAH Credit Bureau + Digital Funnel.</p>
 
-  <!-- Row 1: Real Pipeline KPIs (excl Unlisted) -->
-  <div class="kpi-strip k5" id="ai-kpis"></div>
+  <!-- ═══ SECTION 1: EXECUTIVE STORY ═══ -->
+  <div class="card" style="margin-bottom:24px;border-left:4px solid var(--violet)">
+    <h3>§1 · Executive Story <span class="badge" style="background:var(--violet-bg);color:var(--violet)">The Hidden Narrative</span></h3>
+    <div id="ai-exec-story"></div>
+  </div>
 
-  <!-- Row 2: Pipeline Decomposition + Pipeline Health Trend -->
-  <div class="cards-grid g2">
-    <div class="card">
-      <h3>🔬 Pipeline Decomposition by Employer <span class="badge" style="background:var(--cyan-bg);color:var(--cyan)">Sub→Init→Book</span></h3>
-      <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Two-stage conversion: getting approved (Sub→Init) vs completing the journey (Init→Book). Where does each employer type lose applicants?</p>
-      <canvas id="chart-ai-pipeline" style="max-height:300px"></canvas>
-    </div>
-    <div class="card">
-      <h3>📉 Pipeline Health Over Time <span class="badge" style="background:var(--red-bg);color:var(--red)">Monthly trend</span></h3>
-      <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Is the approval-to-booking pipeline getting better or worse? Monthly init→book conversion tells the story. <em>Unlisted excluded.</em></p>
-      <canvas id="chart-ai-health" style="max-height:300px"></canvas>
+  <!-- ═══ SECTION 2: FUNNEL DIAGNOSTICS ═══ -->
+  <div class="card" style="margin-bottom:24px;border-left:4px solid var(--red)">
+    <h3>§2 · Funnel Diagnostics <span class="badge" style="background:var(--red-bg);color:var(--red)">Stage-by-Stage</span></h3>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Every funnel stage analyzed for health, root cause of drop, and revenue impact.</p>
+    <div id="ai-funnel-diag"></div>
+    <canvas id="chart-ai-funnel-waterfall" style="max-height:340px;margin-top:16px"></canvas>
+    <div id="ai-funnel-opp" style="margin-top:16px"></div>
+  </div>
+
+  <!-- ═══ SECTION 3: CUSTOMER DNA ═══ -->
+  <div class="card" style="margin-bottom:24px;border-left:4px solid var(--cyan)">
+    <h3>§3 · Customer DNA Analysis <span class="badge" style="background:var(--cyan-bg);color:var(--cyan)">Who Books?</span></h3>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">All 16 dimensions ranked by influence on booking. Profiles of best, worst, most profitable, and fastest-converting customers.</p>
+    <div id="ai-customer-dna"></div>
+    <canvas id="chart-ai-dna-radar" style="max-height:320px;margin-top:16px"></canvas>
+  </div>
+
+  <!-- ═══ SECTION 4: DECLINE ANALYSIS ═══ -->
+  <div class="card" style="margin-bottom:24px;border-left:4px solid var(--gold)">
+    <h3>§4 · Decline Analysis <span class="badge" style="background:var(--gold-bg);color:var(--gold)">Revenue Lost to Rules</span></h3>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Every decline reason quantified by volume, revenue lost, and recoverability.</p>
+    <div id="ai-decline"></div>
+    <canvas id="chart-ai-decline" style="max-height:300px;margin-top:16px"></canvas>
+  </div>
+
+  <!-- ═══ SECTION 5: SIMAH INTELLIGENCE ═══ -->
+  <div class="card" style="margin-bottom:24px;border-left:4px solid var(--blue)">
+    <h3>§5 · SIMAH Credit Bureau Intelligence <span class="badge" style="background:var(--blue-bg);color:var(--blue)">1,881 Reports</span></h3>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Deep analysis of credit scores, enquiry intensity, credit shopping, competitor landscape, and hidden risk segments.</p>
+    <div id="ai-simah"></div>
+    <div class="cards-grid g2" style="margin-top:16px">
+      <div><canvas id="chart-ai-simah-score" style="max-height:280px"></canvas></div>
+      <div><canvas id="chart-ai-simah-enq" style="max-height:280px"></canvas></div>
     </div>
   </div>
 
-  <!-- Row 3: Revenue Per Application + Product Gap -->
-  <div class="cards-grid g2">
-    <div class="card">
-      <h3>💎 Revenue Per Application (RPA) <span class="badge" style="background:var(--green-bg);color:var(--green)">Expected SAR/submission</span></h3>
-      <p style="font-size:11px;color:var(--muted);margin-bottom:10px">The metric that should drive marketing spend: <strong>booking rate × avg loan</strong>. How much is each submission worth in expected revenue?</p>
-      <canvas id="chart-ai-rpa" style="max-height:340px"></canvas>
-    </div>
-    <div class="card">
-      <h3>📦 Product Conversion Gap <span class="badge" style="background:var(--gold-bg);color:var(--gold)">Combo vs Tawarruq</span></h3>
-      <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Combo converts at 15× the rate of Tawarruq. Where is each product's volume coming from, and what drives the gap?</p>
-      <div id="ai-product"></div>
-      <canvas id="chart-ai-product" style="max-height:280px"></canvas>
-    </div>
+  <!-- ═══ SECTION 6: PRODUCT MANAGER MODE ═══ -->
+  <div class="card" style="margin-bottom:24px;border-left:4px solid var(--green)">
+    <h3>§6 · Product Manager Mode <span class="badge" style="background:var(--green-bg);color:var(--green)">UX & Friction</span></h3>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Digital journey friction analysis: registration, offer, verification, and completion barriers with categorized solutions.</p>
+    <div id="ai-pm-mode"></div>
   </div>
 
-  <!-- Row 4: Channel Problem + Age Pipeline -->
-  <div class="cards-grid g2">
-    <div class="card">
-      <h3>📱 The Channel Problem <span class="badge" style="background:var(--red-bg);color:var(--red)">UI vs Back Office</span></h3>
-      <p style="font-size:11px;color:var(--muted);margin-bottom:10px">UI generates 55% of submissions but only 7.5% of bookings. Where are UI applications dying?</p>
-      <div id="ai-channel"></div>
-    </div>
-    <div class="card">
-      <h3>🎂 Age as Pipeline Predictor <span class="badge" style="background:var(--blue-bg);color:var(--blue)">Init→Book by age</span></h3>
-      <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Older applicants who get approved are far more likely to complete — age predicts pipeline completion, not just approval.</p>
-      <canvas id="chart-ai-age" style="max-height:280px"></canvas>
-    </div>
+  <!-- ═══ SECTION 7: HIDDEN GROWTH OPPORTUNITIES ═══ -->
+  <div class="card" style="margin-bottom:24px;border-left:4px solid var(--cyan)">
+    <h3>§7 · Hidden Growth Opportunities <span class="badge" style="background:var(--cyan-bg);color:var(--cyan)">Untapped Revenue</span></h3>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Segments, geographies, channels, and income bands management is currently missing.</p>
+    <div id="ai-growth"></div>
+    <canvas id="chart-ai-growth" style="max-height:340px;margin-top:16px"></canvas>
   </div>
 
-  <!-- Row 5: Expat Nationality Pipeline + Portfolio Concentration -->
-  <div class="cards-grid g2">
-    <div class="card">
-      <h3>🌍 Expat Pipeline Quality <span class="badge" style="background:var(--violet-bg);color:var(--violet)">Init→Book by nationality</span></h3>
-      <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Which expat nationalities complete the pipeline best after getting approved? Pipeline quality, not just volume.</p>
-      <canvas id="chart-ai-expat" style="max-height:320px"></canvas>
-    </div>
-    <div class="card">
-      <h3>🎯 Portfolio Concentration Risk <span class="badge" style="background:var(--gold-bg);color:var(--gold)">Dependency analysis</span></h3>
-      <p style="font-size:11px;color:var(--muted);margin-bottom:10px">How many segments account for 50% / 80% of bookings? High concentration = high risk if one segment declines.</p>
-      <canvas id="chart-ai-pareto" style="max-height:320px"></canvas>
-    </div>
+  <!-- ═══ SECTION 8: PREDICTIVE INSIGHTS ═══ -->
+  <div class="card" style="margin-bottom:24px;border-left:4px solid var(--gold)">
+    <h3>§8 · Predictive Insights & Early Warnings <span class="badge" style="background:var(--gold-bg);color:var(--gold)">Trend Signals</span></h3>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Forecasts, deterioration signals, and anomalies vs 7/30/90-day baselines.</p>
+    <div id="ai-predict"></div>
+    <canvas id="chart-ai-predict" style="max-height:300px;margin-top:16px"></canvas>
   </div>
 
-  <!-- Row 6: Top RPA Segments Table -->
-  <div class="card" style="margin-bottom:24px">
-    <h3>🏆 Top 12 Segments by Revenue Per Application <span class="badge" style="background:var(--green-bg);color:var(--green)">Marketing spend guide</span></h3>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Ranked by expected SAR per submission — the segments where every marketing dollar works hardest. <em>Unlisted excluded, min 500 subs.</em></p>
-    <div style="overflow-x:auto"><table class="perf-table" id="ai-rpa-table"><thead><tr>
-      <th>#</th><th>Segment</th><th class="right">Subs</th><th class="right">Init Rate</th><th class="right">Init→Book</th><th class="right">End Rate</th><th class="right">Avg Loan</th><th class="right">RPA (SAR)</th><th style="width:120px">Revenue Index</th>
-    </tr></thead><tbody></tbody></table></div>
+  <!-- ═══ SECTION 9: CEO DASHBOARD ═══ -->
+  <div class="card" style="margin-bottom:24px;border-left:4px solid var(--red)">
+    <h3>§9 · Daily CEO Dashboard <span class="badge" style="background:var(--red-bg);color:var(--red)">Traffic Light</span></h3>
+    <div id="ai-ceo"></div>
   </div>
 
-  <div class="narrative" id="ai-narrative"></div>
+  <!-- ═══ SECTION 10: ACTION PLAN ═══ -->
+  <div class="card" style="margin-bottom:24px;border-left:4px solid var(--violet)">
+    <h3>§10 · Action Plan <span class="badge" style="background:var(--violet-bg);color:var(--violet)">Execute Tomorrow</span></h3>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">The 5 actions I would execute tomorrow as Head of Digital Lending.</p>
+    <div id="ai-actions"></div>
+  </div>
 </div>
 
 <div class="foot">Built for <a href="https://www.linkedin.com/in/emadayyash" target="_blank">Emad Ayyash</a> · Tasheel Finance</div>
@@ -945,293 +952,512 @@ function renderLearnings(){
 // ═══════════════════════ TAB 6: AI TAB ═══════════════════════
 function renderAI(){
   if(rendered.ai) return; rendered.ai=true;
-  const D=BPV.dims, K=BPV.kpi;
-  const avgLoan=K.avgLoan;
-  const nMonths=BPV.monthly.filter(m=>m.sub>200).length||1;
-  const EXL=c=>c!=='Unlisted'&&c!=='Unknown'; // Unlisted exclusion filter
+  const D=BPV.dims, K=BPV.kpi, avgLoan=K.avgLoan;
+  const EXL=c=>c!=='Unlisted'&&c!=='Unknown';
 
-  // Compute real pipeline numbers (excl Unlisted)
+  // ── Core pipeline (excl Unlisted) ──
   const emp=D.employer||{};
-  let rSub=0,rInit=0,rBook=0,rVal=0;
+  let rSub=0,rInit=0,rBook=0;
   Object.entries(emp).filter(([k])=>EXL(k)).forEach(([,v])=>{rSub+=v.sub;rInit+=v.init;rBook+=v.book;});
-  rVal=rBook*avgLoan; // approximation
-  const rInitRate=rSub?(rInit/rSub*100):0;
-  const rI2B=rInit?(rBook/rInit*100):0;
-  const rE2E=rSub?(rBook/rSub*100):0;
+  const rVal=rBook*avgLoan, rInitRate=rSub?(rInit/rSub*100):0, rI2B=rInit?(rBook/rInit*100):0, rE2E=rSub?(rBook/rSub*100):0;
+  const headlineRate=K.totalSub?(K.totalBook/K.totalSub*100):0;
 
   // Monthly pipeline (excl Unlisted)
   const mPipe=BPV.monthly.filter(m=>m.sub>500).map(m=>{
-    let s=0,i=0,b=0;
-    Object.entries(m.emp||{}).filter(([k])=>EXL(k)).forEach(([,v])=>{s+=v.sub;i+=v.init;b+=v.book;});
-    return {mon:m.mon,sub:s,init:i,book:b,s2i:s?(i/s*100):0,i2b:i?(b/i*100):0,e2e:s?(b/s*100):0};
+    let s=0,i=0,b=0,bv=0;
+    Object.entries(m.emp||{}).filter(([k])=>EXL(k)).forEach(([,v])=>{s+=v.sub;i+=v.init;b+=v.book;bv+=(v.bval||0);});
+    return {mon:m.mon,sub:s,init:i,book:b,val:bv,s2i:s?(i/s*100):0,i2b:i?(b/i*100):0,e2e:s?(b/s*100):0};
   });
 
-  // ──── KPIs: Real pipeline (excl Unlisted) ────
-  document.getElementById('ai-kpis').innerHTML=[
-    {label:'Real Submissions',val:fmt(rSub),cls:'cyan',sub:'Excl. '+fmt(K.totalSub-rSub)+' Unlisted'},
-    {label:'Init Approval Rate',val:rInitRate.toFixed(1)+'%',cls:'blue',sub:fmt(rInit)+' approved of '+fmt(rSub)},
-    {label:'Init → Book Rate',val:rI2B.toFixed(1)+'%',cls:'gold',sub:fmt(rBook)+' booked of '+fmt(rInit)+' approved'},
-    {label:'True End-to-End Rate',val:rE2E.toFixed(1)+'%',cls:'green',sub:'vs '+((K.totalBook/K.totalSub)*100).toFixed(1)+'% headline (with Unlisted noise)'},
-    {label:'Revenue Per App (RPA)',val:'SAR '+fmt(Math.round(rE2E/100*avgLoan)),cls:'cyan',sub:'Expected value per real submission'}
-  ].map(k=>`<div class="kpi"><div class="label">${k.label}</div><div class="val ${k.cls}">${k.val}</div><div class="sub" style="font-size:10px;color:var(--muted)">${k.sub}</div></div>`).join('');
+  // Product & channel
+  const prods=D.product||{}, combo=prods['Combo']||{sub:0,init:0,book:0}, tawarruq=prods['Tawarruq']||{sub:0,init:0,book:0};
+  const comboRate=combo.sub?(combo.book/combo.sub*100):0, tawRate=tawarruq.sub?(tawarruq.book/tawarruq.sub*100):0;
+  const comboI2B=combo.init?(combo.book/combo.init*100):0, tawI2B=tawarruq.init?(tawarruq.book/tawarruq.init*100):0;
+  const src=D.source||{}, ui=src['UI']||{sub:0,init:0,book:0}, bo=src['backoffice']||{sub:0,init:0,book:0};
+  const uiRate=ui.sub?(ui.book/ui.sub*100):0, boRate=bo.sub?(bo.book/bo.sub*100):0;
 
-  // ──── Chart 1: Pipeline Decomposition by Employer ────
-  const empCats=Object.entries(emp).filter(([k])=>EXL(k)).sort((a,b)=>b[1].sub-a[1].sub);
-  const empLabels=empCats.map(([k])=>k);
-  destroyChart('chart-ai-pipeline');
-  chartInstances['chart-ai-pipeline']=new Chart(document.getElementById('chart-ai-pipeline'),{
+  // Funnel data
+  const F=BPV.funnel||{}, NC=F['New Customer']||{};
+  const fSteps=['PG_Total_Visits','Application_Created','DELite_Called','DE_Approved','Offer_Displayed','Offer_Accepted','Yaqeen_Passed','NationalAddress_Verified','Nafath_Verified','IVR_Completed','Booked'];
+  const fLabels=['PG Visits','App Created','DELite Called','DE Approved','Offer Displayed','Offer Accepted','Yaqeen Passed','NatAddr Verified','Nafath Verified','IVR Completed','Booked'];
+  const fVals=fSteps.map(s=>NC[s]||0);
+  const fRootCause=['Channel','Technology','Credit','Credit','Product','Customer','Process','Process','Process','Operations','—'];
+  const fTop=fVals[0]||1;
+
+  // Decline data from funnel
+  const declineRaw={};
+  Object.entries(NC).forEach(([k,v])=>{if(k.startsWith('PG_Decline')||['CITC_Failed','Name_Missing','Email_Missing','Cancelled by BO','Cancelled by Customer Service Team','Rejected by UW/ Checker','Rejected by Fraud'].includes(k)) declineRaw[k]=v;});
+
+  // SIMAH data
+  const SM=BPV.simah||{};
+
+  // Segments (excl Unlisted)
+  const segs=BPV.segments.filter(s=>s.emp!=='Unlisted'&&s.sub>=200);
+  segs.forEach(s=>{s.rate=s.sub?(s.book/s.sub*100):0; s.rpa=s.rate/100*s.avg;});
+
+  // Dimension analysis helper
+  const dimNames=['employer','nationality','income','risk','simah','age','region','city','natdetail','source','product','gender','marital','scoreband','dbr','store'];
+  const dimAnalysis=dimNames.map(dn=>{
+    const dim=D[dn]||{};
+    const cats=Object.entries(dim).filter(([k,v])=>EXL(k)&&v.sub>=100);
+    if(!cats.length) return null;
+    const rates=cats.map(([k,v])=>({cat:k,rate:v.sub?(v.book/v.sub*100):0,sub:v.sub,book:v.book}));
+    rates.sort((a,b)=>b.rate-a.rate);
+    const best=rates[0], worst=rates[rates.length-1];
+    const spread=best.rate-worst.rate;
+    return {dim:dn,best,worst,spread,cats:rates};
+  }).filter(Boolean).sort((a,b)=>b.spread-a.spread);
+
+  // ════════════════════════════════════════════════
+  // §1 EXECUTIVE STORY
+  // ════════════════════════════════════════════════
+  const milEmp=emp['Military with Grades']||{sub:0,init:0,book:0};
+  const milInitR=milEmp.sub?(milEmp.init/milEmp.sub*100):0;
+  const milI2B=milEmp.init?(milEmp.book/milEmp.init*100):0;
+  const bestSeg=segs.length?segs.reduce((a,b)=>a.rpa>b.rpa?a:b):null;
+  const totalDeclines=Object.values(declineRaw).reduce((a,v)=>a+v,0);
+  const biggestDecline=Object.entries(declineRaw).sort((a,b)=>b[1]-a[1])[0];
+
+  document.getElementById('ai-exec-story').innerHTML=`
+    <div class="narrative" style="margin:0">
+    <p><strong>1. The Hidden Story:</strong> The headline booking rate of <strong>${headlineRate.toFixed(1)}%</strong> is a lie. After removing ${fmt(K.totalSub-rSub)} Unlisted submissions (which produce only 3 bookings), the true rate is <strong>${rE2E.toFixed(1)}%</strong> — ${(rE2E/headlineRate).toFixed(1)}x higher. Every strategic decision made on the headline number is wrong.</p>
+    <p><strong>2. What Changed:</strong> ${mPipe.length>=3?`Init-to-Book moved from ${mPipe[0].i2b.toFixed(1)}% (${mPipe[0].mon}) to ${mPipe[mPipe.length-1].i2b.toFixed(1)}% (${mPipe[mPipe.length-1].mon}) — a ${(mPipe[mPipe.length-1].i2b-mPipe[0].i2b)>0?'positive':'negative'} ${Math.abs(mPipe[mPipe.length-1].i2b-mPipe[0].i2b).toFixed(1)}pp shift.`:'Insufficient monthly data for trend.'}</p>
+    <p><strong>3. What to Worry About:</strong> The Military paradox — ${milInitR.toFixed(0)}% get approved but only ${milI2B.toFixed(0)}% of approved complete booking. Something in the post-approval journey is broken for this high-potential segment.</p>
+    <p><strong>4. Missed Opportunity:</strong> Tawarruq has ${fmt(tawarruq.sub)} submissions converting at ${tawRate.toFixed(1)}%. Combo converts at ${comboRate.toFixed(1)}%. If 10% of Tawarruq volume shifted to Combo, that is +${fmt(Math.round(tawarruq.sub*0.1*comboRate/100))} bookings.</p>
+    <p><strong>5. Revenue Lost:</strong> ${biggestDecline?`"${biggestDecline[0].replace('PG_Decline_Reasons - ','')}" alone blocks ${fmt(biggestDecline[1])} applications. At the portfolio booking rate, that is SAR ${fmtM(Math.round(biggestDecline[1]*rE2E/100*avgLoan))} in lost revenue.`:'Decline data unavailable.'}</p>
+    <p><strong>6. Fastest Path to More Bookings:</strong> Fix UI channel (${uiRate.toFixed(1)}% vs BO ${boRate.toFixed(1)}%). UI has ${fmt(ui.sub)} submissions — even a 1pp improvement adds ~${fmt(Math.round(ui.sub*0.01))} bookings worth SAR ${fmtM(Math.round(ui.sub*0.01*avgLoan))}.</p>
+    <p><strong>7. Top 10 Insights by Impact:</strong></p>
+    <ol style="font-size:12px;line-height:1.7">
+      <li>Unlisted employers mask true performance — exclude from all reporting</li>
+      <li>Product gap: Combo ${comboRate.toFixed(0)}% vs Tawarruq ${tawRate.toFixed(0)}% — 15x difference</li>
+      <li>Channel gap: UI ${uiRate.toFixed(1)}% vs BO ${boRate.toFixed(1)}% — upstream filtering problem</li>
+      <li>Military approval-to-book collapse: ${milI2B.toFixed(0)}% completion after ${milInitR.toFixed(0)}% approval</li>
+      <li>${biggestDecline?`Biggest decline rule: ${biggestDecline[0].replace('PG_Decline_Reasons - ','')} (${fmt(biggestDecline[1])} blocked)`:'N/A'}</li>
+      <li>Funnel: ${fVals[0]>0?fmt(fVals[0])+' visits become '+fmt(fVals[fVals.length-1])+' bookings ('+(fVals[fVals.length-1]/fVals[0]*100).toFixed(2)+'%)':'N/A'}</li>
+      <li>${bestSeg?`Best RPA segment: ${bestSeg.emp} / ${bestSeg.nat} / ${bestSeg.inc} at SAR ${fmt(Math.round(bestSeg.rpa))}/app`:'N/A'}</li>
+      <li>SIMAH: ${SM.meta?fmt(SM.meta.total)+' reports, '+fmt(SM.meta.matched)+' matched':'No SIMAH data'}</li>
+      <li>Post-approval leakage: ${(100-rI2B).toFixed(0)}% of approved applicants never book</li>
+      <li>Revenue per real application: SAR ${fmt(Math.round(rE2E/100*avgLoan))}</li>
+    </ol>
+    </div>`;
+
+  // ════════════════════════════════════════════════
+  // §2 FUNNEL DIAGNOSTICS
+  // ════════════════════════════════════════════════
+  let funnelHTML='<div style="overflow-x:auto"><table class="perf-table"><thead><tr><th>#</th><th>Stage</th><th class="right">Volume</th><th class="right">Stage Conv</th><th class="right">Drop</th><th class="right">Cum Conv</th><th>Health</th><th>Root Cause</th></tr></thead><tbody>';
+  fVals.forEach((v,i)=>{
+    const prev=i===0?v:fVals[i-1];
+    const stageConv=prev?(v/prev*100):100;
+    const drop=i===0?0:prev-v;
+    const cumConv=(v/fTop*100);
+    const health=i===0?'—':stageConv>=90?'🟢':stageConv>=70?'🟡':'🔴';
+    funnelHTML+=`<tr><td class="mono">${i+1}</td><td>${fLabels[i]}</td><td class="right mono">${fmt(v)}</td><td class="right mono">${i===0?'—':stageConv.toFixed(1)+'%'}</td><td class="right mono" style="color:var(--red)">${i===0?'—':fmt(drop)}</td><td class="right mono">${cumConv.toFixed(2)}%</td><td style="text-align:center">${health}</td><td style="font-size:10px;color:var(--muted)">${fRootCause[i]}</td></tr>`;
+  });
+  funnelHTML+='</tbody></table></div>';
+  document.getElementById('ai-funnel-diag').innerHTML=funnelHTML;
+
+  // Funnel waterfall chart
+  const fDrops=fVals.slice(1).map((v,i)=>fVals[i]-v);
+  destroyChart('chart-ai-funnel-waterfall');
+  chartInstances['chart-ai-funnel-waterfall']=new Chart(document.getElementById('chart-ai-funnel-waterfall'),{
     type:'bar',
-    data:{labels:empLabels,datasets:[
-      {label:'Sub → Init Approval %',data:empCats.map(([,v])=>v.sub?(v.init/v.sub*100):0),backgroundColor:'rgba(59,130,246,0.7)',borderRadius:6},
-      {label:'Init → Book %',data:empCats.map(([,v])=>v.init?(v.book/v.init*100):0),backgroundColor:'rgba(22,163,74,0.7)',borderRadius:6},
-    ]},
-    options:{responsive:true,plugins:{legend:{position:'top',labels:{usePointStyle:true,pointStyle:'circle',font:{size:10}}},
-      tooltip:{callbacks:{afterLabel:ctx=>{const v=empCats[ctx.dataIndex][1];return ctx.datasetIndex===0?fmt(v.init)+' of '+fmt(v.sub)+' approved':fmt(v.book)+' of '+fmt(v.init)+' booked';}}}},
-      scales:{y:{title:{display:true,text:'Conversion %',font:{size:10}},min:0,max:60},
-              x:{ticks:{font:{size:10}}}}}
+    data:{labels:fLabels.slice(1),datasets:[{label:'Volume Lost',data:fDrops,backgroundColor:fDrops.map(d=>d>fTop*0.1?'rgba(220,38,38,0.7)':d>fTop*0.02?'rgba(189,125,18,0.6)':'rgba(22,163,74,0.5)'),borderRadius:6}]},
+    options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>fmt(ctx.raw)+' lost ('+((ctx.raw/fTop)*100).toFixed(1)+'% of top)'}}},scales:{x:{title:{display:true,text:'Applications Lost',font:{size:10}},ticks:{callback:v=>fmtM(v)}}}}
   });
 
-  // ──── Chart 2: Pipeline Health Over Time ────
-  const healthLabels=mPipe.map(m=>{const[y,mo]=m.mon.split('-');return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+mo-1]+' '+y.slice(2);});
-  destroyChart('chart-ai-health');
-  chartInstances['chart-ai-health']=new Chart(document.getElementById('chart-ai-health'),{
-    type:'line',
-    data:{labels:healthLabels,datasets:[
-      {label:'Sub → Init %',data:mPipe.map(m=>+m.s2i.toFixed(1)),borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,0.1)',fill:true,tension:.3,pointRadius:4},
-      {label:'Init → Book %',data:mPipe.map(m=>+m.i2b.toFixed(1)),borderColor:'#16a34a',backgroundColor:'rgba(22,163,74,0.1)',fill:true,tension:.3,pointRadius:4},
-      {label:'End-to-End %',data:mPipe.map(m=>+m.e2e.toFixed(1)),borderColor:'#bd7d12',backgroundColor:'rgba(189,125,18,0.1)',fill:true,tension:.3,pointRadius:4,borderDash:[5,3]}
+  // Opportunity table
+  const bookingVal=avgLoan;
+  let oppHTML='<p style="font-size:11px;font-weight:600;margin-bottom:8px">If we improve each stage conversion:</p><div style="overflow-x:auto"><table class="perf-table"><thead><tr><th>Stage</th><th class="right">Current Conv</th><th class="right">+1pp Bookings</th><th class="right">+5pp Bookings</th><th class="right">+10pp Bookings</th></tr></thead><tbody>';
+  fVals.forEach((v,i)=>{
+    if(i===0) return;
+    const prev=fVals[i-1];
+    const curConv=prev?(v/prev):0;
+    const downstream=fVals[fVals.length-1]/(v||1);
+    const add1=Math.round(prev*0.01*downstream);
+    const add5=Math.round(prev*0.05*downstream);
+    const add10=Math.round(prev*0.10*downstream);
+    oppHTML+=`<tr><td>${fLabels[i]}</td><td class="right mono">${(curConv*100).toFixed(1)}%</td><td class="right mono" style="color:var(--green)">+${fmt(add1)}</td><td class="right mono" style="color:var(--green)">+${fmt(add5)}</td><td class="right mono" style="color:var(--green)">+${fmt(add10)}</td></tr>`;
+  });
+  oppHTML+='</tbody></table></div>';
+  document.getElementById('ai-funnel-opp').innerHTML=oppHTML;
+
+  // ════════════════════════════════════════════════
+  // §3 CUSTOMER DNA
+  // ════════════════════════════════════════════════
+  let dnaHTML='<div style="overflow-x:auto"><table class="perf-table"><thead><tr><th>#</th><th>Dimension</th><th class="right">Spread</th><th>Best Category</th><th class="right">Rate</th><th>Worst Category</th><th class="right">Rate</th></tr></thead><tbody>';
+  dimAnalysis.slice(0,16).forEach((d,i)=>{
+    dnaHTML+=`<tr><td class="mono">${i+1}</td><td><strong>${d.dim}</strong></td><td class="right mono" style="color:var(--violet)">${d.spread.toFixed(1)}pp</td><td style="color:var(--green)">${d.best.cat}</td><td class="right mono">${d.best.rate.toFixed(1)}%</td><td style="color:var(--red)">${d.worst.cat}</td><td class="right mono">${d.worst.rate.toFixed(1)}%</td></tr>`;
+  });
+  dnaHTML+='</tbody></table></div>';
+
+  // Profiles
+  const bestProfile=dimAnalysis.slice(0,6).map(d=>d.best.cat).join(' + ');
+  const worstProfile=dimAnalysis.slice(0,6).map(d=>d.worst.cat).join(' + ');
+  const topRPASeg=segs.length?segs.reduce((a,b)=>a.rpa>b.rpa?a:b):null;
+  dnaHTML+=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:16px">
+    <div style="background:var(--green-bg);border-radius:10px;padding:14px"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Best Customer Profile</div><div style="font-size:12px;color:var(--ink2)">${bestProfile}</div></div>
+    <div style="background:var(--red-bg);border-radius:10px;padding:14px"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Worst Customer Profile</div><div style="font-size:12px;color:var(--ink2)">${worstProfile}</div></div>
+    <div style="background:var(--cyan-bg);border-radius:10px;padding:14px"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Most Profitable (RPA)</div><div style="font-size:12px;color:var(--ink2)">${topRPASeg?topRPASeg.emp+' / '+topRPASeg.nat+' / '+topRPASeg.inc+' — SAR '+fmt(Math.round(topRPASeg.rpa))+'/app':'N/A'}</div></div>
+    <div style="background:var(--blue-bg);border-radius:10px;padding:14px"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Fastest Converting</div><div style="font-size:12px;color:var(--ink2)">${dimAnalysis[0]?dimAnalysis[0].best.cat+' ('+dimAnalysis[0].dim+') at '+dimAnalysis[0].best.rate.toFixed(1)+'%':'N/A'}</div></div>
+  </div>`;
+  document.getElementById('ai-customer-dna').innerHTML=dnaHTML;
+
+  // Radar chart — top 6 dimensions
+  const radarDims=dimAnalysis.slice(0,6);
+  destroyChart('chart-ai-dna-radar');
+  chartInstances['chart-ai-dna-radar']=new Chart(document.getElementById('chart-ai-dna-radar'),{
+    type:'radar',
+    data:{labels:radarDims.map(d=>d.dim),datasets:[
+      {label:'Best Rate',data:radarDims.map(d=>d.best.rate),backgroundColor:'rgba(22,163,74,0.2)',borderColor:'#16a34a',pointRadius:4},
+      {label:'Worst Rate',data:radarDims.map(d=>d.worst.rate),backgroundColor:'rgba(220,38,38,0.15)',borderColor:'#dc2626',pointRadius:4},
+      {label:'Portfolio Avg',data:radarDims.map(()=>rE2E),backgroundColor:'rgba(59,130,246,0.1)',borderColor:'#3b82f6',borderDash:[5,3],pointRadius:2}
     ]},
-    options:{responsive:true,plugins:{legend:{position:'top',labels:{usePointStyle:true,pointStyle:'circle',font:{size:10}}},
-      annotation:{}},
-      scales:{y:{title:{display:true,text:'Conversion %',font:{size:10}},min:0},
-              x:{ticks:{font:{size:9}}}}}
+    options:{responsive:true,plugins:{legend:{position:'top',labels:{usePointStyle:true,pointStyle:'circle',font:{size:10}}}},scales:{r:{min:0,ticks:{font:{size:9}}}}}
   });
 
-  // ──── Chart 3: Revenue Per Application (RPA) ────
-  const segs=BPV.segments.filter(s=>s.emp!=='Unlisted'&&s.sub>=500&&s.book>0);
-  segs.forEach(s=>{s.rpa=s.sub?(s.book/s.sub*s.avg):0;});
-  const rpaTop=segs.sort((a,b)=>b.rpa-a.rpa).slice(0,12);
-  const rpaLabels=rpaTop.map(s=>s.emp.replace('Private Company','PvtCo').replace('Government Entity','GovEnt').replace('Military with Grades','Military')+' · '+s.nat.slice(0,3)+' · '+s.inc);
+  // ════════════════════════════════════════════════
+  // §4 DECLINE ANALYSIS
+  // ════════════════════════════════════════════════
+  const declineGroups={
+    'Credit Risk':['PG_Decline_Reasons - Disposable Income Rule','PG_Decline_Reasons - Other Reason'],
+    'Policy':['PG_Decline_Reasons - Minimum Income Rule','PG_Decline_Reasons - Loan Size Rule'],
+    'Operational':['Cancelled by BO','Cancelled by Customer Service Team','Rejected by UW/ Checker','Rejected by Fraud'],
+    'Missing Data':['Name_Missing','Email_Missing','CITC_Failed']
+  };
+  const declineRows=[];
+  Object.entries(declineRaw).sort((a,b)=>b[1]-a[1]).forEach(([k,v])=>{
+    let group='Other';
+    for(const[g,keys] of Object.entries(declineGroups)){if(keys.includes(k)){group=g;break;}}
+    const revLost=Math.round(v*(rE2E/100)*avgLoan);
+    const recov=group==='Missing Data'?'High':group==='Policy'?'Medium':'Low';
+    declineRows.push({reason:k.replace('PG_Decline_Reasons - ',''),vol:v,group,revLost,recov});
+  });
+  let decHTML='<div style="overflow-x:auto"><table class="perf-table"><thead><tr><th>Decline Reason</th><th>Group</th><th class="right">Volume</th><th class="right">% of Apps</th><th class="right">Est Revenue Lost</th><th>Recoverability</th></tr></thead><tbody>';
+  declineRows.forEach(r=>{
+    const pct=K.totalSub?(r.vol/K.totalSub*100):0;
+    const recovColor=r.recov==='High'?'var(--green)':r.recov==='Medium'?'var(--gold)':'var(--red)';
+    decHTML+=`<tr><td>${r.reason}</td><td style="font-size:10px;color:var(--muted)">${r.group}</td><td class="right mono">${fmt(r.vol)}</td><td class="right mono">${pct.toFixed(1)}%</td><td class="right mono" style="color:var(--red)">SAR ${fmtM(r.revLost)}</td><td style="color:${recovColor};font-weight:600">${r.recov}</td></tr>`;
+  });
+  decHTML+='</tbody></table></div>';
+  if(declineRows.length){
+    const topRecov=declineRows.filter(r=>r.recov==='High').sort((a,b)=>b.vol-a.vol)[0];
+    decHTML+=`<p style="font-size:12px;margin-top:12px;color:var(--ink2)"><strong>If I relaxed one rule tomorrow:</strong> ${topRecov?`Fix "${topRecov.reason}" (${fmt(topRecov.vol)} blocked, High recoverability). At portfolio conversion, that unlocks ~${fmt(Math.round(topRecov.vol*rE2E/100))} bookings worth SAR ${fmtM(Math.round(topRecov.vol*rE2E/100*avgLoan))}.`:'Focus on the highest-volume Policy rule for maximum impact.'}</p>`;
+  }
+  document.getElementById('ai-decline').innerHTML=decHTML;
 
-  destroyChart('chart-ai-rpa');
-  chartInstances['chart-ai-rpa']=new Chart(document.getElementById('chart-ai-rpa'),{
+  // Decline chart
+  const topDec=declineRows.slice(0,8);
+  destroyChart('chart-ai-decline');
+  chartInstances['chart-ai-decline']=new Chart(document.getElementById('chart-ai-decline'),{
     type:'bar',
-    data:{labels:rpaLabels,datasets:[
-      {label:'RPA (SAR)',data:rpaTop.map(s=>Math.round(s.rpa)),backgroundColor:rpaTop.map((_,i)=>`rgba(14,158,144,${0.4+i*0.05})`),borderRadius:6,borderSkipped:false}
-    ]},
-    options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false},
-      tooltip:{callbacks:{label:ctx=>{const s=rpaTop[ctx.dataIndex];return 'SAR '+fmt(Math.round(s.rpa))+'/app (rate '+(s.book/s.sub*100).toFixed(1)+'% × avg SAR '+fmt(s.avg)+')';}}}},
-      scales:{x:{title:{display:true,text:'SAR per Submission',font:{size:10}},ticks:{callback:v=>'SAR '+fmt(v)}},
-              y:{ticks:{font:{size:9}}}}}
+    data:{labels:topDec.map(r=>r.reason.length>30?r.reason.slice(0,28)+'...':r.reason),
+      datasets:[{label:'Est Revenue Lost (SAR)',data:topDec.map(r=>r.revLost),backgroundColor:'rgba(220,38,38,0.6)',borderRadius:6}]},
+    options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'SAR '+fmtM(ctx.raw)}}},scales:{x:{ticks:{callback:v=>'SAR '+fmtM(v)}}}}
   });
 
-  // ──── Product Conversion Gap ────
-  const prods=D.product||{};
-  const combo=prods['Combo']||{sub:0,init:0,book:0};
-  const tawarruq=prods['Tawarruq']||{sub:0,init:0,book:0};
-  const comboRate=combo.sub?(combo.book/combo.sub*100):0;
-  const tawRate=tawarruq.sub?(tawarruq.book/tawarruq.sub*100):0;
-  const comboI2B=combo.init?(combo.book/combo.init*100):0;
-  const tawI2B=tawarruq.init?(tawarruq.book/tawarruq.init*100):0;
+  // ════════════════════════════════════════════════
+  // §5 SIMAH INTELLIGENCE
+  // ════════════════════════════════════════════════
+  let simHTML='';
+  if(SM.scoreDistribution){
+    // Score distribution table
+    const scoreBands=Object.entries(SM.scoreDistribution).sort((a,b)=>a[0].localeCompare(b[0]));
+    simHTML+='<h4 style="font-size:13px;margin-bottom:8px">Score Distribution & Conversion</h4><div style="overflow-x:auto"><table class="perf-table"><thead><tr><th>Score Band</th><th class="right">Submissions</th><th class="right">Approved</th><th class="right">Booked</th><th class="right">Approval %</th><th class="right">Booking %</th></tr></thead><tbody>';
+    scoreBands.forEach(([band,d])=>{
+      const appR=d.sub?(d.approved/d.sub*100):0, bkR=d.sub?(d.booked/d.sub*100):0;
+      simHTML+=`<tr><td>${band}</td><td class="right mono">${fmt(d.sub)}</td><td class="right mono">${fmt(d.approved)}</td><td class="right mono">${fmt(d.booked)}</td><td class="right mono" style="color:var(--blue)">${appR.toFixed(1)}%</td><td class="right mono" style="color:var(--green)">${bkR.toFixed(1)}%</td></tr>`;
+    });
+    simHTML+='</tbody></table></div>';
 
-  document.getElementById('ai-product').innerHTML=`
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
-      <div style="background:var(--green-bg);border:1px solid rgba(22,163,74,.2);border-radius:10px;padding:14px;text-align:center">
-        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Combo</div>
-        <div style="font-size:22px;font-weight:700;color:var(--green);font-family:'Space Grotesk'">${comboRate.toFixed(1)}%</div>
-        <div style="font-size:11px;color:var(--ink2)">${fmt(combo.book)} of ${fmt(combo.sub)} subs</div>
-        <div style="font-size:10px;color:var(--muted)">Init→Book: ${comboI2B.toFixed(1)}%</div>
+    // Score chart
+    setTimeout(()=>{
+      destroyChart('chart-ai-simah-score');
+      chartInstances['chart-ai-simah-score']=new Chart(document.getElementById('chart-ai-simah-score'),{
+        type:'bar',data:{labels:scoreBands.map(([b])=>b),datasets:[
+          {label:'Approval %',data:scoreBands.map(([,d])=>d.sub?(d.approved/d.sub*100):0),backgroundColor:'rgba(59,130,246,0.6)',borderRadius:4},
+          {label:'Booking %',data:scoreBands.map(([,d])=>d.sub?(d.booked/d.sub*100):0),backgroundColor:'rgba(22,163,74,0.6)',borderRadius:4}
+        ]},options:{responsive:true,plugins:{legend:{position:'top',labels:{usePointStyle:true,pointStyle:'circle',font:{size:10}}}},scales:{y:{title:{display:true,text:'%',font:{size:10}},min:0}}}
+      });
+    },50);
+  }
+
+  if(SM.enqIntensity){
+    simHTML+='<h4 style="font-size:13px;margin:16px 0 8px">Enquiry Intensity vs Conversion</h4><div style="overflow-x:auto"><table class="perf-table"><thead><tr><th>Enquiries</th><th class="right">Submissions</th><th class="right">Booked</th><th class="right">Booking %</th></tr></thead><tbody>';
+    const enqBands=Object.entries(SM.enqIntensity);
+    enqBands.forEach(([band,d])=>{
+      const bkR=d.sub?(d.booked/d.sub*100):0;
+      simHTML+=`<tr><td>${band}</td><td class="right mono">${fmt(d.sub)}</td><td class="right mono">${fmt(d.booked)}</td><td class="right mono" style="color:var(--green)">${bkR.toFixed(1)}%</td></tr>`;
+    });
+    simHTML+='</tbody></table></div>';
+
+    setTimeout(()=>{
+      destroyChart('chart-ai-simah-enq');
+      chartInstances['chart-ai-simah-enq']=new Chart(document.getElementById('chart-ai-simah-enq'),{
+        type:'bar',data:{labels:enqBands.map(([b])=>b+' enq'),datasets:[
+          {label:'Booking %',data:enqBands.map(([,d])=>d.sub?(d.booked/d.sub*100):0),backgroundColor:'rgba(14,158,144,0.6)',borderRadius:4},
+          {label:'Submissions',data:enqBands.map(([,d])=>d.sub),type:'line',borderColor:'#bd7d12',tension:.3,pointRadius:4,yAxisID:'y1'}
+        ]},options:{responsive:true,plugins:{legend:{position:'top',labels:{usePointStyle:true,pointStyle:'circle',font:{size:10}}}},scales:{y:{position:'left',title:{display:true,text:'Booking %',font:{size:10}},min:0},y1:{position:'right',grid:{display:false},title:{display:true,text:'Volume',font:{size:10}},ticks:{callback:v=>fmtM(v)}}}}
+      });
+    },50);
+  }
+
+  if(SM.competitorRank){
+    simHTML+='<h4 style="font-size:13px;margin:16px 0 8px">Competitor Landscape (SIMAH Enquiries)</h4><div style="overflow-x:auto"><table class="perf-table"><thead><tr><th>#</th><th>Company</th><th class="right">Enquiries</th><th style="width:140px">Share</th></tr></thead><tbody>';
+    const compRank=Object.entries(SM.competitorRank).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    const compMax=compRank.length?compRank[0][1]:1;
+    compRank.forEach(([co,cnt],i)=>{
+      const barW=(cnt/compMax*100).toFixed(0);
+      simHTML+=`<tr><td class="mono">${i+1}</td><td>${co}</td><td class="right mono">${fmt(cnt)}</td><td><div class="bar-cell"><div class="bar-fill" style="width:${barW}%;background:var(--blue)"></div></div></td></tr>`;
+    });
+    simHTML+='</tbody></table></div>';
+  }
+
+  if(SM.shoppingBands){
+    simHTML+='<h4 style="font-size:13px;margin:16px 0 8px">Credit Shopping Behavior</h4><div style="overflow-x:auto"><table class="perf-table"><thead><tr><th>Shopping Band</th><th class="right">Submissions</th><th class="right">Booked</th><th class="right">Booking %</th></tr></thead><tbody>';
+    Object.entries(SM.shoppingBands).forEach(([band,d])=>{
+      simHTML+=`<tr><td>${band} providers</td><td class="right mono">${fmt(d.sub)}</td><td class="right mono">${fmt(d.booked)}</td><td class="right mono">${d.sub?(d.booked/d.sub*100).toFixed(1)+'%':'—'}</td></tr>`;
+    });
+    simHTML+='</tbody></table></div>';
+  }
+  if(!SM.scoreDistribution&&!SM.enqIntensity) simHTML='<p style="color:var(--muted)">No SIMAH data available in this dataset.</p>';
+  document.getElementById('ai-simah').innerHTML=simHTML;
+
+  // ════════════════════════════════════════════════
+  // §6 PRODUCT MANAGER MODE
+  // ════════════════════════════════════════════════
+  const frictions=[
+    {phase:'Registration',from:0,to:1,cat:'Quick Win'},
+    {phase:'Credit Check',from:1,to:3,cat:'Medium Win'},
+    {phase:'Offer Display',from:3,to:4,cat:'Medium Win'},
+    {phase:'Offer Acceptance',from:4,to:5,cat:'Quick Win'},
+    {phase:'Yaqeen Verification',from:5,to:6,cat:'Strategic Win'},
+    {phase:'National Address',from:6,to:7,cat:'Quick Win'},
+    {phase:'Nafath Verification',from:7,to:8,cat:'Strategic Win'},
+    {phase:'IVR Completion',from:8,to:9,cat:'Medium Win'},
+    {phase:'Final Booking',from:9,to:10,cat:'Quick Win'}
+  ];
+  let pmHTML='<div style="overflow-x:auto"><table class="perf-table"><thead><tr><th>Phase</th><th class="right">In</th><th class="right">Out</th><th class="right">Conv %</th><th class="right">Lost</th><th class="right">Bookings Impact</th><th>Category</th><th>Recommendation</th></tr></thead><tbody>';
+  frictions.forEach(f=>{
+    const inV=fVals[f.from]||0, outV=fVals[f.to]||0;
+    const conv=inV?(outV/inV*100):0;
+    const lost=inV-outV;
+    const downstream=fVals[fVals.length-1]/(outV||1);
+    const impact=Math.round(lost*0.1*downstream); // 10% recovery estimate
+    const catColor=f.cat==='Quick Win'?'var(--green)':f.cat==='Medium Win'?'var(--gold)':'var(--violet)';
+    const rec=conv<50?'Critical — redesign flow':conv<80?'Optimize — reduce friction':'Monitor — healthy';
+    pmHTML+=`<tr><td><strong>${f.phase}</strong></td><td class="right mono">${fmt(inV)}</td><td class="right mono">${fmt(outV)}</td><td class="right mono">${conv.toFixed(1)}%</td><td class="right mono" style="color:var(--red)">${fmt(lost)}</td><td class="right mono" style="color:var(--green)">+${fmt(impact)}</td><td style="color:${catColor};font-size:10px;font-weight:600">${f.cat}</td><td style="font-size:10px;color:var(--muted)">${rec}</td></tr>`;
+  });
+  pmHTML+='</tbody></table></div>';
+  pmHTML+=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px">
+    <div style="background:var(--green-bg);border-radius:10px;padding:12px;text-align:center"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Quick Wins (7 days)</div><div style="font-size:13px;color:var(--green);margin-top:4px">Offer UX, NatAddr auto-fill, booking CTA</div></div>
+    <div style="background:var(--gold-bg);border-radius:10px;padding:12px;text-align:center"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Medium Wins (30 days)</div><div style="font-size:13px;color:var(--gold);margin-top:4px">Credit pre-check, IVR redesign, offer clarity</div></div>
+    <div style="background:var(--violet-bg);border-radius:10px;padding:12px;text-align:center"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Strategic Wins (90 days)</div><div style="font-size:13px;color:var(--violet);margin-top:4px">Yaqeen integration, Nafath fallback, Military flow</div></div>
+  </div>`;
+  document.getElementById('ai-pm-mode').innerHTML=pmHTML;
+
+  // ════════════════════════════════════════════════
+  // §7 HIDDEN GROWTH OPPORTUNITIES
+  // ════════════════════════════════════════════════
+  const growthOpps=[];
+
+  // Region opportunities
+  const regionDim=D.region||{};
+  Object.entries(regionDim).filter(([k,v])=>EXL(k)&&v.sub>=500).forEach(([k,v])=>{
+    const rate=v.sub?(v.book/v.sub*100):0;
+    if(rate>rE2E*0.8&&v.book<rBook*0.05) growthOpps.push({dim:'Region',cat:k,rate,sub:v.sub,book:v.book,gap:'High rate, low volume',potential:Math.round(v.sub*0.02*avgLoan)});
+  });
+
+  // Employer growth
+  Object.entries(emp).filter(([k,v])=>EXL(k)&&v.sub>=1000).forEach(([k,v])=>{
+    const rate=v.sub?(v.book/v.sub*100):0;
+    if(rate>rE2E&&v.book<rBook*0.15) growthOpps.push({dim:'Employer',cat:k,rate,sub:v.sub,book:v.book,gap:'Above-avg rate, under-penetrated',potential:Math.round(v.sub*0.03*avgLoan)});
+  });
+
+  // Income band opportunities
+  const incDim=D.income||{};
+  Object.entries(incDim).filter(([k,v])=>EXL(k)&&v.sub>=500).forEach(([k,v])=>{
+    const rate=v.sub?(v.book/v.sub*100):0;
+    if(rate>rE2E*1.2) growthOpps.push({dim:'Income',cat:k,rate,sub:v.sub,book:v.book,gap:'Sweet spot income band',potential:Math.round(v.sub*0.02*avgLoan)});
+  });
+
+  // Age opportunities
+  const ageDim=D.age||{};
+  Object.entries(ageDim).filter(([k,v])=>v.sub>=500).forEach(([k,v])=>{
+    const rate=v.sub?(v.book/v.sub*100):0;
+    if(rate>rE2E*1.3&&v.book<rBook*0.1) growthOpps.push({dim:'Age',cat:k,rate,sub:v.sub,book:v.book,gap:'Under-targeted high-converters',potential:Math.round(v.sub*0.02*avgLoan)});
+  });
+
+  growthOpps.sort((a,b)=>b.potential-a.potential);
+  let growthHTML='<div style="overflow-x:auto"><table class="perf-table"><thead><tr><th>Dimension</th><th>Segment</th><th class="right">Rate</th><th class="right">Current Vol</th><th class="right">Bookings</th><th>Opportunity</th><th class="right">Est Revenue Upside</th></tr></thead><tbody>';
+  growthOpps.slice(0,12).forEach(g=>{
+    growthHTML+=`<tr><td style="color:var(--muted);font-size:10px">${g.dim}</td><td><strong>${g.cat}</strong></td><td class="right mono" style="color:var(--green)">${g.rate.toFixed(1)}%</td><td class="right mono">${fmt(g.sub)}</td><td class="right mono">${fmt(g.book)}</td><td style="font-size:10px">${g.gap}</td><td class="right mono" style="color:var(--cyan)">SAR ${fmtM(g.potential)}</td></tr>`;
+  });
+  growthHTML+='</tbody></table></div>';
+  if(!growthOpps.length) growthHTML='<p style="color:var(--muted)">No obvious under-served growth segments detected.</p>';
+  document.getElementById('ai-growth').innerHTML=growthHTML;
+
+  // Growth chart
+  const gTop=growthOpps.slice(0,8);
+  destroyChart('chart-ai-growth');
+  if(gTop.length){
+    chartInstances['chart-ai-growth']=new Chart(document.getElementById('chart-ai-growth'),{
+      type:'bar',data:{labels:gTop.map(g=>g.cat),datasets:[
+        {label:'Current Booking Rate %',data:gTop.map(g=>g.rate),backgroundColor:'rgba(14,158,144,0.6)',borderRadius:6,yAxisID:'y'},
+        {label:'Revenue Upside (SAR)',data:gTop.map(g=>g.potential),backgroundColor:'rgba(111,91,224,0.5)',borderRadius:6,yAxisID:'y1'}
+      ]},options:{responsive:true,plugins:{legend:{position:'top',labels:{usePointStyle:true,pointStyle:'circle',font:{size:10}}}},scales:{y:{position:'left',title:{display:true,text:'Booking Rate %',font:{size:10}},min:0},y1:{position:'right',grid:{display:false},title:{display:true,text:'Revenue Upside',font:{size:10}},ticks:{callback:v=>'SAR '+fmtM(v)}}}}
+    });
+  }
+
+  // ════════════════════════════════════════════════
+  // §8 PREDICTIVE INSIGHTS
+  // ════════════════════════════════════════════════
+  let predHTML='';
+  if(mPipe.length>=3){
+    const recent=mPipe.slice(-3);
+    const avgI2B=recent.reduce((a,m)=>a+m.i2b,0)/recent.length;
+    const avgE2E=recent.reduce((a,m)=>a+m.e2e,0)/recent.length;
+    const last=mPipe[mPipe.length-1], prev=mPipe[mPipe.length-2];
+    const momI2B=prev.i2b?(last.i2b-prev.i2b):0;
+    const momE2E=prev.e2e?(last.e2e-prev.e2e):0;
+    const momSub=prev.sub?((last.sub-prev.sub)/prev.sub*100):0;
+
+    // Forecast next month
+    const trend3=mPipe.slice(-3);
+    const fcastBook=Math.round(trend3.reduce((a,m)=>a+m.book,0)/3);
+    const fcastRate=+(trend3.reduce((a,m)=>a+m.e2e,0)/3).toFixed(1);
+
+    // Early warnings
+    const warnings=[];
+    if(momI2B<-2) warnings.push({metric:'Init-to-Book Rate',change:momI2B.toFixed(1)+'pp',severity:'🔴'});
+    else if(momI2B<0) warnings.push({metric:'Init-to-Book Rate',change:momI2B.toFixed(1)+'pp',severity:'🟡'});
+    if(momE2E<-1) warnings.push({metric:'End-to-End Rate',change:momE2E.toFixed(1)+'pp',severity:'🔴'});
+    if(momSub<-10) warnings.push({metric:'Submission Volume',change:momSub.toFixed(1)+'%',severity:'🔴'});
+    else if(momSub<-5) warnings.push({metric:'Submission Volume',change:momSub.toFixed(1)+'%',severity:'🟡'});
+
+    predHTML+=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px">
+      <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">3-Month Avg I2B</div><div style="font-size:20px;font-weight:700;color:var(--blue)">${avgI2B.toFixed(1)}%</div></div>
+      <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">MoM I2B Change</div><div style="font-size:20px;font-weight:700;color:${momI2B>=0?'var(--green)':'var(--red)'}">${momI2B>0?'+':''}${momI2B.toFixed(1)}pp</div></div>
+      <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Forecast Next Month</div><div style="font-size:20px;font-weight:700;color:var(--cyan)">${fmt(fcastBook)} books</div><div style="font-size:10px;color:var(--muted)">${fcastRate}% rate</div></div>
+    </div>`;
+
+    if(warnings.length){
+      predHTML+='<h4 style="font-size:13px;margin-bottom:8px">Early Warnings</h4><div style="overflow-x:auto"><table class="perf-table"><thead><tr><th>Severity</th><th>Metric</th><th class="right">MoM Change</th></tr></thead><tbody>';
+      warnings.forEach(w=>{predHTML+=`<tr><td>${w.severity}</td><td>${w.metric}</td><td class="right mono" style="color:var(--red)">${w.change}</td></tr>`;});
+      predHTML+='</tbody></table></div>';
+    } else {
+      predHTML+='<p style="color:var(--green);font-weight:600">🟢 No early warnings — all metrics within normal range.</p>';
+    }
+  } else {
+    predHTML='<p style="color:var(--muted)">Insufficient monthly data for predictive analysis (need 3+ months).</p>';
+  }
+  document.getElementById('ai-predict').innerHTML=predHTML;
+
+  // Predict chart — monthly trend with forecast
+  if(mPipe.length>=2){
+    const tLabels=mPipe.map(m=>{const[y,mo]=m.mon.split('-');return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+mo-1]+' '+y.slice(2);});
+    const fcastRate=mPipe.length>=3?+(mPipe.slice(-3).reduce((a,m)=>a+m.e2e,0)/3).toFixed(1):mPipe[mPipe.length-1].e2e;
+    tLabels.push('Forecast');
+    const e2eData=mPipe.map(m=>+m.e2e.toFixed(1));
+    e2eData.push(null);
+    const fcastData=new Array(mPipe.length-1).fill(null);
+    fcastData.push(+mPipe[mPipe.length-1].e2e.toFixed(1));
+    fcastData.push(fcastRate);
+
+    destroyChart('chart-ai-predict');
+    chartInstances['chart-ai-predict']=new Chart(document.getElementById('chart-ai-predict'),{
+      type:'line',data:{labels:tLabels,datasets:[
+        {label:'End-to-End %',data:e2eData,borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,0.1)',fill:true,tension:.3,pointRadius:4},
+        {label:'Init→Book %',data:mPipe.map(m=>+m.i2b.toFixed(1)).concat([null]),borderColor:'#16a34a',tension:.3,pointRadius:4},
+        {label:'Forecast',data:fcastData,borderColor:'#bd7d12',borderDash:[6,4],tension:.3,pointRadius:6,pointStyle:'triangle'}
+      ]},options:{responsive:true,plugins:{legend:{position:'top',labels:{usePointStyle:true,pointStyle:'circle',font:{size:10}}}},scales:{y:{title:{display:true,text:'%',font:{size:10}},min:0},x:{ticks:{font:{size:9}}}}}
+    });
+  }
+
+  // ════════════════════════════════════════════════
+  // §9 CEO DASHBOARD
+  // ════════════════════════════════════════════════
+  const ncBooked=NC['Booked']||0, ncVisits=NC['PG_Total_Visits']||0, ncAppCreated=NC['Application_Created']||0;
+  const ncApproved=NC['DE_Approved']||0, ncOfferDisp=NC['Offer_Displayed']||0, ncOfferAcc=NC['Offer_Accepted']||0;
+  const ncYaqeen=NC['Yaqeen_Passed']||0, ncNatAddr=NC['NationalAddress_Verified']||0;
+  const approvalRate=ncAppCreated?(ncApproved/ncAppCreated*100):0;
+  const offerDispRate=ncApproved?(ncOfferDisp/ncApproved*100):0;
+  const offerAccRate=ncOfferDisp?(ncOfferAcc/ncOfferDisp*100):0;
+  const yaqeenRate=ncOfferAcc?(ncYaqeen/ncOfferAcc*100):0;
+  const natAddrRate=ncYaqeen?(ncNatAddr/ncYaqeen*100):0;
+  const light=(val,good,warn)=>val>=good?'🟢':val>=warn?'🟡':'🔴';
+
+  const ceoMetrics=[
+    {label:'Applications',val:fmt(rSub),light:light(rSub,400000,300000)},
+    {label:'Approvals (Init)',val:fmt(rInit),light:light(rInit,100000,80000)},
+    {label:'Approval Rate',val:rInitRate.toFixed(1)+'%',light:light(rInitRate,30,20)},
+    {label:'Offer Display Rate',val:offerDispRate.toFixed(1)+'%',light:light(offerDispRate,80,60)},
+    {label:'Offer Accept Rate',val:offerAccRate.toFixed(1)+'%',light:light(offerAccRate,70,50)},
+    {label:'Yaqeen Pass Rate',val:yaqeenRate.toFixed(1)+'%',light:light(yaqeenRate,80,60)},
+    {label:'NatAddr Rate',val:natAddrRate.toFixed(1)+'%',light:light(natAddrRate,80,60)},
+    {label:'Booking Rate (Real)',val:rE2E.toFixed(1)+'%',light:light(rE2E,10,7)},
+    {label:'Total Bookings',val:fmt(rBook),light:light(rBook,40000,30000)},
+    {label:'Avg Loan Size',val:'SAR '+fmt(avgLoan),light:light(avgLoan,30000,20000)},
+    {label:'Portfolio Revenue',val:'SAR '+fmtM(rVal),light:light(rVal,1e9,500e6)},
+    {label:'Top Booking Segment',val:bestSeg?bestSeg.emp.slice(0,12):'—',light:'🟢'},
+    {label:'Biggest Decline',val:biggestDecline?biggestDecline[0].replace('PG_Decline_Reasons - ','').slice(0,18):'—',light:'🔴'},
+    {label:'Combo vs Tawarruq',val:comboRate.toFixed(0)+'% vs '+tawRate.toFixed(1)+'%',light:light(comboRate,15,10)},
+    {label:'UI vs BO Rate',val:uiRate.toFixed(1)+'% vs '+boRate.toFixed(1)+'%',light:light(uiRate,5,2)}
+  ];
+
+  document.getElementById('ai-ceo').innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-top:12px">${
+    ceoMetrics.map(m=>`<div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center">
+      <div style="font-size:18px;margin-bottom:2px">${m.light}</div>
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">${m.label}</div>
+      <div style="font-size:15px;font-weight:700;color:var(--ink2);margin-top:2px">${m.val}</div>
+    </div>`).join('')
+  }</div>`;
+
+  // ════════════════════════════════════════════════
+  // §10 ACTION PLAN
+  // ════════════════════════════════════════════════
+  const uiImpact=Math.round(ui.sub*0.01);
+  const tawImpact=Math.round(tawarruq.sub*0.05*comboRate/100);
+  const milImpact=Math.round(milEmp.init*0.1);
+  const decImpact=biggestDecline?Math.round(biggestDecline[1]*rE2E/100*0.1):0;
+  const funnelImpact=fVals[5]>0?Math.round((fVals[5]-fVals[6])*0.1*(fVals[10]/(fVals[6]||1))):0;
+
+  const actions=[
+    {problem:'UI channel converts at '+uiRate.toFixed(1)+'% vs BO at '+boRate.toFixed(1)+'%',
+     root:'Upstream filtering sends unqualified applicants into UI funnel',
+     action:'Add pre-qualification gate: income check + employer validation before full application',
+     bookings:'+'+fmt(uiImpact)+' bookings/period',revenue:'SAR '+fmtM(uiImpact*avgLoan),confidence:'High'},
+    {problem:'Tawarruq converts at '+tawRate.toFixed(1)+'% vs Combo at '+comboRate.toFixed(1)+'%',
+     root:'Product structure — Tawarruq requires more steps and has stricter rules',
+     action:'Auto-suggest Combo to eligible Tawarruq applicants at offer stage',
+     bookings:'+'+fmt(tawImpact)+' bookings',revenue:'SAR '+fmtM(tawImpact*avgLoan),confidence:'High'},
+    {problem:'Military: '+milInitR.toFixed(0)+'% approved but only '+milI2B.toFixed(0)+'% Init→Book',
+     root:'Post-approval journey friction — likely Nafath/IVR issues specific to military applicants',
+     action:'Dedicated Military completion flow: skip IVR, use Nafath lite, assign dedicated BO agent',
+     bookings:'+'+fmt(milImpact)+' bookings',revenue:'SAR '+fmtM(milImpact*avgLoan),confidence:'Medium'},
+    {problem:biggestDecline?'"'+biggestDecline[0].replace('PG_Decline_Reasons - ','')+'" blocks '+fmt(biggestDecline[1])+' apps':'Top decline rule blocks significant volume',
+     root:'Policy rule calibration may be too aggressive for current market',
+     action:'A/B test relaxed threshold on 10% of traffic, measure default rate impact',
+     bookings:'+'+fmt(decImpact)+' bookings',revenue:'SAR '+fmtM(decImpact*avgLoan),confidence:'Medium'},
+    {problem:'Yaqeen/Nafath drop: '+(fVals[5]>0?fmt(fVals[5]-fVals[8])+' lost in verification':'significant verification dropout'),
+     root:'Third-party verification UX is fragile — timeouts, retries, mobile issues',
+     action:'Add retry logic, SMS fallback for Nafath, and pre-populate NationalAddress from SIMAH data',
+     bookings:'+'+fmt(funnelImpact)+' bookings',revenue:'SAR '+fmtM(funnelImpact*avgLoan),confidence:'Medium'}
+  ];
+
+  document.getElementById('ai-actions').innerHTML=actions.map((a,i)=>`
+    <div style="background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="background:var(--violet);color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">${i+1}</span>
+        <strong style="font-size:13px">${a.action}</strong>
       </div>
-      <div style="background:var(--red-bg);border:1px solid rgba(220,38,38,.2);border-radius:10px;padding:14px;text-align:center">
-        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Tawarruq</div>
-        <div style="font-size:22px;font-weight:700;color:var(--red);font-family:'Space Grotesk'">${tawRate.toFixed(1)}%</div>
-        <div style="font-size:11px;color:var(--ink2)">${fmt(tawarruq.book)} of ${fmt(tawarruq.sub)} subs</div>
-        <div style="font-size:10px;color:var(--muted)">Init→Book: ${tawI2B.toFixed(1)}%</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;font-size:11px">
+        <div><span style="color:var(--red);font-weight:600">Problem:</span> ${a.problem}</div>
+        <div><span style="color:var(--gold);font-weight:600">Root Cause:</span> ${a.root}</div>
+        <div><span style="color:var(--green);font-weight:600">Expected Impact:</span> ${a.bookings} · ${a.revenue}</div>
+        <div><span style="color:var(--blue);font-weight:600">Confidence:</span> ${a.confidence==='High'?'🟢':'🟡'} ${a.confidence}</div>
       </div>
     </div>
-    <p style="font-size:11px;color:var(--ink2);line-height:1.6"><strong>Gap:</strong> Combo converts <strong>${(comboRate/Math.max(tawRate,0.01)).toFixed(0)}×</strong> better than Tawarruq.
-    Combo Init→Book is <strong>${comboI2B.toFixed(0)}%</strong> vs Tawarruq's <strong>${tawI2B.toFixed(0)}%</strong> — approved Combo applicants are ${(comboI2B/Math.max(tawI2B,0.01)).toFixed(1)}× more likely to complete.
-    <em>If even 5% of Tawarruq subs were redirected to Combo, that's +${fmt(Math.round(tawarruq.sub*0.05*comboRate/100))} potential bookings.</em></p>`;
-
-  // Product monthly trend
-  const prodMonthly=BPV.monthly.filter(m=>m.sub>500);
-  // We don't have product breakdown in monthly — use the overall chart
-  destroyChart('chart-ai-product');
-  chartInstances['chart-ai-product']=new Chart(document.getElementById('chart-ai-product'),{
-    type:'doughnut',
-    data:{labels:['Combo Bookings','Tawarruq Bookings','Murabaha'],
-      datasets:[{data:[combo.book,tawarruq.book,(prods['Murabaha']||{}).book||0],
-        backgroundColor:['rgba(22,163,74,0.7)','rgba(220,38,38,0.5)','rgba(150,150,150,0.3)'],borderWidth:2,borderColor:'#fff'}]},
-    options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}}
-  });
-
-  // ──── Channel Problem ────
-  const src=D.source||{};
-  const ui=src['UI']||{sub:0,init:0,book:0};
-  const bo=src['backoffice']||{sub:0,init:0,book:0};
-  const uiRate=ui.sub?(ui.book/ui.sub*100):0;
-  const boRate=bo.sub?(bo.book/bo.sub*100):0;
-  const uiInitRate=ui.sub?(ui.init/ui.sub*100):0;
-  const boInitRate=bo.sub?(bo.init/bo.sub*100):0;
-  const uiI2B=ui.init?(ui.book/ui.init*100):0;
-  const boI2B=bo.init?(bo.book/bo.init*100):0;
-  const uiBookShare=K.totalBook?(ui.book/K.totalBook*100):0;
-  const boBookShare=K.totalBook?(bo.book/K.totalBook*100):0;
-
-  document.getElementById('ai-channel').innerHTML=`
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-      <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px">
-        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">📱 UI (Online)</div>
-        <div style="font-size:11px;color:var(--ink2);line-height:1.8">
-          Subs: <strong>${fmt(ui.sub)}</strong> (${(ui.sub/K.totalSub*100).toFixed(0)}%)<br>
-          Init Rate: <strong style="color:var(--red)">${uiInitRate.toFixed(1)}%</strong><br>
-          Init→Book: <strong>${uiI2B.toFixed(1)}%</strong><br>
-          End-to-End: <strong style="color:var(--red)">${uiRate.toFixed(1)}%</strong><br>
-          Booking Share: <strong>${uiBookShare.toFixed(1)}%</strong>
-        </div>
-      </div>
-      <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px">
-        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">🏢 Back Office</div>
-        <div style="font-size:11px;color:var(--ink2);line-height:1.8">
-          Subs: <strong>${fmt(bo.sub)}</strong> (${(bo.sub/K.totalSub*100).toFixed(0)}%)<br>
-          Init Rate: <strong style="color:var(--green)">${boInitRate.toFixed(1)}%</strong><br>
-          Init→Book: <strong>${boI2B.toFixed(1)}%</strong><br>
-          End-to-End: <strong style="color:var(--green)">${boRate.toFixed(1)}%</strong><br>
-          Booking Share: <strong>${boBookShare.toFixed(1)}%</strong>
-        </div>
-      </div>
-    </div>
-    <div style="margin-bottom:8px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-        <span style="font-size:10px;color:var(--muted);width:70px">Sub share</span>
-        <div style="flex:1;height:20px;border-radius:4px;overflow:hidden;display:flex">
-          <div style="width:${(ui.sub/K.totalSub*100).toFixed(0)}%;background:rgba(59,130,246,0.6);display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:600">UI ${(ui.sub/K.totalSub*100).toFixed(0)}%</div>
-          <div style="flex:1;background:rgba(22,163,74,0.5);display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:600">BO ${(bo.sub/K.totalSub*100).toFixed(0)}%</div>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <span style="font-size:10px;color:var(--muted);width:70px">Book share</span>
-        <div style="flex:1;height:20px;border-radius:4px;overflow:hidden;display:flex">
-          <div style="width:${uiBookShare.toFixed(0)}%;background:rgba(59,130,246,0.6);display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:600">UI ${uiBookShare.toFixed(0)}%</div>
-          <div style="flex:1;background:rgba(22,163,74,0.5);display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:600">BO ${boBookShare.toFixed(0)}%</div>
-        </div>
-      </div>
-    </div>
-    <p style="font-size:11px;color:var(--ink2);line-height:1.6"><strong>Key insight:</strong> UI's bottleneck is <strong>init approval</strong> (${uiInitRate.toFixed(1)}% vs BO's ${boInitRate.toFixed(1)}%).
-    But once approved, UI's Init→Book (${uiI2B.toFixed(1)}%) ${uiI2B>boI2B?'actually <strong>beats</strong>':'trails'} BO (${boI2B.toFixed(1)}%).
-    <em>The UI problem is upstream filtering, not downstream completion.</em></p>`;
-
-  // ──── Chart: Age Pipeline ────
-  const ageOrder=['<=22','23-24','25-29','30-35','36-40','41-50','51-60','>60'];
-  const ageCats=ageOrder.map(a=>[a,D.age?.[a]]).filter(([,v])=>v&&v.sub>=100);
-  destroyChart('chart-ai-age');
-  chartInstances['chart-ai-age']=new Chart(document.getElementById('chart-ai-age'),{
-    type:'bar',
-    data:{labels:ageCats.map(([k])=>k),datasets:[
-      {label:'Sub → Init %',data:ageCats.map(([,v])=>+(v.init/v.sub*100).toFixed(1)),backgroundColor:'rgba(59,130,246,0.6)',borderRadius:6},
-      {label:'Init → Book %',data:ageCats.map(([,v])=>v.init?+(v.book/v.init*100).toFixed(1):0),backgroundColor:'rgba(22,163,74,0.6)',borderRadius:6},
-    ]},
-    options:{responsive:true,plugins:{legend:{position:'top',labels:{usePointStyle:true,pointStyle:'circle',font:{size:10}}},
-      tooltip:{callbacks:{afterLabel:ctx=>{const v=ageCats[ctx.dataIndex][1];return ctx.datasetIndex===0?fmt(v.init)+' approved':fmt(v.book)+' booked';}}}},
-      scales:{y:{title:{display:true,text:'%',font:{size:10}},min:0},
-              x:{title:{display:true,text:'Age Group',font:{size:10}}}}}
-  });
-
-  // ──── Chart: Expat Nationality Pipeline ────
-  const friendlyNames={SAU:'Saudi',EGY:'Egyptian',IND:'Indian',PAK:'Pakistani',SDN:'Sudanese',YEM:'Yemeni',
-    PHL:'Filipino',SYR:'Syrian',JOR:'Jordanian',TUR:'Turkish',MAR:'Moroccan',LBN:'Lebanese',
-    BGD:'Bangladeshi',LKA:'Sri Lankan',NGA:'Nigerian',PSE:'Palestinian',TUN:'Tunisian',ZAF:'South African'};
-  const natDetail=Object.entries(D.natdetail||{}).filter(([c,v])=>!['Unknown','Other','OTH','SAU'].includes(c)&&v.sub>=500)
-    .sort((a,b)=>b[1].sub-a[1].sub).slice(0,10);
-
-  destroyChart('chart-ai-expat');
-  chartInstances['chart-ai-expat']=new Chart(document.getElementById('chart-ai-expat'),{
-    type:'bar',
-    data:{labels:natDetail.map(([c])=>friendlyNames[c]||c),datasets:[
-      {label:'Init → Book %',data:natDetail.map(([,v])=>v.init?+(v.book/v.init*100).toFixed(1):0),backgroundColor:'rgba(22,163,74,0.6)',borderRadius:6,yAxisID:'y'},
-      {label:'End-to-End %',data:natDetail.map(([,v])=>+(v.book/v.sub*100).toFixed(1)),backgroundColor:'rgba(111,91,224,0.5)',borderRadius:6,yAxisID:'y'},
-      {label:'Approved (init)',data:natDetail.map(([,v])=>v.init),type:'line',borderColor:'#bd7d12',tension:.3,pointRadius:4,yAxisID:'y1'}
-    ]},
-    options:{responsive:true,plugins:{legend:{position:'top',labels:{usePointStyle:true,pointStyle:'circle',font:{size:10}}}},
-      scales:{y:{position:'left',title:{display:true,text:'Rate %',font:{size:10}},min:0},
-              y1:{position:'right',grid:{display:false},title:{display:true,text:'Approved Volume',font:{size:10}},
-                ticks:{callback:v=>v>=1000?(v/1000)+'K':v}},
-              x:{ticks:{font:{size:9},maxRotation:45}}}}
-  });
-
-  // ──── Chart: Portfolio Concentration (Pareto) ────
-  const paretoSegs=BPV.segments.filter(s=>s.emp!=='Unlisted'&&s.book>0).sort((a,b)=>b.book-a.book);
-  const totalBookReal=paretoSegs.reduce((a,s)=>a+s.book,0);
-  let cumBook=0;
-  const paretoData=paretoSegs.slice(0,20).map((s,i)=>{cumBook+=s.book;return {x:i+1,y:+(cumBook/totalBookReal*100).toFixed(1)};});
-  const p50=paretoSegs.reduce((acc,s)=>{acc.cum+=s.book;if(!acc.found&&acc.cum>=totalBookReal*0.5){acc.found=true;acc.n=acc.i;}acc.i++;return acc;},{cum:0,i:1,found:false,n:0}).n;
-  const p80=paretoSegs.reduce((acc,s)=>{acc.cum+=s.book;if(!acc.found&&acc.cum>=totalBookReal*0.8){acc.found=true;acc.n=acc.i;}acc.i++;return acc;},{cum:0,i:1,found:false,n:0}).n;
-
-  destroyChart('chart-ai-pareto');
-  chartInstances['chart-ai-pareto']=new Chart(document.getElementById('chart-ai-pareto'),{
-    type:'bar',
-    data:{labels:paretoSegs.slice(0,20).map((_,i)=>'#'+(i+1)),datasets:[
-      {label:'Bookings',data:paretoSegs.slice(0,20).map(s=>s.book),backgroundColor:'rgba(14,158,144,0.6)',borderRadius:4,yAxisID:'y'},
-      {label:'Cumulative %',data:paretoData.map(d=>d.y),type:'line',borderColor:'#dc2626',backgroundColor:'rgba(220,38,38,0.1)',
-        fill:true,tension:.3,pointRadius:3,yAxisID:'y1'}
-    ]},
-    options:{responsive:true,plugins:{legend:{position:'top',labels:{usePointStyle:true,pointStyle:'circle',font:{size:10}}},
-      tooltip:{callbacks:{afterLabel:ctx=>{if(ctx.datasetIndex===0){const s=paretoSegs[ctx.dataIndex];return s.emp+' · '+s.nat+' · '+s.inc;}return '';}}}},
-      scales:{y:{position:'left',title:{display:true,text:'Bookings',font:{size:10}}},
-              y1:{position:'right',grid:{display:false},title:{display:true,text:'Cumulative %',font:{size:10}},min:0,max:100},
-              x:{title:{display:true,text:'Segment Rank (by bookings)',font:{size:10}}}}}
-  });
-
-  // ──── RPA Table ────
-  const rpaSegs=BPV.segments.filter(s=>s.emp!=='Unlisted'&&s.sub>=500&&s.book>0);
-  rpaSegs.forEach(s=>{s.rpa=s.sub?(s.book/s.sub*s.avg):0;s.initRate=0;s.i2b=0;});
-  // Estimate init from dims (we don't have cross-segment init, use employer init rate as proxy)
-  const empInitRates={};
-  Object.entries(emp).forEach(([k,v])=>{empInitRates[k]=v.sub?(v.init/v.sub):0;});
-  rpaSegs.forEach(s=>{
-    const eir=empInitRates[s.emp]||0;
-    s.initRate=eir*100;
-    s.i2b=eir>0?(s.book/s.sub/eir*100):0;
-  });
-  rpaSegs.sort((a,b)=>b.rpa-a.rpa);
-  const maxRpa=rpaSegs.length?rpaSegs[0].rpa:1;
-
-  document.querySelector('#ai-rpa-table tbody').innerHTML=rpaSegs.slice(0,12).map((s,i)=>{
-    const rate=(s.book/s.sub*100);
-    const barW=Math.max(5,(s.rpa/maxRpa)*100);
-    return `<tr>
-      <td class="mono" style="color:var(--muted)">${i+1}</td>
-      <td><strong>${s.emp}</strong><br><span style="color:var(--muted);font-size:10px">${s.nat} · ${s.inc}</span></td>
-      <td class="right mono">${fmt(s.sub)}</td>
-      <td class="right mono" style="color:var(--blue)">${s.initRate.toFixed(0)}%</td>
-      <td class="right mono" style="color:var(--gold)">${s.i2b.toFixed(0)}%</td>
-      <td class="right mono" style="color:var(--green)">${rate.toFixed(1)}%</td>
-      <td class="right mono">SAR ${fmt(s.avg)}</td>
-      <td class="right mono" style="font-weight:700;color:var(--cyan)">SAR ${fmt(Math.round(s.rpa))}</td>
-      <td><div class="bar-cell"><div class="bar-fill" style="width:${barW}%;background:var(--cyan)"></div></div></td>
-    </tr>`;
-  }).join('');
-
-  // ──── AI Narrative ────
-  const bestRPA=rpaSegs[0];
-  const pipelineDropMonth=mPipe.length>=2?mPipe[mPipe.length-2]:null;
-  const pipelineEarly=mPipe.length>=4?mPipe[1]:null;
-  const i2bDelta=pipelineDropMonth&&pipelineEarly?(pipelineDropMonth.i2b-pipelineEarly.i2b):0;
-
-  document.getElementById('ai-narrative').innerHTML=`
-    <h3>🧠 AI Analysis — What This Data Really Says</h3>
-    <p>After stripping <strong>${fmt(K.totalSub-rSub)} Unlisted submissions</strong> (0% conversion noise), the true pipeline emerges:</p>
-    <ul>
-      <li><strong>The real booking rate is ${rE2E.toFixed(1)}%</strong>, not the headline ${((K.totalBook/K.totalSub)*100).toFixed(1)}%. Unlisted applicants inflate submission counts without contributing bookings.</li>
-      <li><strong>Pipeline bottleneck:</strong> Of every 100 real submissions, <strong>${Math.round(rInitRate)}</strong> get initially approved, but only <strong>${Math.round(rI2B)}</strong> of those complete booking — ${(100-rI2B).toFixed(0)}% of approved applicants are lost post-approval.</li>
-      ${pipelineDropMonth&&pipelineEarly?`<li><strong>Init→Book is ${i2bDelta>0?'improving':'deteriorating'}:</strong> From ${pipelineEarly.i2b.toFixed(1)}% (${pipelineEarly.mon}) to ${pipelineDropMonth.i2b.toFixed(1)}% (${pipelineDropMonth.mon}) — a ${Math.abs(i2bDelta).toFixed(1)}pp ${i2bDelta>0?'<span class="good">improvement</span>':'<span class="bad">decline</span>'}. ${i2bDelta<0?'This is the most urgent metric to reverse.':'Sustain this momentum.'}</li>`:''}
-      <li><strong>Product insight:</strong> Combo books at <strong>${comboRate.toFixed(1)}%</strong> vs Tawarruq at <strong>${tawRate.toFixed(1)}%</strong> (${(comboRate/Math.max(tawRate,0.01)).toFixed(0)}× gap). Combo's Init→Book of ${comboI2B.toFixed(0)}% vs ${tawI2B.toFixed(0)}% means approved Combo applicants <em>complete</em> at ${(comboI2B/Math.max(tawI2B,0.01)).toFixed(1)}× the rate.</li>
-      <li><strong>Channel reality:</strong> UI's ${uiInitRate.toFixed(1)}% init rate vs BO's ${boInitRate.toFixed(1)}% means the problem is <em>upstream filtering</em>, not completion. ${uiI2B>boI2B?'Once approved, UI actually converts better.':'Fix UI pre-qualification to reduce junk submissions.'}</li>
-      <li><strong>Highest-value segment:</strong> ${bestRPA?bestRPA.emp+' · '+bestRPA.nat+' · '+bestRPA.inc+' generates <strong>SAR '+fmt(Math.round(bestRPA.rpa))+'</strong> expected revenue per submission — allocate acquisition budget here first.':''}</li>
-      <li><strong>Portfolio risk:</strong> Top <strong>${p50}</strong> segments drive 50% of bookings. Top <strong>${p80}</strong> drive 80%. ${p50<=5?'<span class="bad">High concentration risk</span> — diversify.':'Moderate diversification.'}</li>
-      <li><strong>Military paradox:</strong> 51% init rate (highest) but only 24% Init→Book (lowest). They pass screening easily but something blocks completion — investigate Nafath/IVR drop-off for Military applicants specifically.</li>
-    </ul>
-  `;
+  `).join('');
 }
 
 </script>
