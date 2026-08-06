@@ -362,6 +362,13 @@ canvas{width:100%!important;max-height:300px}
     <p style="font-size:11px;color:var(--muted);margin-bottom:12px">The 5 actions I would execute tomorrow as Head of Digital Lending.</p>
     <div id="ai-actions"></div>
   </div>
+
+  <!-- ═══ SECTION 11: PM REVIEW ═══ -->
+  <div class="card" style="margin-bottom:24px;border-left:4px solid #e040fb">
+    <h3>§11 · PM Review <span class="badge" style="background:rgba(224,64,251,0.12);color:#e040fb">The Untold Story</span></h3>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Veteran CPO lens — hidden narratives, counter-intuitive correlations, and behavioral anomalies most analysts miss.</p>
+    <div id="ai-pm-review"></div>
+  </div>
 </div>
 
 <div class="foot">Built for <a href="https://www.linkedin.com/in/emadayyash" target="_blank">Emad Ayyash</a> · Tasheel Finance</div>
@@ -1429,6 +1436,347 @@ function renderAI(){
       </div>
     </div>
   `).join('');
+
+  // ════════════════════════════════════════════════
+  // §11 PM REVIEW — THE UNTOLD STORY
+  // ════════════════════════════════════════════════
+  (function renderPMReview(){
+    const lensIcons = ['🔍','🕳️','🔄','🫥'];
+    const lensTitles = ['The Outlier Paradox','The Silent Drop-off','The Counter-Narrative','The Blind Spot'];
+    const lensDescs = [
+      'Tiny, overlooked segments behaving completely differently from the rest',
+      'Friction hiding where surface metrics look "fine"',
+      'Assumptions about our users this data quietly disproves',
+      'Critical questions we should be asking but haven\'t'
+    ];
+    const lensColors = ['#ff6b35','#e040fb','#00bfa5','#536dfe'];
+
+    // ─── LENS 1: OUTLIER PARADOX ───
+    // Scan D directly with low threshold to find micro-segments dimAnalysis might exclude
+    const outliers = [];
+    const outlierDims = ['employer','nationality','income','age','region','city','natdetail','source','product','gender','scoreband','marital','dbr','store'];
+
+    outlierDims.forEach(dn => {
+      const dim = D[dn] || {};
+      const cats = Object.entries(dim).filter(([k,v]) => EXL(k) && v.sub >= 10).map(([k,v]) => ({cat:k, rate: v.sub ? v.book/v.sub*100 : 0, sub: v.sub, book: v.book}));
+      if (cats.length < 3) return;
+      const dimTotal = cats.reduce((a,c) => a + c.sub, 0); // use dimension's own total, not filtered rSub
+      const avgRate = cats.reduce((a,c) => a + c.rate, 0) / cats.length;
+      const label = DIM_LABELS[dn] || dn;
+
+      cats.forEach(c => {
+        // Small segment (< 5% of dimension volume) behaving 1.5x+ above or 0.3x below average
+        if (c.sub < dimTotal * 0.05 && c.sub >= 10) {
+          const ratio = avgRate > 0 ? c.rate / avgRate : 0;
+          if (ratio > 1.5 && c.book >= 3) {
+            outliers.push({
+              dim: label, cat: c.cat, rate: c.rate, avg: avgRate, ratio,
+              sub: c.sub, book: c.book, direction: 'above',
+              narrative: `While contributing only ${(c.sub/dimTotal*100).toFixed(2)}% of ${label} volume, this micro-segment converts at ${ratio.toFixed(1)}× the average. If we scaled acquisition to even 2× current volume, that's ~${fmt(Math.round(c.book*2))} additional bookings.`
+            });
+          } else if (ratio < 0.3 && c.sub >= 30) {
+            outliers.push({
+              dim: label, cat: c.cat, rate: c.rate, avg: avgRate, ratio: 1/ratio,
+              sub: c.sub, book: c.book, direction: 'below',
+              narrative: `${fmt(c.sub)} applications come in, but only ${c.rate.toFixed(1)}% convert — ${(1/ratio).toFixed(1)}× worse than average. Something about this segment's journey is fundamentally broken. Are we even meant to serve them, or are we wasting acquisition spend?`
+            });
+          }
+        }
+      });
+    });
+
+    // Cross-segment outliers: find segments (from segs) with anomalous RPA
+    if (segs.length >= 5) {
+      const segRPAs = segs.map(s => s.rpa).sort((a,b) => a-b);
+      const medianRPA = segRPAs[Math.floor(segRPAs.length/2)];
+      segs.forEach(s => {
+        if (s.rpa > medianRPA * 3 && s.sub < rSub * 0.03 && s.sub >= 30) {
+          outliers.push({
+            dim: 'Cross-segment', cat: `${s.emp} × ${s.nat} × ${s.inc}`, rate: s.rate, avg: rE2E, ratio: s.rate / (rE2E || 1),
+            sub: s.sub, book: s.book, direction: 'above',
+            narrative: `This intersection produces SAR ${fmt(Math.round(s.rpa))}/application in revenue — ${(s.rpa/medianRPA).toFixed(1)}× the median. It's a goldmine hiding in plain sight.`
+          });
+        }
+      });
+    }
+    outliers.sort((a,b) => Math.abs(b.ratio) - Math.abs(a.ratio));
+
+    // ─── LENS 2: SILENT DROP-OFF ───
+    // Find steps where absolute drop-offs hide behind "fine" percentages
+    const silentDrops = [];
+
+    // Funnel step-over-step analysis
+    for (let i = 1; i < fVals.length; i++) {
+      if (fVals[i-1] === 0) continue;
+      const stepRate = fVals[i] / fVals[i-1] * 100;
+      const absLoss = fVals[i-1] - fVals[i];
+      const lossShareOfTotal = fVals[0] > 0 ? absLoss / fVals[0] * 100 : 0;
+
+      // "Fine on the surface" = pass rate > 70% but losing big absolute numbers
+      if (stepRate > 70 && absLoss > 500 && lossShareOfTotal > 3) {
+        silentDrops.push({
+          from: fLabels[i-1], to: fLabels[i],
+          passRate: stepRate, absLoss, lossShare: lossShareOfTotal,
+          narrative: `${fLabels[i-1]} → ${fLabels[i]} looks healthy at ${stepRate.toFixed(0)}% pass rate. But ${fmt(absLoss)} applicants quietly vanish — ${lossShareOfTotal.toFixed(1)}% of your entire top-of-funnel. Nobody's looking here because the rate is "fine."`
+        });
+      }
+    }
+
+    // Dimension-level "silent" underperformance: high volume, rate close to avg but slightly below
+    dimAnalysis.forEach(da => {
+      (da.cats || []).forEach(c => {
+        if (c.sub > rSub * 0.10 && c.rate < (rE2E * 0.85) && c.rate > (rE2E * 0.5)) {
+          const lostBookings = Math.round(c.sub * (rE2E - c.rate) / 100);
+          if (lostBookings > 100) {
+            silentDrops.push({
+              from: da.label + ': ' + c.cat, to: 'Expected baseline',
+              passRate: c.rate, absLoss: lostBookings, lossShare: rBook > 0 ? lostBookings / rBook * 100 : 0,
+              narrative: `${c.cat} looks "okay" at ${c.rate.toFixed(1)}% E2E rate — just ${(rE2E - c.rate).toFixed(1)}pp below average. But at ${fmt(c.sub)} submissions, that small gap = ${fmt(lostBookings)} missed bookings (${rBook>0?(lostBookings/rBook*100).toFixed(1):'?'}% of all bookings).`
+            });
+          }
+        }
+      });
+    });
+    silentDrops.sort((a,b) => b.absLoss - a.absLoss);
+
+    // ─── LENS 3: COUNTER-NARRATIVE ───
+    // Data that contradicts common assumptions
+    const counterNarratives = [];
+
+    // Assumption: "Higher income = better conversion"
+    const incEntries = Object.entries(D.income || {}).filter(([k,v]) => EXL(k) && v.sub >= 50).map(([k,v]) => ({cat:k, rate: v.sub ? v.book/v.sub*100 : 0, sub: v.sub, book: v.book}));
+    if (incEntries.length >= 3) {
+      incEntries.sort((a,b) => {
+        const numA = parseInt(a.cat.replace(/[^0-9]/g,'')) || 0;
+        const numB = parseInt(b.cat.replace(/[^0-9]/g,'')) || 0;
+        return numA - numB;
+      });
+      const lowInc = incEntries.slice(0, Math.ceil(incEntries.length/3));
+      const highInc = incEntries.slice(-Math.ceil(incEntries.length/3));
+      const lowAvg = lowInc.reduce((a,c) => a + c.rate, 0) / lowInc.length;
+      const highAvg = highInc.reduce((a,c) => a + c.rate, 0) / highInc.length;
+      if (lowAvg > highAvg * 1.1) {
+        counterNarratives.push({
+          assumption: 'Higher income = better conversion',
+          reality: `Lower-income bands convert at ${lowAvg.toFixed(1)}% vs ${highAvg.toFixed(1)}% for higher-income bands.`,
+          narrative: `We assume affluent applicants are "better leads." The data says otherwise: lower-income segments convert ${((lowAvg/highAvg-1)*100).toFixed(0)}% better. Are we over-optimizing acquisition for high-income segments while ignoring our actual sweet spot?`,
+          delta: lowAvg - highAvg
+        });
+      }
+    }
+
+    // Assumption: "UI (digital) is always better than backoffice"
+    if (ui.sub > 100 && bo.sub > 100) {
+      if (boRate > uiRate * 1.1) {
+        counterNarratives.push({
+          assumption: 'Digital-first (UI) always outperforms Backoffice',
+          reality: `Backoffice converts at ${boRate.toFixed(1)}% vs UI at ${uiRate.toFixed(1)}%.`,
+          narrative: `We bet the strategy on digital-first. But backoffice applications convert ${((boRate/uiRate-1)*100).toFixed(0)}% better. Is it the human touch? Better pre-screening? Or is our UI itself the bottleneck?`,
+          delta: boRate - uiRate
+        });
+      }
+    }
+
+    // Assumption: "Combo products are always premium/better"
+    if (combo.sub > 100 && tawarruq.sub > 100) {
+      if (tawRate > comboRate * 1.15) {
+        counterNarratives.push({
+          assumption: 'Combo (bundled) products outperform standalone Tawarruq',
+          reality: `Tawarruq converts at ${tawRate.toFixed(1)}% vs Combo at ${comboRate.toFixed(1)}%.`,
+          narrative: `Product complexity kills conversion. Tawarruq's simpler journey outperforms Combo by ${((tawRate/comboRate-1)*100).toFixed(0)}%. Every added product layer is friction. Are bundles optimized for the borrower or for the P&L?`,
+          delta: tawRate - comboRate
+        });
+      }
+    }
+
+    // Assumption: "Weekday applications convert better" — check monthly patterns
+    // Assumption: "More SIMAH enquiries = higher risk" — check SM data
+    if (SM.enqIntensity) {
+      const eiEntries = Object.entries(SM.enqIntensity).filter(([,v]) => v.sub >= 50).map(([k,v]) => ({cat:k, rate: v.sub ? v.book/v.sub*100 : 0, sub: v.sub}));
+      if (eiEntries.length >= 2) {
+        const highEnq = eiEntries.find(e => e.cat.includes('5+') || e.cat.includes('High') || parseInt(e.cat) >= 5);
+        const lowEnq = eiEntries.find(e => e.cat.includes('0') || e.cat.includes('1') || e.cat.includes('Low'));
+        if (highEnq && lowEnq && highEnq.rate > lowEnq.rate * 1.1) {
+          counterNarratives.push({
+            assumption: 'More bureau enquiries = riskier applicant',
+            reality: `High-enquiry applicants convert at ${highEnq.rate.toFixed(1)}% vs ${lowEnq.rate.toFixed(1)}% for low-enquiry.`,
+            narrative: `Counter to credit orthodoxy, applicants with more bureau hits convert better. They're experienced borrowers who know the process — "serial shoppers" aren't risky, they're decisive.`,
+            delta: highEnq.rate - lowEnq.rate
+          });
+        }
+      }
+    }
+
+    // MoM trend contradiction: "We're growing" but quality declining
+    if (mPipe.length >= 3) {
+      const last3 = mPipe.slice(-3);
+      const first3 = mPipe.slice(0, Math.min(3, mPipe.length));
+      const recentVol = last3.reduce((a,m) => a + m.sub, 0) / last3.length;
+      const earlyVol = first3.reduce((a,m) => a + m.sub, 0) / first3.length;
+      const recentE2E = last3.reduce((a,m) => a + m.e2e, 0) / last3.length;
+      const earlyE2E = first3.reduce((a,m) => a + m.e2e, 0) / first3.length;
+      if (recentVol > earlyVol * 1.1 && recentE2E < earlyE2E * 0.9) {
+        counterNarratives.push({
+          assumption: 'Growing submissions = growing business',
+          reality: `Volume up ${((recentVol/earlyVol-1)*100).toFixed(0)}% but E2E rate down ${((1-recentE2E/earlyE2E)*100).toFixed(0)}%.`,
+          narrative: `The headline says growth. The pipeline says dilution. We're acquiring more applicants but converting fewer. Net bookings may actually be flat or declining. Are marketing campaigns bringing the wrong audience?`,
+          delta: recentE2E - earlyE2E
+        });
+      }
+    }
+
+    counterNarratives.sort((a,b) => Math.abs(b.delta) - Math.abs(a.delta));
+
+    // ─── LENS 4: BLIND SPOT ───
+    // Questions the data raises that nobody is asking
+    const blindSpots = [];
+
+    // Blind spot: Do we know the unit economics per dimension?
+    const topDim = dimAnalysis[0];
+    if (topDim && topDim.spread > 5) {
+      blindSpots.push({
+        question: `What is the Cost Per Funded Loan across ${topDim.label} segments?`,
+        context: `${topDim.label} shows a ${topDim.spread.toFixed(1)}pp spread between best (${topDim.best.cat}: ${topDim.best.rate.toFixed(1)}%) and worst (${topDim.worst.cat}: ${topDim.worst.rate.toFixed(1)}%). But we only see conversion rate — we don't see acquisition cost. A segment with 12% conversion at SAR 500 CAC beats 15% at SAR 2,000 CAC.`,
+        urgency: 'High'
+      });
+    }
+
+    // Blind spot: Cannibalisation between products
+    if (combo.sub > 100 && tawarruq.sub > 100) {
+      blindSpots.push({
+        question: 'Are Combo and Tawarruq cannibalising each other?',
+        context: `With ${fmt(combo.sub)} Combo and ${fmt(tawarruq.sub)} Tawarruq applications, we treat them as independent products. But do applicants rejected from one try the other? If there's cross-product migration, our per-product conversion rates are misleading.`,
+        urgency: 'Medium'
+      });
+    }
+
+    // Blind spot: Repeat applicants / resubmission rate
+    blindSpots.push({
+      question: 'What % of "new" applications are resubmissions from previously declined applicants?',
+      context: `We count ${fmt(rSub)} submissions. But how many are unique people? If 20% are re-applications, our true reach is lower and our acquisition cost per unique applicant is 25% higher than reported. Every funnel metric shifts.`,
+      urgency: 'High'
+    });
+
+    // Blind spot: Time-to-book
+    if (fVals[0] > 0 && fVals[10] > 0) {
+      blindSpots.push({
+        question: 'How many days does the average booked customer spend in the funnel?',
+        context: `We see ${fmt(fVals[0])} enter and ${fmt(fVals[10])} booked. But is the booked cohort from this period's entries or last month's? If average time-to-book is 15+ days, our monthly conversion rates are comparing different cohorts.`,
+        urgency: 'High'
+      });
+    }
+
+    // Blind spot: Post-booking performance
+    blindSpots.push({
+      question: 'What is the 30/60/90-day delinquency rate by the segments we consider "high-converting"?',
+      context: `We celebrate high booking rates. But if our best-converting segments also have the highest early default, we're optimising for origination while destroying portfolio quality. Conversion rate is not a success metric — performing loan rate is.`,
+      urgency: 'Critical'
+    });
+
+    // ─── RENDER ALL 4 LENSES ───
+    let pmHTML = '';
+
+    // Lens 1 — Outlier Paradox
+    pmHTML += `<div style="background:var(--panel2);border:1px solid ${lensColors[0]}33;border-radius:14px;padding:20px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <span style="font-size:22px">${lensIcons[0]}</span>
+        <h4 style="margin:0;font-size:15px;color:${lensColors[0]}">${lensTitles[0]}</h4>
+        <span style="font-size:10px;color:var(--muted);margin-left:auto">${lensDescs[0]}</span>
+      </div>`;
+    if (outliers.length) {
+      pmHTML += '<div style="display:flex;flex-direction:column;gap:10px">';
+      outliers.slice(0,4).forEach(o => {
+        const arrow = o.direction === 'above' ? '↑' : '↓';
+        const color = o.direction === 'above' ? 'var(--green)' : 'var(--red)';
+        pmHTML += `<div style="background:var(--bg);border-radius:10px;padding:14px;border-left:3px solid ${color}">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <strong style="font-size:13px">${o.dim}: ${o.cat}</strong>
+            <span style="font-size:18px;font-weight:800;color:${color}">${o.ratio.toFixed(1)}× ${arrow}</span>
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px">${o.rate.toFixed(1)}% conversion (avg: ${o.avg.toFixed(1)}%) · ${fmt(o.sub)} apps · ${fmt(o.book)} booked</div>
+          <div style="font-size:12px;line-height:1.5">${o.narrative}</div>
+        </div>`;
+      });
+      pmHTML += '</div>';
+    } else {
+      pmHTML += '<p style="color:var(--muted);font-size:12px">No dramatic outliers detected in the current period. Segments are behaving uniformly — which itself may be suspicious. Is something homogenising our acquisition?</p>';
+    }
+    pmHTML += '</div>';
+
+    // Lens 2 — Silent Drop-off
+    pmHTML += `<div style="background:var(--panel2);border:1px solid ${lensColors[1]}33;border-radius:14px;padding:20px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <span style="font-size:22px">${lensIcons[1]}</span>
+        <h4 style="margin:0;font-size:15px;color:${lensColors[1]}">${lensTitles[1]}</h4>
+        <span style="font-size:10px;color:var(--muted);margin-left:auto">${lensDescs[1]}</span>
+      </div>`;
+    if (silentDrops.length) {
+      pmHTML += '<div style="display:flex;flex-direction:column;gap:10px">';
+      silentDrops.slice(0,4).forEach(sd => {
+        pmHTML += `<div style="background:var(--bg);border-radius:10px;padding:14px;border-left:3px solid ${lensColors[1]}">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <strong style="font-size:13px">${sd.from}${sd.to !== 'Expected baseline' ? ' → '+sd.to : ''}</strong>
+            <span style="background:${lensColors[1]}22;color:${lensColors[1]};padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700">${fmt(sd.absLoss)} lost</span>
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px">${sd.passRate !== undefined ? 'Surface rate: '+sd.passRate.toFixed(0)+'%' : ''} · Represents ${sd.lossShare.toFixed(1)}% of total pipeline</div>
+          <div style="font-size:12px;line-height:1.5">${sd.narrative}</div>
+        </div>`;
+      });
+      pmHTML += '</div>';
+    } else {
+      pmHTML += '<p style="color:var(--muted);font-size:12px">No hidden friction points detected — every major drop-off is already visible in the funnel metrics.</p>';
+    }
+    pmHTML += '</div>';
+
+    // Lens 3 — Counter-Narrative
+    pmHTML += `<div style="background:var(--panel2);border:1px solid ${lensColors[2]}33;border-radius:14px;padding:20px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <span style="font-size:22px">${lensIcons[2]}</span>
+        <h4 style="margin:0;font-size:15px;color:${lensColors[2]}">${lensTitles[2]}</h4>
+        <span style="font-size:10px;color:var(--muted);margin-left:auto">${lensDescs[2]}</span>
+      </div>`;
+    if (counterNarratives.length) {
+      pmHTML += '<div style="display:flex;flex-direction:column;gap:10px">';
+      counterNarratives.slice(0,4).forEach(cn => {
+        pmHTML += `<div style="background:var(--bg);border-radius:10px;padding:14px;border-left:3px solid ${lensColors[2]}">
+          <div style="margin-bottom:6px">
+            <span style="background:var(--red-bg);color:var(--red);padding:2px 8px;border-radius:12px;font-size:10px;font-weight:600;text-decoration:line-through">❌ ${cn.assumption}</span>
+          </div>
+          <div style="font-size:12px;font-weight:600;color:var(--green);margin-bottom:6px">✅ Reality: ${cn.reality}</div>
+          <div style="font-size:12px;line-height:1.5">${cn.narrative}</div>
+        </div>`;
+      });
+      pmHTML += '</div>';
+    } else {
+      pmHTML += '<p style="color:var(--muted);font-size:12px">Current data aligns with conventional assumptions — no contradictions detected this period.</p>';
+    }
+    pmHTML += '</div>';
+
+    // Lens 4 — Blind Spot
+    pmHTML += `<div style="background:var(--panel2);border:1px solid ${lensColors[3]}33;border-radius:14px;padding:20px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <span style="font-size:22px">${lensIcons[3]}</span>
+        <h4 style="margin:0;font-size:15px;color:${lensColors[3]}">${lensTitles[3]}</h4>
+        <span style="font-size:10px;color:var(--muted);margin-left:auto">${lensDescs[3]}</span>
+      </div>`;
+    if (blindSpots.length) {
+      pmHTML += '<div style="display:flex;flex-direction:column;gap:10px">';
+      blindSpots.forEach(bs => {
+        const urgColors = {Critical:'var(--red)',High:'var(--gold)',Medium:'var(--blue)'};
+        pmHTML += `<div style="background:var(--bg);border-radius:10px;padding:14px;border-left:3px solid ${urgColors[bs.urgency]||'var(--muted)'}">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <strong style="font-size:13px">❓ ${bs.question}</strong>
+            <span style="background:${urgColors[bs.urgency]||'var(--muted)'}22;color:${urgColors[bs.urgency]||'var(--muted)'};padding:2px 10px;border-radius:12px;font-size:10px;font-weight:600">${bs.urgency}</span>
+          </div>
+          <div style="font-size:12px;line-height:1.5;color:var(--fg)">${bs.context}</div>
+        </div>`;
+      });
+      pmHTML += '</div>';
+    }
+    pmHTML += '</div>';
+
+    document.getElementById('ai-pm-review').innerHTML = pmHTML;
+  })();
 }
 
 // ═══════════════════════ §7 GROWTH — SELF-CONTAINED ═══════════════════════
