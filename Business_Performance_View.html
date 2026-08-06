@@ -264,7 +264,7 @@ canvas{width:100%!important;max-height:300px}
 
 <!-- ═══════════════════════ TAB 6: AI TAB ═══════════════════════ -->
 <div class="section" id="sec-ai">
-  <h2 class="section-title" style="display:flex;align-items:center;gap:10px">🧠 AI Head of Digital Lending <span class="badge" style="background:var(--violet-bg);color:var(--violet);font-size:11px;padding:3px 10px;border-radius:8px">10-Section Intelligence</span></h2>
+  <h2 class="section-title" style="display:flex;align-items:center;gap:10px">🧠 PM Eye's <span class="badge" style="background:var(--violet-bg);color:var(--violet);font-size:11px;padding:3px 10px;border-radius:8px">10-Section Intelligence</span></h2>
   <p class="section-sub">Combining the lens of CPO, CRO, CAO, Growth Lead, and Strategy Consultant. <strong>Unlisted employers excluded</strong> from all post-submission metrics. Data: Loan Booking + SIMAH Credit Bureau + Digital Funnel.</p>
 
   <!-- ═══ SECTION 1: EXECUTIVE STORY ═══ -->
@@ -319,7 +319,16 @@ canvas{width:100%!important;max-height:300px}
   <!-- ═══ SECTION 7: HIDDEN GROWTH OPPORTUNITIES ═══ -->
   <div class="card" style="margin-bottom:24px;border-left:4px solid var(--cyan)">
     <h3>§7 · Hidden Growth Opportunities <span class="badge" style="background:var(--cyan-bg);color:var(--cyan)">Untapped Revenue</span></h3>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Segments, geographies, channels, and income bands management is currently missing.</p>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:8px">Under-penetrated segments with above-average conversion — independent date range.</p>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;padding:10px 14px;background:var(--panel2);border:1px solid var(--line);border-radius:10px">
+      <span style="font-size:11px;color:var(--muted);font-weight:600">📅 Period:</span>
+      <input type="date" id="ai7-from" style="font-size:11px;padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)">
+      <span style="font-size:11px;color:var(--muted)">→</span>
+      <input type="date" id="ai7-to" style="font-size:11px;padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)">
+      <button id="ai7-3m" class="ai7-qk" style="font-size:10px;padding:3px 10px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:inherit;cursor:pointer">Last 3 months</button>
+      <button id="ai7-6m" class="ai7-qk" style="font-size:10px;padding:3px 10px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:inherit;cursor:pointer">Last 6 months</button>
+      <button id="ai7-all" class="ai7-qk" style="font-size:10px;padding:3px 10px;border:1px solid var(--line);border-radius:6px;background:var(--cyan);color:#fff;cursor:pointer">All Time</button>
+    </div>
     <div id="ai-growth"></div>
     <canvas id="chart-ai-growth" style="max-height:340px;margin-top:16px"></canvas>
   </div>
@@ -327,7 +336,16 @@ canvas{width:100%!important;max-height:300px}
   <!-- ═══ SECTION 8: PREDICTIVE INSIGHTS ═══ -->
   <div class="card" style="margin-bottom:24px;border-left:4px solid var(--gold)">
     <h3>§8 · Predictive Insights & Early Warnings <span class="badge" style="background:var(--gold-bg);color:var(--gold)">Trend Signals</span></h3>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Forecasts, deterioration signals, and anomalies vs 7/30/90-day baselines.</p>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:8px">Forecasts, deterioration signals, and anomalies — independent date range.</p>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;padding:10px 14px;background:var(--panel2);border:1px solid var(--line);border-radius:10px">
+      <span style="font-size:11px;color:var(--muted);font-weight:600">📅 Period:</span>
+      <input type="date" id="ai8-from" style="font-size:11px;padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)">
+      <span style="font-size:11px;color:var(--muted)">→</span>
+      <input type="date" id="ai8-to" style="font-size:11px;padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)">
+      <button id="ai8-3m" class="ai8-qk" style="font-size:10px;padding:3px 10px;border:1px solid var(--line);border-radius:6px;background:var(--cyan);color:#fff;cursor:pointer">Last 3 months</button>
+      <button id="ai8-6m" class="ai8-qk" style="font-size:10px;padding:3px 10px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:inherit;cursor:pointer">Last 6 months</button>
+      <button id="ai8-all" class="ai8-qk" style="font-size:10px;padding:3px 10px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:inherit;cursor:pointer">All Time</button>
+    </div>
     <div id="ai-predict"></div>
     <canvas id="chart-ai-predict" style="max-height:300px;margin-top:16px"></canvas>
   </div>
@@ -952,60 +970,112 @@ function renderLearnings(){
 // ═══════════════════════ TAB 6: AI TAB ═══════════════════════
 function renderAI(){
   if(rendered.ai) return; rendered.ai=true;
-  const D=BPV.dims, K=BPV.kpi, avgLoan=K.avgLoan;
+
+  // ═══════════════════════ DATE-FILTERED AGGREGATION ═══════════════════════
+  const filteredMonths = getFilteredMonths();
+  const periodLabel = (FILTER_FROM||FILTER_TO)
+    ? (FILTER_FROM===FILTER_TO ? FILTER_FROM : (FILTER_FROM||'start')+' → '+(FILTER_TO||'latest'))
+    : 'All Time';
+
+  // Aggregate employer/nationality/income from filtered months
+  const fEmp={}, fNat={}, fInc={};
+  let fTotalSub=0, fTotalInit=0, fTotalBook=0, fTotalVal=0;
+  filteredMonths.forEach(m=>{
+    fTotalSub+=m.sub; fTotalInit+=m.init; fTotalBook+=m.book; fTotalVal+=m.val;
+    for(const [cat,v] of Object.entries(m.emp||{})){
+      if(!fEmp[cat]) fEmp[cat]={sub:0,init:0,book:0};
+      fEmp[cat].sub+=v.sub; fEmp[cat].init+=v.init; fEmp[cat].book+=v.book;
+    }
+    for(const [cat,v] of Object.entries(m.nat||{})){
+      if(!fNat[cat]) fNat[cat]={sub:0,init:0,book:0};
+      fNat[cat].sub+=v.sub; fNat[cat].init+=v.init; fNat[cat].book+=v.book;
+    }
+    for(const [cat,v] of Object.entries(m.inc||{})){
+      if(!fInc[cat]) fInc[cat]={sub:0,init:0,book:0};
+      fInc[cat].sub+=v.sub; fInc[cat].init+=v.init; fInc[cat].book+=v.book;
+    }
+  });
+  const fAvgLoan = fTotalBook ? Math.round(fTotalVal/fTotalBook) : BPV.kpi.avgLoan;
+
+  // Mixed dims: filtered emp/nat/inc + all-time for rest (product, source, etc.)
+  const D_all = BPV.dims;
+  const D = Object.assign({}, D_all, {employer:fEmp, nationality:fNat, income:fInc});
+  const K = {totalSub:fTotalSub, totalBook:fTotalBook, totalVal:fTotalVal, avgLoan:fAvgLoan, snapDate:BPV.kpi.snapDate};
+  const avgLoan = fAvgLoan;
+
+  // Aggregate funnel from filtered monthlyFunnel
+  const filteredMF = BPV.monthlyFunnel.filter(mf=>{
+    if(FILTER_FROM && mf.mon < FILTER_FROM.slice(0,7)) return false;
+    if(FILTER_TO && mf.mon > FILTER_TO.slice(0,7)) return false;
+    return true;
+  });
+  const filteredFunnel = {};
+  filteredMF.forEach(mf=>{
+    for(const [journey,steps] of Object.entries(mf)){
+      if(journey==='mon') continue;
+      if(!filteredFunnel[journey]) filteredFunnel[journey]={};
+      for(const [step,cnt] of Object.entries(steps)){
+        filteredFunnel[journey][step] = (filteredFunnel[journey][step]||0) + cnt;
+      }
+    }
+  });
+
   const EXL=c=>c!=='Unlisted'&&c!=='Unknown';
 
-  // ── Core pipeline (excl Unlisted) ──
-  const emp=D.employer||{};
+  // ── Core pipeline (excl Unlisted) — from filtered months ──
+  const emp = D.employer || {};
   let rSub=0,rInit=0,rBook=0;
   Object.entries(emp).filter(([k])=>EXL(k)).forEach(([,v])=>{rSub+=v.sub;rInit+=v.init;rBook+=v.book;});
   const rVal=rBook*avgLoan, rInitRate=rSub?(rInit/rSub*100):0, rI2B=rInit?(rBook/rInit*100):0, rE2E=rSub?(rBook/rSub*100):0;
   const headlineRate=K.totalSub?(K.totalBook/K.totalSub*100):0;
 
-  // Monthly pipeline (excl Unlisted)
-  const mPipe=BPV.monthly.filter(m=>m.sub>500).map(m=>{
+  // Monthly pipeline (excl Unlisted) — filtered
+  const mPipe=filteredMonths.filter(m=>m.sub>500).map(m=>{
     let s=0,i=0,b=0,bv=0;
     Object.entries(m.emp||{}).filter(([k])=>EXL(k)).forEach(([,v])=>{s+=v.sub;i+=v.init;b+=v.book;bv+=(v.bval||0);});
     return {mon:m.mon,sub:s,init:i,book:b,val:bv,s2i:s?(i/s*100):0,i2b:i?(b/i*100):0,e2e:s?(b/s*100):0};
   });
 
-  // Product & channel
-  const prods=D.product||{}, combo=prods['Combo']||{sub:0,init:0,book:0}, tawarruq=prods['Tawarruq']||{sub:0,init:0,book:0};
+  // Product & channel — all-time only (not available in monthly breakdowns)
+  const prods=D_all.product||{}, combo=prods['Combo']||{sub:0,init:0,book:0}, tawarruq=prods['Tawarruq']||{sub:0,init:0,book:0};
   const comboRate=combo.sub?(combo.book/combo.sub*100):0, tawRate=tawarruq.sub?(tawarruq.book/tawarruq.sub*100):0;
   const comboI2B=combo.init?(combo.book/combo.init*100):0, tawI2B=tawarruq.init?(tawarruq.book/tawarruq.init*100):0;
-  const src=D.source||{}, ui=src['UI']||{sub:0,init:0,book:0}, bo=src['backoffice']||{sub:0,init:0,book:0};
+  const src=D_all.source||{}, ui=src['UI']||{sub:0,init:0,book:0}, bo=src['backoffice']||{sub:0,init:0,book:0};
   const uiRate=ui.sub?(ui.book/ui.sub*100):0, boRate=bo.sub?(bo.book/bo.sub*100):0;
+  const prodAllTime = FILTER_FROM||FILTER_TO ? ' <span style="font-size:9px;color:var(--muted);font-style:italic">(all-time)</span>' : '';
 
-  // Funnel data
-  const F=BPV.funnel||{}, NC=F['New Customer']||{};
+  // Funnel data — from filtered monthlyFunnel
+  const F=filteredFunnel, NC=F['New Customer']||{};
   const fSteps=['PG_Total_Visits','Application_Created','DELite_Called','DE_Approved','Offer_Displayed','Offer_Accepted','Yaqeen_Passed','NationalAddress_Verified','Nafath_Verified','IVR_Completed','Booked'];
-  const fLabels=['PG Visits','App Created','DELite Called','DE Approved','Offer Displayed','Offer Accepted','Yaqeen Passed','NatAddr Verified','Nafath Verified','IVR Completed','Booked'];
+  const fLabels=['PG Visits','App Created','DELite Called','DE Approved','Offer Displayed','Offer Accepted','Yaqeen Passed','National Address Verified','Nafath Verified','IVR Completed','Booked'];
   const fVals=fSteps.map(s=>NC[s]||0);
   const fRootCause=['Channel','Technology','Credit','Credit','Product','Customer','Process','Process','Process','Operations','—'];
   const fTop=fVals[0]||1;
 
-  // Decline data from funnel
+  // Decline data from filtered funnel
   const declineRaw={};
   Object.entries(NC).forEach(([k,v])=>{if(k.startsWith('PG_Decline')||['CITC_Failed','Name_Missing','Email_Missing','Cancelled by BO','Cancelled by Customer Service Team','Rejected by UW/ Checker','Rejected by Fraud'].includes(k)) declineRaw[k]=v;});
 
-  // SIMAH data
+  // SIMAH data — all-time only (no monthly breakdown)
   const SM=BPV.simah||{};
 
-  // Segments (excl Unlisted)
+  // Segments (excl Unlisted) — all-time only
   const segs=BPV.segments.filter(s=>s.emp!=='Unlisted'&&s.sub>=200);
   segs.forEach(s=>{s.rate=s.sub?(s.book/s.sub*100):0; s.rpa=s.rate/100*s.avg;});
 
-  // Dimension analysis helper
+  // Dimension analysis — employer/nationality/income are filtered; others are all-time
   const dimNames=['employer','nationality','income','risk','simah','age','region','city','natdetail','source','product','gender','marital','scoreband','dbr','store'];
+  const DIM_LABELS={employer:'Employer',nationality:'Nationality',income:'Income',risk:'Risk',simah:'SIMAH',age:'Age',region:'Region',city:'City',natdetail:'National Address',source:'Source',product:'Product',gender:'Gender',marital:'Marital',scoreband:'Score Band',dbr:'DBR',store:'Store'};
+  const minSub = filteredMonths.length<=2 ? 10 : 100; // lower threshold for narrow date ranges
   const dimAnalysis=dimNames.map(dn=>{
     const dim=D[dn]||{};
-    const cats=Object.entries(dim).filter(([k,v])=>EXL(k)&&v.sub>=100);
+    const cats=Object.entries(dim).filter(([k,v])=>EXL(k)&&v.sub>=minSub);
     if(!cats.length) return null;
     const rates=cats.map(([k,v])=>({cat:k,rate:v.sub?(v.book/v.sub*100):0,sub:v.sub,book:v.book}));
     rates.sort((a,b)=>b.rate-a.rate);
     const best=rates[0], worst=rates[rates.length-1];
     const spread=best.rate-worst.rate;
-    return {dim:dn,best,worst,spread,cats:rates};
+    return {dim:dn,label:DIM_LABELS[dn]||dn,best,worst,spread,cats:rates};
   }).filter(Boolean).sort((a,b)=>b.spread-a.spread);
 
   // ════════════════════════════════════════════════
@@ -1019,6 +1089,14 @@ function renderAI(){
   const biggestDecline=Object.entries(declineRaw).sort((a,b)=>b[1]-a[1])[0];
 
   document.getElementById('ai-exec-story').innerHTML=`
+    <div style="margin-bottom:12px;padding:8px 14px;background:var(--blue-bg);border-radius:8px;font-size:11px;display:flex;align-items:center;gap:8px">
+      <span style="font-size:14px">📅</span>
+      <span><strong>Period:</strong> ${periodLabel}</span>
+      <span style="color:var(--muted)">·</span>
+      <span>${fmt(rSub)} apps · ${fmt(rBook)} bookings · SAR ${fmtM(rVal)} revenue</span>
+      ${filteredMonths.length?'<span style="color:var(--muted)">·</span><span>'+filteredMonths.length+' month(s)</span>':''}
+      ${(FILTER_FROM||FILTER_TO)?'<span style="color:var(--muted);font-style:italic;margin-left:auto">Product/Source/SIMAH: all-time</span>':''}
+    </div>
     <div class="narrative" style="margin:0">
     <p><strong>1. The Hidden Story:</strong> The headline booking rate of <strong>${headlineRate.toFixed(1)}%</strong> is a lie. After removing ${fmt(K.totalSub-rSub)} Unlisted submissions (which produce only 3 bookings), the true rate is <strong>${rE2E.toFixed(1)}%</strong> — ${(rE2E/headlineRate).toFixed(1)}x higher. Every strategic decision made on the headline number is wrong.</p>
     <p><strong>2. What Changed:</strong> ${mPipe.length>=3?`Init-to-Book moved from ${mPipe[0].i2b.toFixed(1)}% (${mPipe[0].mon}) to ${mPipe[mPipe.length-1].i2b.toFixed(1)}% (${mPipe[mPipe.length-1].mon}) — a ${(mPipe[mPipe.length-1].i2b-mPipe[0].i2b)>0?'positive':'negative'} ${Math.abs(mPipe[mPipe.length-1].i2b-mPipe[0].i2b).toFixed(1)}pp shift.`:'Insufficient monthly data for trend.'}</p>
@@ -1086,7 +1164,7 @@ function renderAI(){
   // ════════════════════════════════════════════════
   let dnaHTML='<div style="overflow-x:auto"><table class="perf-table"><thead><tr><th>#</th><th>Dimension</th><th class="right">Spread</th><th>Best Category</th><th class="right">Rate</th><th>Worst Category</th><th class="right">Rate</th></tr></thead><tbody>';
   dimAnalysis.slice(0,16).forEach((d,i)=>{
-    dnaHTML+=`<tr><td class="mono">${i+1}</td><td><strong>${d.dim}</strong></td><td class="right mono" style="color:var(--violet)">${d.spread.toFixed(1)}pp</td><td style="color:var(--green)">${d.best.cat}</td><td class="right mono">${d.best.rate.toFixed(1)}%</td><td style="color:var(--red)">${d.worst.cat}</td><td class="right mono">${d.worst.rate.toFixed(1)}%</td></tr>`;
+    dnaHTML+=`<tr><td class="mono">${i+1}</td><td><strong>${d.label}</strong></td><td class="right mono" style="color:var(--violet)">${d.spread.toFixed(1)}pp</td><td style="color:var(--green)">${d.best.cat}</td><td class="right mono">${d.best.rate.toFixed(1)}%</td><td style="color:var(--red)">${d.worst.cat}</td><td class="right mono">${d.worst.rate.toFixed(1)}%</td></tr>`;
   });
   dnaHTML+='</tbody></table></div>';
 
@@ -1098,7 +1176,7 @@ function renderAI(){
     <div style="background:var(--green-bg);border-radius:10px;padding:14px"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Best Customer Profile</div><div style="font-size:12px;color:var(--ink2)">${bestProfile}</div></div>
     <div style="background:var(--red-bg);border-radius:10px;padding:14px"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Worst Customer Profile</div><div style="font-size:12px;color:var(--ink2)">${worstProfile}</div></div>
     <div style="background:var(--cyan-bg);border-radius:10px;padding:14px"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Most Profitable (RPA)</div><div style="font-size:12px;color:var(--ink2)">${topRPASeg?topRPASeg.emp+' / '+topRPASeg.nat+' / '+topRPASeg.inc+' — SAR '+fmt(Math.round(topRPASeg.rpa))+'/app':'N/A'}</div></div>
-    <div style="background:var(--blue-bg);border-radius:10px;padding:14px"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Fastest Converting</div><div style="font-size:12px;color:var(--ink2)">${dimAnalysis[0]?dimAnalysis[0].best.cat+' ('+dimAnalysis[0].dim+') at '+dimAnalysis[0].best.rate.toFixed(1)+'%':'N/A'}</div></div>
+    <div style="background:var(--blue-bg);border-radius:10px;padding:14px"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Fastest Converting</div><div style="font-size:12px;color:var(--ink2)">${dimAnalysis[0]?dimAnalysis[0].best.cat+' ('+dimAnalysis[0].label+') at '+dimAnalysis[0].best.rate.toFixed(1)+'%':'N/A'}</div></div>
   </div>`;
   document.getElementById('ai-customer-dna').innerHTML=dnaHTML;
 
@@ -1107,7 +1185,7 @@ function renderAI(){
   destroyChart('chart-ai-dna-radar');
   chartInstances['chart-ai-dna-radar']=new Chart(document.getElementById('chart-ai-dna-radar'),{
     type:'radar',
-    data:{labels:radarDims.map(d=>d.dim),datasets:[
+    data:{labels:radarDims.map(d=>d.label),datasets:[
       {label:'Best Rate',data:radarDims.map(d=>d.best.rate),backgroundColor:'rgba(22,163,74,0.2)',borderColor:'#16a34a',pointRadius:4},
       {label:'Worst Rate',data:radarDims.map(d=>d.worst.rate),backgroundColor:'rgba(220,38,38,0.15)',borderColor:'#dc2626',pointRadius:4},
       {label:'Portfolio Avg',data:radarDims.map(()=>rE2E),backgroundColor:'rgba(59,130,246,0.1)',borderColor:'#3b82f6',borderDash:[5,3],pointRadius:2}
@@ -1249,129 +1327,21 @@ function renderAI(){
   });
   pmHTML+='</tbody></table></div>';
   pmHTML+=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px">
-    <div style="background:var(--green-bg);border-radius:10px;padding:12px;text-align:center"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Quick Wins (7 days)</div><div style="font-size:13px;color:var(--green);margin-top:4px">Offer UX, NatAddr auto-fill, booking CTA</div></div>
+    <div style="background:var(--green-bg);border-radius:10px;padding:12px;text-align:center"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Quick Wins (7 days)</div><div style="font-size:13px;color:var(--green);margin-top:4px">Offer UX, National Address auto-fill, booking CTA</div></div>
     <div style="background:var(--gold-bg);border-radius:10px;padding:12px;text-align:center"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Medium Wins (30 days)</div><div style="font-size:13px;color:var(--gold);margin-top:4px">Credit pre-check, IVR redesign, offer clarity</div></div>
     <div style="background:var(--violet-bg);border-radius:10px;padding:12px;text-align:center"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Strategic Wins (90 days)</div><div style="font-size:13px;color:var(--violet);margin-top:4px">Yaqeen integration, Nafath fallback, Military flow</div></div>
   </div>`;
   document.getElementById('ai-pm-mode').innerHTML=pmHTML;
 
   // ════════════════════════════════════════════════
-  // §7 HIDDEN GROWTH OPPORTUNITIES
+  // §7 HIDDEN GROWTH OPPORTUNITIES — independent date filter
   // ════════════════════════════════════════════════
-  const growthOpps=[];
-
-  // Region opportunities
-  const regionDim=D.region||{};
-  Object.entries(regionDim).filter(([k,v])=>EXL(k)&&v.sub>=500).forEach(([k,v])=>{
-    const rate=v.sub?(v.book/v.sub*100):0;
-    if(rate>rE2E*0.8&&v.book<rBook*0.05) growthOpps.push({dim:'Region',cat:k,rate,sub:v.sub,book:v.book,gap:'High rate, low volume',potential:Math.round(v.sub*0.02*avgLoan)});
-  });
-
-  // Employer growth
-  Object.entries(emp).filter(([k,v])=>EXL(k)&&v.sub>=1000).forEach(([k,v])=>{
-    const rate=v.sub?(v.book/v.sub*100):0;
-    if(rate>rE2E&&v.book<rBook*0.15) growthOpps.push({dim:'Employer',cat:k,rate,sub:v.sub,book:v.book,gap:'Above-avg rate, under-penetrated',potential:Math.round(v.sub*0.03*avgLoan)});
-  });
-
-  // Income band opportunities
-  const incDim=D.income||{};
-  Object.entries(incDim).filter(([k,v])=>EXL(k)&&v.sub>=500).forEach(([k,v])=>{
-    const rate=v.sub?(v.book/v.sub*100):0;
-    if(rate>rE2E*1.2) growthOpps.push({dim:'Income',cat:k,rate,sub:v.sub,book:v.book,gap:'Sweet spot income band',potential:Math.round(v.sub*0.02*avgLoan)});
-  });
-
-  // Age opportunities
-  const ageDim=D.age||{};
-  Object.entries(ageDim).filter(([k,v])=>v.sub>=500).forEach(([k,v])=>{
-    const rate=v.sub?(v.book/v.sub*100):0;
-    if(rate>rE2E*1.3&&v.book<rBook*0.1) growthOpps.push({dim:'Age',cat:k,rate,sub:v.sub,book:v.book,gap:'Under-targeted high-converters',potential:Math.round(v.sub*0.02*avgLoan)});
-  });
-
-  growthOpps.sort((a,b)=>b.potential-a.potential);
-  let growthHTML='<div style="overflow-x:auto"><table class="perf-table"><thead><tr><th>Dimension</th><th>Segment</th><th class="right">Rate</th><th class="right">Current Vol</th><th class="right">Bookings</th><th>Opportunity</th><th class="right">Est Revenue Upside</th></tr></thead><tbody>';
-  growthOpps.slice(0,12).forEach(g=>{
-    growthHTML+=`<tr><td style="color:var(--muted);font-size:10px">${g.dim}</td><td><strong>${g.cat}</strong></td><td class="right mono" style="color:var(--green)">${g.rate.toFixed(1)}%</td><td class="right mono">${fmt(g.sub)}</td><td class="right mono">${fmt(g.book)}</td><td style="font-size:10px">${g.gap}</td><td class="right mono" style="color:var(--cyan)">SAR ${fmtM(g.potential)}</td></tr>`;
-  });
-  growthHTML+='</tbody></table></div>';
-  if(!growthOpps.length) growthHTML='<p style="color:var(--muted)">No obvious under-served growth segments detected.</p>';
-  document.getElementById('ai-growth').innerHTML=growthHTML;
-
-  // Growth chart
-  const gTop=growthOpps.slice(0,8);
-  destroyChart('chart-ai-growth');
-  if(gTop.length){
-    chartInstances['chart-ai-growth']=new Chart(document.getElementById('chart-ai-growth'),{
-      type:'bar',data:{labels:gTop.map(g=>g.cat),datasets:[
-        {label:'Current Booking Rate %',data:gTop.map(g=>g.rate),backgroundColor:'rgba(14,158,144,0.6)',borderRadius:6,yAxisID:'y'},
-        {label:'Revenue Upside (SAR)',data:gTop.map(g=>g.potential),backgroundColor:'rgba(111,91,224,0.5)',borderRadius:6,yAxisID:'y1'}
-      ]},options:{responsive:true,plugins:{legend:{position:'top',labels:{usePointStyle:true,pointStyle:'circle',font:{size:10}}}},scales:{y:{position:'left',title:{display:true,text:'Booking Rate %',font:{size:10}},min:0},y1:{position:'right',grid:{display:false},title:{display:true,text:'Revenue Upside',font:{size:10}},ticks:{callback:v=>'SAR '+fmtM(v)}}}}
-    });
-  }
+  renderGrowth();
 
   // ════════════════════════════════════════════════
-  // §8 PREDICTIVE INSIGHTS
+  // §8 PREDICTIVE INSIGHTS — independent date filter
   // ════════════════════════════════════════════════
-  let predHTML='';
-  if(mPipe.length>=3){
-    const recent=mPipe.slice(-3);
-    const avgI2B=recent.reduce((a,m)=>a+m.i2b,0)/recent.length;
-    const avgE2E=recent.reduce((a,m)=>a+m.e2e,0)/recent.length;
-    const last=mPipe[mPipe.length-1], prev=mPipe[mPipe.length-2];
-    const momI2B=prev.i2b?(last.i2b-prev.i2b):0;
-    const momE2E=prev.e2e?(last.e2e-prev.e2e):0;
-    const momSub=prev.sub?((last.sub-prev.sub)/prev.sub*100):0;
-
-    // Forecast next month
-    const trend3=mPipe.slice(-3);
-    const fcastBook=Math.round(trend3.reduce((a,m)=>a+m.book,0)/3);
-    const fcastRate=+(trend3.reduce((a,m)=>a+m.e2e,0)/3).toFixed(1);
-
-    // Early warnings
-    const warnings=[];
-    if(momI2B<-2) warnings.push({metric:'Init-to-Book Rate',change:momI2B.toFixed(1)+'pp',severity:'🔴'});
-    else if(momI2B<0) warnings.push({metric:'Init-to-Book Rate',change:momI2B.toFixed(1)+'pp',severity:'🟡'});
-    if(momE2E<-1) warnings.push({metric:'End-to-End Rate',change:momE2E.toFixed(1)+'pp',severity:'🔴'});
-    if(momSub<-10) warnings.push({metric:'Submission Volume',change:momSub.toFixed(1)+'%',severity:'🔴'});
-    else if(momSub<-5) warnings.push({metric:'Submission Volume',change:momSub.toFixed(1)+'%',severity:'🟡'});
-
-    predHTML+=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px">
-      <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">3-Month Avg I2B</div><div style="font-size:20px;font-weight:700;color:var(--blue)">${avgI2B.toFixed(1)}%</div></div>
-      <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">MoM I2B Change</div><div style="font-size:20px;font-weight:700;color:${momI2B>=0?'var(--green)':'var(--red)'}">${momI2B>0?'+':''}${momI2B.toFixed(1)}pp</div></div>
-      <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Forecast Next Month</div><div style="font-size:20px;font-weight:700;color:var(--cyan)">${fmt(fcastBook)} books</div><div style="font-size:10px;color:var(--muted)">${fcastRate}% rate</div></div>
-    </div>`;
-
-    if(warnings.length){
-      predHTML+='<h4 style="font-size:13px;margin-bottom:8px">Early Warnings</h4><div style="overflow-x:auto"><table class="perf-table"><thead><tr><th>Severity</th><th>Metric</th><th class="right">MoM Change</th></tr></thead><tbody>';
-      warnings.forEach(w=>{predHTML+=`<tr><td>${w.severity}</td><td>${w.metric}</td><td class="right mono" style="color:var(--red)">${w.change}</td></tr>`;});
-      predHTML+='</tbody></table></div>';
-    } else {
-      predHTML+='<p style="color:var(--green);font-weight:600">🟢 No early warnings — all metrics within normal range.</p>';
-    }
-  } else {
-    predHTML='<p style="color:var(--muted)">Insufficient monthly data for predictive analysis (need 3+ months).</p>';
-  }
-  document.getElementById('ai-predict').innerHTML=predHTML;
-
-  // Predict chart — monthly trend with forecast
-  if(mPipe.length>=2){
-    const tLabels=mPipe.map(m=>{const[y,mo]=m.mon.split('-');return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+mo-1]+' '+y.slice(2);});
-    const fcastRate=mPipe.length>=3?+(mPipe.slice(-3).reduce((a,m)=>a+m.e2e,0)/3).toFixed(1):mPipe[mPipe.length-1].e2e;
-    tLabels.push('Forecast');
-    const e2eData=mPipe.map(m=>+m.e2e.toFixed(1));
-    e2eData.push(null);
-    const fcastData=new Array(mPipe.length-1).fill(null);
-    fcastData.push(+mPipe[mPipe.length-1].e2e.toFixed(1));
-    fcastData.push(fcastRate);
-
-    destroyChart('chart-ai-predict');
-    chartInstances['chart-ai-predict']=new Chart(document.getElementById('chart-ai-predict'),{
-      type:'line',data:{labels:tLabels,datasets:[
-        {label:'End-to-End %',data:e2eData,borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,0.1)',fill:true,tension:.3,pointRadius:4},
-        {label:'Init→Book %',data:mPipe.map(m=>+m.i2b.toFixed(1)).concat([null]),borderColor:'#16a34a',tension:.3,pointRadius:4},
-        {label:'Forecast',data:fcastData,borderColor:'#bd7d12',borderDash:[6,4],tension:.3,pointRadius:6,pointStyle:'triangle'}
-      ]},options:{responsive:true,plugins:{legend:{position:'top',labels:{usePointStyle:true,pointStyle:'circle',font:{size:10}}}},scales:{y:{title:{display:true,text:'%',font:{size:10}},min:0},x:{ticks:{font:{size:9}}}}}
-    });
-  }
+  renderPredictive(); // initial render with default range
 
   // ════════════════════════════════════════════════
   // §9 CEO DASHBOARD
@@ -1393,7 +1363,7 @@ function renderAI(){
     {label:'Offer Display Rate',val:offerDispRate.toFixed(1)+'%',light:light(offerDispRate,80,60)},
     {label:'Offer Accept Rate',val:offerAccRate.toFixed(1)+'%',light:light(offerAccRate,70,50)},
     {label:'Yaqeen Pass Rate',val:yaqeenRate.toFixed(1)+'%',light:light(yaqeenRate,80,60)},
-    {label:'NatAddr Rate',val:natAddrRate.toFixed(1)+'%',light:light(natAddrRate,80,60)},
+    {label:'National Address Rate',val:natAddrRate.toFixed(1)+'%',light:light(natAddrRate,80,60)},
     {label:'Booking Rate (Real)',val:rE2E.toFixed(1)+'%',light:light(rE2E,10,7)},
     {label:'Total Bookings',val:fmt(rBook),light:light(rBook,40000,30000)},
     {label:'Avg Loan Size',val:'SAR '+fmt(avgLoan),light:light(avgLoan,30000,20000)},
@@ -1419,7 +1389,8 @@ function renderAI(){
   const tawImpact=Math.round(tawarruq.sub*0.05*comboRate/100);
   const milImpact=Math.round(milEmp.init*0.1);
   const decImpact=biggestDecline?Math.round(biggestDecline[1]*rE2E/100*0.1):0;
-  const funnelImpact=fVals[5]>0?Math.round((fVals[5]-fVals[6])*0.1*(fVals[10]/(fVals[6]||1))):0;
+  const verifDrop=fVals[5]>0?(fVals[5]-fVals[8]):0; // Offer_Accepted → Nafath_Verified total drop
+  const funnelImpact=Math.round(verifDrop*0.10); // 10% recovery of verification dropout = direct booking uplift
 
   const actions=[
     {problem:'UI channel converts at '+uiRate.toFixed(1)+'% vs BO at '+boRate.toFixed(1)+'%',
@@ -1458,6 +1429,220 @@ function renderAI(){
       </div>
     </div>
   `).join('');
+}
+
+// ═══════════════════════ §7 GROWTH — SELF-CONTAINED ═══════════════════════
+(function initGrowthFilter(){
+  const allMonths = BPV.monthly.filter(m=>m.sub>200);
+  if(!allMonths.length) return;
+  const allMons = allMonths.map(m=>m.mon).sort();
+  const elFrom = document.getElementById('ai7-from');
+  const elTo   = document.getElementById('ai7-to');
+  function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+  const now=new Date();
+  // Default: All Time
+  elFrom.value=allMons[0]+'-01'; elTo.value=ymd(now);
+  function highlight(btn){document.querySelectorAll('.ai7-qk').forEach(b=>{b.style.background=b===btn?'var(--cyan)':'var(--panel)';b.style.color=b===btn?'#fff':'inherit';});}
+  highlight(document.getElementById('ai7-all'));
+  document.getElementById('ai7-3m').addEventListener('click',function(){const d=new Date(now.getFullYear(),now.getMonth()-3,1);elFrom.value=ymd(d);elTo.value=ymd(now);highlight(this);renderGrowth();});
+  document.getElementById('ai7-6m').addEventListener('click',function(){const d=new Date(now.getFullYear(),now.getMonth()-6,1);elFrom.value=ymd(d);elTo.value=ymd(now);highlight(this);renderGrowth();});
+  document.getElementById('ai7-all').addEventListener('click',function(){elFrom.value=allMons[0]+'-01';elTo.value=ymd(now);highlight(this);renderGrowth();});
+  elFrom.addEventListener('change',function(){highlight(null);renderGrowth();});
+  elTo.addEventListener('change',function(){highlight(null);renderGrowth();});
+})();
+
+function renderGrowth(){
+  const EXL=c=>c!=='Unlisted'&&c!=='Unknown';
+  const elFrom=document.getElementById('ai7-from'), elTo=document.getElementById('ai7-to');
+  const gFrom=elFrom?elFrom.value:'', gTo=elTo?elTo.value:'';
+
+  // Build filtered employer/nationality/income from monthly
+  const gMonths=BPV.monthly.filter(m=>{
+    if(gFrom && m.mon<gFrom.slice(0,7)) return false;
+    if(gTo && m.mon>gTo.slice(0,7)) return false;
+    return m.sub>0;
+  });
+  const gEmp={},gNat={},gInc={};
+  let gTotalSub=0,gTotalBook=0,gTotalVal=0;
+  gMonths.forEach(m=>{
+    gTotalSub+=m.sub; gTotalBook+=m.book; gTotalVal+=m.val;
+    for(const [cat,v] of Object.entries(m.emp||{})){if(!gEmp[cat])gEmp[cat]={sub:0,init:0,book:0};gEmp[cat].sub+=v.sub;gEmp[cat].init+=v.init;gEmp[cat].book+=v.book;}
+    for(const [cat,v] of Object.entries(m.nat||{})){if(!gNat[cat])gNat[cat]={sub:0,init:0,book:0};gNat[cat].sub+=v.sub;gNat[cat].init+=v.init;gNat[cat].book+=v.book;}
+    for(const [cat,v] of Object.entries(m.inc||{})){if(!gInc[cat])gInc[cat]={sub:0,init:0,book:0};gInc[cat].sub+=v.sub;gInc[cat].init+=v.init;gInc[cat].book+=v.book;}
+  });
+  const gAvgLoan=gTotalBook?Math.round(gTotalVal/gTotalBook):BPV.kpi.avgLoan;
+
+  // Compute real E2E (excl Unlisted)
+  let rSub7=0,rBook7=0;
+  Object.entries(gEmp).filter(([k])=>EXL(k)).forEach(([,v])=>{rSub7+=v.sub;rBook7+=v.book;});
+  const gE2E=rSub7?(rBook7/rSub7*100):0;
+
+  // Adaptive thresholds based on period volume
+  const minSub=Math.max(50,Math.round(rSub7*0.002)); // 0.2% of total
+  const maxBookShare=0.20; // under 20% of total bookings
+
+  const growthOpps=[];
+
+  // Employer growth (filtered)
+  Object.entries(gEmp).filter(([k,v])=>EXL(k)&&v.sub>=minSub).forEach(([k,v])=>{
+    const rate=v.sub?(v.book/v.sub*100):0;
+    if(rate>gE2E&&v.book<rBook7*maxBookShare) growthOpps.push({dim:'Employer',cat:k,rate,sub:v.sub,book:v.book,gap:'Above-avg rate, under-penetrated',potential:Math.round(v.sub*0.03*gAvgLoan)});
+  });
+
+  // Nationality growth (filtered)
+  Object.entries(gNat).filter(([k,v])=>EXL(k)&&v.sub>=minSub).forEach(([k,v])=>{
+    const rate=v.sub?(v.book/v.sub*100):0;
+    if(rate>gE2E*1.1&&v.book<rBook7*maxBookShare) growthOpps.push({dim:'Nationality',cat:k,rate,sub:v.sub,book:v.book,gap:'High-converting nationality',potential:Math.round(v.sub*0.02*gAvgLoan)});
+  });
+
+  // Income band (filtered)
+  Object.entries(gInc).filter(([k,v])=>EXL(k)&&v.sub>=minSub).forEach(([k,v])=>{
+    const rate=v.sub?(v.book/v.sub*100):0;
+    if(rate>gE2E*1.1) growthOpps.push({dim:'Income',cat:k,rate,sub:v.sub,book:v.book,gap:'Sweet spot income band',potential:Math.round(v.sub*0.02*gAvgLoan)});
+  });
+
+  // Region & Age (all-time — no monthly breakdown, but use adaptive thresholds)
+  const D_all=BPV.dims;
+  const regionDim=D_all.region||{};
+  Object.entries(regionDim).filter(([k,v])=>EXL(k)&&v.sub>=minSub).forEach(([k,v])=>{
+    const rate=v.sub?(v.book/v.sub*100):0;
+    if(rate>gE2E*0.8) growthOpps.push({dim:'Region',cat:k,rate,sub:v.sub,book:v.book,gap:'High rate region',potential:Math.round(v.sub*0.02*gAvgLoan)});
+  });
+  const ageDim=D_all.age||{};
+  Object.entries(ageDim).filter(([k,v])=>v.sub>=minSub).forEach(([k,v])=>{
+    const rate=v.sub?(v.book/v.sub*100):0;
+    if(rate>gE2E*1.2) growthOpps.push({dim:'Age',cat:k,rate,sub:v.sub,book:v.book,gap:'Under-targeted high-converters',potential:Math.round(v.sub*0.02*gAvgLoan)});
+  });
+
+  // Product (all-time)
+  const prodDim=D_all.product||{};
+  Object.entries(prodDim).filter(([k,v])=>EXL(k)&&v.sub>=minSub).forEach(([k,v])=>{
+    const rate=v.sub?(v.book/v.sub*100):0;
+    if(rate>gE2E*1.5) growthOpps.push({dim:'Product',cat:k,rate,sub:v.sub,book:v.book,gap:'High-converting product',potential:Math.round(v.sub*0.02*gAvgLoan)});
+  });
+
+  growthOpps.sort((a,b)=>b.potential-a.potential);
+  // Dedupe by cat name (keep highest potential)
+  const seen=new Set();
+  const deduped=growthOpps.filter(g=>{if(seen.has(g.cat))return false;seen.add(g.cat);return true;});
+
+  let growthHTML='';
+  if(deduped.length){
+    growthHTML='<div style="overflow-x:auto"><table class="perf-table"><thead><tr><th>Dimension</th><th>Segment</th><th class="right">Rate</th><th class="right">Current Vol</th><th class="right">Bookings</th><th>Opportunity</th><th class="right">Est Revenue Upside</th></tr></thead><tbody>';
+    deduped.slice(0,12).forEach(g=>{
+      growthHTML+=`<tr><td style="color:var(--muted);font-size:10px">${g.dim}</td><td><strong>${g.cat}</strong></td><td class="right mono" style="color:var(--green)">${g.rate.toFixed(1)}%</td><td class="right mono">${fmt(g.sub)}</td><td class="right mono">${fmt(g.book)}</td><td style="font-size:10px">${g.gap}</td><td class="right mono" style="color:var(--cyan)">SAR ${fmtM(g.potential)}</td></tr>`;
+    });
+    growthHTML+='</tbody></table></div>';
+  } else {
+    growthHTML='<p style="color:var(--muted)">No under-served growth segments detected for this period. Try widening the date range.</p>';
+  }
+  document.getElementById('ai-growth').innerHTML=growthHTML;
+
+  // Growth chart
+  const gTop=deduped.slice(0,8);
+  destroyChart('chart-ai-growth');
+  if(gTop.length){
+    chartInstances['chart-ai-growth']=new Chart(document.getElementById('chart-ai-growth'),{
+      type:'bar',data:{labels:gTop.map(g=>g.cat),datasets:[
+        {label:'Current Booking Rate %',data:gTop.map(g=>g.rate),backgroundColor:'rgba(14,158,144,0.6)',borderRadius:6,yAxisID:'y'},
+        {label:'Revenue Upside (SAR)',data:gTop.map(g=>g.potential),backgroundColor:'rgba(111,91,224,0.5)',borderRadius:6,yAxisID:'y1'}
+      ]},options:{responsive:true,plugins:{legend:{position:'top',labels:{usePointStyle:true,pointStyle:'circle',font:{size:10}}}},scales:{y:{position:'left',title:{display:true,text:'Booking Rate %',font:{size:10}},min:0},y1:{position:'right',grid:{display:false},title:{display:true,text:'Revenue Upside',font:{size:10}},ticks:{callback:v=>'SAR '+fmtM(v)}}}}
+    });
+  }
+}
+
+// ═══════════════════════ §8 PREDICTIVE — SELF-CONTAINED ═══════════════════════
+(function initPredictiveFilter(){
+  const allMonths = BPV.monthly.filter(m=>m.sub>200);
+  if(!allMonths.length) return;
+  const allMons = allMonths.map(m=>m.mon).sort();
+  const elFrom = document.getElementById('ai8-from');
+  const elTo   = document.getElementById('ai8-to');
+  function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+  // Default: last 3 months
+  const now=new Date(), m3=new Date(now.getFullYear(),now.getMonth()-3,1);
+  elFrom.value=ymd(m3); elTo.value=ymd(now);
+  function highlight(btn){document.querySelectorAll('.ai8-qk').forEach(b=>{b.style.background=b===btn?'var(--cyan)':'var(--panel)';b.style.color=b===btn?'#fff':'inherit';});}
+  highlight(document.getElementById('ai8-3m'));
+  document.getElementById('ai8-3m').addEventListener('click',function(){const d=new Date(now.getFullYear(),now.getMonth()-3,1);elFrom.value=ymd(d);elTo.value=ymd(now);highlight(this);renderPredictive();});
+  document.getElementById('ai8-6m').addEventListener('click',function(){const d=new Date(now.getFullYear(),now.getMonth()-6,1);elFrom.value=ymd(d);elTo.value=ymd(now);highlight(this);renderPredictive();});
+  document.getElementById('ai8-all').addEventListener('click',function(){elFrom.value=allMons[0]+'-01';elTo.value=ymd(now);highlight(this);renderPredictive();});
+  elFrom.addEventListener('change',function(){highlight(null);renderPredictive();});
+  elTo.addEventListener('change',function(){highlight(null);renderPredictive();});
+})();
+
+function renderPredictive(){
+  const EXL=c=>c!=='Unlisted'&&c!=='Unknown';
+  const elFrom=document.getElementById('ai8-from'), elTo=document.getElementById('ai8-to');
+  const pFrom=elFrom?elFrom.value:'', pTo=elTo?elTo.value:'';
+  // Filter months by §8's own date range
+  const pMonths=BPV.monthly.filter(m=>{
+    if(m.sub<500) return false;
+    if(pFrom && m.mon<pFrom.slice(0,7)) return false;
+    if(pTo && m.mon>pTo.slice(0,7)) return false;
+    return true;
+  });
+  const pPipe=pMonths.map(m=>{
+    let s=0,i=0,b=0,bv=0;
+    Object.entries(m.emp||{}).filter(([k])=>EXL(k)).forEach(([,v])=>{s+=v.sub;i+=v.init;b+=v.book;bv+=(v.bval||0);});
+    return {mon:m.mon,sub:s,init:i,book:b,val:bv,s2i:s?(i/s*100):0,i2b:i?(b/i*100):0,e2e:s?(b/s*100):0};
+  });
+
+  let predHTML='';
+  if(pPipe.length>=3){
+    const recent=pPipe.slice(-3);
+    const avgI2B=recent.reduce((a,m)=>a+m.i2b,0)/recent.length;
+    const avgE2E=recent.reduce((a,m)=>a+m.e2e,0)/recent.length;
+    const last=pPipe[pPipe.length-1], prev=pPipe[pPipe.length-2];
+    const momI2B=prev.i2b?(last.i2b-prev.i2b):0;
+    const momE2E=prev.e2e?(last.e2e-prev.e2e):0;
+    const momSub=prev.sub?((last.sub-prev.sub)/prev.sub*100):0;
+    const trend3=pPipe.slice(-3);
+    const fcastBook=Math.round(trend3.reduce((a,m)=>a+m.book,0)/3);
+    const fcastRate=+(trend3.reduce((a,m)=>a+m.e2e,0)/3).toFixed(1);
+    const warnings=[];
+    if(momI2B<-2) warnings.push({metric:'Init-to-Book Rate',change:momI2B.toFixed(1)+'pp',severity:'🔴'});
+    else if(momI2B<0) warnings.push({metric:'Init-to-Book Rate',change:momI2B.toFixed(1)+'pp',severity:'🟡'});
+    if(momE2E<-1) warnings.push({metric:'End-to-End Rate',change:momE2E.toFixed(1)+'pp',severity:'🔴'});
+    if(momSub<-10) warnings.push({metric:'Submission Volume',change:momSub.toFixed(1)+'%',severity:'🔴'});
+    else if(momSub<-5) warnings.push({metric:'Submission Volume',change:momSub.toFixed(1)+'%',severity:'🟡'});
+
+    predHTML+=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px">
+      <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">3-Month Avg I2B</div><div style="font-size:20px;font-weight:700;color:var(--blue)">${avgI2B.toFixed(1)}%</div></div>
+      <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">MoM I2B Change</div><div style="font-size:20px;font-weight:700;color:${momI2B>=0?'var(--green)':'var(--red)'}">${momI2B>0?'+':''}${momI2B.toFixed(1)}pp</div></div>
+      <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Forecast Next Month</div><div style="font-size:20px;font-weight:700;color:var(--cyan)">${fmt(fcastBook)} books</div><div style="font-size:10px;color:var(--muted)">${fcastRate}% rate</div></div>
+    </div>`;
+    if(warnings.length){
+      predHTML+='<h4 style="font-size:13px;margin-bottom:8px">Early Warnings</h4><div style="overflow-x:auto"><table class="perf-table"><thead><tr><th>Severity</th><th>Metric</th><th class="right">MoM Change</th></tr></thead><tbody>';
+      warnings.forEach(w=>{predHTML+=`<tr><td>${w.severity}</td><td>${w.metric}</td><td class="right mono" style="color:var(--red)">${w.change}</td></tr>`;});
+      predHTML+='</tbody></table></div>';
+    } else {
+      predHTML+='<p style="color:var(--green);font-weight:600">🟢 No early warnings — all metrics within normal range.</p>';
+    }
+  } else if(pPipe.length>=1){
+    predHTML=`<p style="color:var(--muted)">Only ${pPipe.length} month(s) in selected range — need 3+ for predictive analysis. Widen the date range above.</p>`;
+  } else {
+    predHTML='<p style="color:var(--muted)">No monthly data in selected range. Adjust the date filter above.</p>';
+  }
+  document.getElementById('ai-predict').innerHTML=predHTML;
+
+  // Chart
+  destroyChart('chart-ai-predict');
+  if(pPipe.length>=2){
+    const tLabels=pPipe.map(m=>{const[y,mo]=m.mon.split('-');return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+mo-1]+' '+y.slice(2);});
+    const fcastRate2=pPipe.length>=3?+(pPipe.slice(-3).reduce((a,m)=>a+m.e2e,0)/3).toFixed(1):pPipe[pPipe.length-1].e2e;
+    tLabels.push('Forecast');
+    const e2eData=pPipe.map(m=>+m.e2e.toFixed(1)); e2eData.push(null);
+    const fcastData=new Array(pPipe.length-1).fill(null);
+    fcastData.push(+pPipe[pPipe.length-1].e2e.toFixed(1)); fcastData.push(fcastRate2);
+    chartInstances['chart-ai-predict']=new Chart(document.getElementById('chart-ai-predict'),{
+      type:'line',data:{labels:tLabels,datasets:[
+        {label:'End-to-End %',data:e2eData,borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,0.1)',fill:true,tension:.3,pointRadius:4},
+        {label:'Init→Book %',data:pPipe.map(m=>+m.i2b.toFixed(1)).concat([null]),borderColor:'#16a34a',tension:.3,pointRadius:4},
+        {label:'Forecast',data:fcastData,borderColor:'#bd7d12',borderDash:[6,4],tension:.3,pointRadius:6,pointStyle:'triangle'}
+      ]},options:{responsive:true,plugins:{legend:{position:'top',labels:{usePointStyle:true,pointStyle:'circle',font:{size:10}}}},scales:{y:{title:{display:true,text:'%',font:{size:10}},min:0},x:{ticks:{font:{size:9}}}}}
+    });
+  }
 }
 
 </script>

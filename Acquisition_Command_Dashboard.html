@@ -281,6 +281,9 @@ body.gate-locked>*:not(#login-gate){display:none!important}
 
   <div class="sec-h" style="margin-top:20px"><span class="k">04</span><h2>Funnel vs last month</h2><span class="hint">selected range vs same calendar dates, one month back</span></div>
   <div class="chart-card" id="sum-mom"></div>
+
+  <div class="sec-h" style="margin-top:20px"><span class="k">05</span><h2>CEO Dashboard — Traffic Light</h2><span class="hint">key metrics health check for selected range</span></div>
+  <div class="chart-card" id="sum-ceo-traffic"></div>
 </section>
 <section class="panel-tab" id="perf">
   <div class="sec-h"><span class="k">KPI</span><h2>Core acquisition metrics</h2><span class="hint" id="perf-hint"></span></div>
@@ -942,7 +945,7 @@ const RAWSTORE = {"n":744180,"dates":["2025-10-06","2025-10-07","2025-10-08","20
 
   // ---- filter state + apply ----
   let FILTERS={};
-  const DIMLABEL={region:'Region',employer:'Employer',nationality:'Nationality',income:'Income',risk:'Risk grade',simah:'SIMAH/QARAR',age:'Age',gender:'Gender',marital:'Marital',product:'Product',source:'Source',scoreband:'Score band',dbr:'DBR',store:'Store',city:'City',natdetail:'Nat. (detail)'};
+  const DIMLABEL={region:'Region',employer:'Employer',nationality:'Nationality',income:'Income',risk:'Risk grade',simah:'SIMAH/QARAR',age:'Age',gender:'Gender',marital:'Marital',product:'Product',source:'Source',scoreband:'Score band',dbr:'DBR',store:'Store',city:'City',natdetail:'National Address'};
   function activeCount(){let n=0;for(const d in FILTERS)if(FILTERS[d])n+=FILTERS[d].size;return n;}
   function toggleFilter(dim,label){
     const code=V2C[dim]?V2C[dim].get(label):undefined; if(code===undefined){toast('Can’t filter “'+label+'”');return;}
@@ -1476,7 +1479,69 @@ function renderSummaryTab(){
   mh+=row('Total sales value',mm.cur.val,mm.prev.val,money,false);
   mh+='</tbody></table>';
   document.getElementById('sum-mom').innerHTML=mh;
+
+  // ═══════════════════════ CEO TRAFFIC LIGHT ═══════════════════════
+  renderCEOTrafficLight();
 }
+
+function renderCEOTrafficLight(){
+  const c=CUR; if(!c) return;
+  const k=c.cur.k;
+  const sub=k.sub, init=k.init, final=k.final, book=k.book, val=k.val;
+  const avgTicket=book?Math.round(val/book):0;
+  const initRate=sub?100*init/sub:0;
+  const finalRate=init?100*final/init:0;
+  const bookRate=sub?100*book/sub:0;
+  const initBookRate=init?(100*book/init):0;
+
+  // Employer breakdown (excl Unlisted)
+  const empD=c.cur.d.employer||{};
+  const empSub=empD.sub||{}, empBook=empD.book||{}, empInit=empD.init||{};
+  let rSub=0,rInit=0,rBook=0;
+  Object.entries(empSub).forEach(([cat,cnt])=>{if(cat!=='Unlisted'&&cat!=='Unknown'){rSub+=cnt;rInit+=(empInit[cat]||0);rBook+=(empBook[cat]||0);}});
+  const rE2E=rSub?(100*rBook/rSub):0;
+  const rInitRate=rSub?(100*rInit/rSub):0;
+
+  // Best employer by booking rate (min 100 subs)
+  let bestEmp='—';let bestEmpRate=0;
+  Object.entries(empSub).forEach(([cat,cnt])=>{
+    if(cat==='Unlisted'||cat==='Unknown'||cnt<100) return;
+    const rate=cnt?(empBook[cat]||0)/cnt*100:0;
+    if(rate>bestEmpRate){bestEmpRate=rate;bestEmp=cat;}
+  });
+
+  const light=function(v,good,warn){return v>=good?'🟢':v>=warn?'🟡':'🔴';};
+  const nDays=c.curDays||1;
+  const dailySub=Math.round(rSub/nDays);
+  const dailyBook=Math.round(rBook/nDays);
+
+  const metrics=[
+    {label:'Applications (excl Unlisted)',val:fmt(rSub),light:light(dailySub,1500,1000)},
+    {label:'Daily Avg Submissions',val:fmt(dailySub),light:light(dailySub,1500,1000)},
+    {label:'Approvals (Init)',val:fmt(rInit),light:light(rInit/nDays,500,300)},
+    {label:'Approval Rate',val:rInitRate.toFixed(1)+'%',light:light(rInitRate,30,20)},
+    {label:'Final Approval Rate',val:finalRate.toFixed(1)+'%',light:light(finalRate,70,50)},
+    {label:'Init → Book Rate',val:initBookRate.toFixed(1)+'%',light:light(initBookRate,20,10)},
+    {label:'Booking Rate (Real)',val:rE2E.toFixed(1)+'%',light:light(rE2E,10,7)},
+    {label:'Total Bookings',val:fmt(rBook),light:light(dailyBook,100,70)},
+    {label:'Avg Loan Size',val:money(avgTicket),light:light(avgTicket,30000,20000)},
+    {label:'Portfolio Revenue',val:money(val),light:light(val/nDays,3e6,2e6)},
+    {label:'Days in Range',val:fmt(nDays),light:'🔵'},
+    {label:'Top Employer',val:bestEmp.length>15?bestEmp.slice(0,13)+'…':bestEmp,light:'🟢'},
+    {label:'Headline Rate (incl Unlisted)',val:bookRate.toFixed(1)+'%',light:light(bookRate,5,3)},
+    {label:'Real vs Headline',val:(rE2E/Math.max(bookRate,0.01)).toFixed(1)+'x',light:light(rE2E/Math.max(bookRate,0.01),1.3,1)}
+  ];
+
+  const el=document.getElementById('sum-ceo-traffic');
+  if(!el) return;
+  el.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin-top:8px">'+
+    metrics.map(function(m){return '<div style="background:var(--panel);border:1px solid var(--line2);border-radius:10px;padding:12px;text-align:center">'+
+      '<div style="font-size:18px;margin-bottom:2px">'+m.light+'</div>'+
+      '<div style="font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:.04em">'+m.label+'</div>'+
+      '<div style="font-size:15px;font-weight:700;color:var(--ink);margin-top:2px">'+m.val+'</div>'+
+    '</div>';}).join('')+'</div>';
+}
+
 window.renderNewCards=renderNewCards;
 function renderNewCards(){
   if(!window.__engine||!window.__engine.dimDailyTrend)return;
