@@ -167,6 +167,7 @@ canvas{width:100%!important;max-height:300px}
   <button data-tab="seasonality">Seasonality</button>
   <button data-tab="learnings">Key Learnings</button>
   <button data-tab="ai" style="color:var(--violet);font-weight:600">🧠 AI Tab</button>
+  <button data-tab="day2day" style="color:var(--red);font-weight:600">📊 Day2Day</button>
 </div>
 
 <!-- ═══════════════════════ TAB 1: EXECUTIVE OVERVIEW ═══════════════════════ -->
@@ -371,6 +372,151 @@ canvas{width:100%!important;max-height:300px}
   </div>
 </div>
 
+<!-- ═══════════════════════ TAB 7: DAY2DAY INTELLIGENCE ═══════════════════════ -->
+<div class="section" id="sec-day2day">
+  <h2 class="section-title" style="display:flex;align-items:center;gap:10px">📊 Day2Day <span class="badge" style="background:var(--red-bg);color:var(--red);font-size:11px;padding:3px 10px;border-radius:8px">17-Section Loan Intelligence</span></h2>
+  <p class="section-sub" id="d2d-sub">Chief Data Scientist × CPO × Growth Strategist × Credit Risk Expert — cross-correlating Acquisition + SIMAH + Funnel as one connected ecosystem. <strong>Unlisted employers excluded</strong>.</p>
+
+  <!-- S1: Executive Summary -->
+  <div class="card" style="margin-bottom:24px;border-left:4px solid var(--red)">
+    <h3>§1 · Executive Summary <span class="badge" style="background:var(--red-bg);color:var(--red)">Top 10 Insights</span></h3>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Not observations — insights. Every one answers "So what?" with estimated business impact.</p>
+    <div id="d2d-exec-summary"></div>
+  </div>
+
+  <!-- S2: Daily Health Score -->
+  <div class="card" style="margin-bottom:24px;border-left:4px solid var(--green)">
+    <h3>§2 · Daily Health Score <span class="badge" style="background:var(--green-bg);color:var(--green)">/100</span></h3>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">8-dimension health assessment: Traffic, Conversion, Credit Quality, Operations, Customer Journey, Risk, Growth, Booking.</p>
+    <div id="d2d-health-score"></div>
+    <canvas id="chart-d2d-health-radar" style="max-height:340px;margin-top:16px"></canvas>
+  </div>
+
+  <!-- S3: Funnel Intelligence -->
+  <div class="card" style="margin-bottom:24px;border-left:4px solid var(--red)">
+    <h3>§3 · Funnel Intelligence <span class="badge" style="background:var(--red-bg);color:var(--red)">Root Cause</span></h3>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Every funnel stage: conversion, drop %, root cause, business cost, missed revenue. Top 20 leakage opportunities.</p>
+    <div id="d2d-funnel-intel"></div>
+    <canvas id="chart-d2d-funnel-waterfall" style="max-height:340px;margin-top:16px"></canvas>
+  </div>
+
+  <!-- S4: Booking Intelligence -->
+  <div class="card" style="margin-bottom:24px;border-left:4px solid var(--green)">
+    <h3>§4 · Booking Intelligence <span class="badge" style="background:var(--green-bg);color:var(--green)">Who Books & Who Doesn't</span></h3>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Common characteristics of booked vs declined vs abandoned populations compared.</p>
+    <div id="d2d-booking-intel"></div>
+    <canvas id="chart-d2d-booking-compare" style="max-height:300px;margin-top:16px"></canvas>
+  </div>
+
+  <!-- S5: SIMAH Intelligence -->
+  <div class="card" style="margin-bottom:24px;border-left:4px solid var(--blue)">
+    <h3>§5 · SIMAH Intelligence <span class="badge" style="background:var(--blue-bg);color:var(--blue)">Credit Bureau Deep Dive</span></h3>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Score ranges, default behavior, enquiry intensity, debt ratio, delinquency, competitor landscape. Which SIMAH attributes predict booking strongest.</p>
+    <div id="d2d-simah-intel"></div>
+    <div class="cards-grid g2" style="margin-top:16px">
+      <div><canvas id="chart-d2d-simah-score" style="max-height:280px"></canvas></div>
+      <div><canvas id="chart-d2d-simah-predict" style="max-height:280px"></canvas></div>
+    </div>
+  </div>
+
+  <!-- S6: Credit Decision Analysis -->
+  <div class="card" style="margin-bottom:24px;border-left:4px solid var(--gold)">
+    <h3>§6 · Credit Decision Analysis <span class="badge" style="background:var(--gold-bg);color:var(--gold)">Necessary vs Conservative</span></h3>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Why DE rejects, clustered by reason. Necessary declines vs overly conservative policy. Estimated extra bookings per rule.</p>
+    <div id="d2d-credit-decision"></div>
+    <canvas id="chart-d2d-decline-pareto" style="max-height:300px;margin-top:16px"></canvas>
+  </div>
+
+  <!-- S7: Customer Segmentation -->
+  <div class="card" style="margin-bottom:24px;border-left:4px solid var(--cyan)">
+    <h3>§7 · Customer Segmentation <span class="badge" style="background:var(--cyan-bg);color:var(--cyan)">Hidden Personas</span></h3>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Auto-detected personas across 16 dimensions. Behavioral profiles of each segment.</p>
+    <div id="d2d-customer-seg"></div>
+    <canvas id="chart-d2d-seg-scatter" style="max-height:300px;margin-top:16px"></canvas>
+  </div>
+
+  <!-- S8: Geographic Intelligence -->
+  <div class="card" style="margin-bottom:24px;border-left:4px solid var(--blue)">
+    <h3>§8 · Geographic Intelligence <span class="badge" style="background:var(--blue-bg);color:var(--blue)">City / Region / Store</span></h3>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Highest/lowest conversion by geography. Expansion opportunities and problem areas.</p>
+    <div id="d2d-geo-intel"></div>
+    <canvas id="chart-d2d-geo-bar" style="max-height:300px;margin-top:16px"></canvas>
+  </div>
+
+  <!-- S9: Merchant Intelligence -->
+  <div class="card" style="margin-bottom:24px;border-left:4px solid var(--gold)">
+    <h3>§9 · Merchant Intelligence <span class="badge" style="background:var(--gold-bg);color:var(--gold)">Employer Ranking</span></h3>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Best and worst employers by approval, booking, abandonment, and customer value.</p>
+    <div id="d2d-merchant-intel"></div>
+  </div>
+
+  <!-- S10: Channel Intelligence -->
+  <div class="card" style="margin-bottom:24px;border-left:4px solid var(--violet)">
+    <h3>§10 · Channel Intelligence <span class="badge" style="background:var(--violet-bg);color:var(--violet)">UI vs Branch vs BO</span></h3>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Fastest, highest converting, lowest friction, most profitable channel.</p>
+    <div id="d2d-channel-intel"></div>
+    <canvas id="chart-d2d-channel" style="max-height:280px;margin-top:16px"></canvas>
+  </div>
+
+  <!-- S11: Revenue Intelligence -->
+  <div class="card" style="margin-bottom:24px;border-left:4px solid var(--green)">
+    <h3>§11 · Revenue Intelligence <span class="badge" style="background:var(--green-bg);color:var(--green)">Lost / Captured / Recoverable</span></h3>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Revenue captured, lost to declines, lost to dropout, and recoverable upside — monthly and annual estimates.</p>
+    <div id="d2d-revenue-intel"></div>
+    <canvas id="chart-d2d-revenue" style="max-height:280px;margin-top:16px"></canvas>
+  </div>
+
+  <!-- S12: Operational Intelligence -->
+  <div class="card" style="margin-bottom:24px;border-left:4px solid var(--red)">
+    <h3>§12 · Operational Intelligence <span class="badge" style="background:var(--red-bg);color:var(--red)">Bottlenecks & SLA</span></h3>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">IVR, National Address, Yaqeen, GOSI, MOF, SIMAH, Qarar, Manual Review, Fraud — operational bottleneck analysis.</p>
+    <div id="d2d-ops-intel"></div>
+  </div>
+
+  <!-- S13: Product Intelligence -->
+  <div class="card" style="margin-bottom:24px;border-left:4px solid var(--cyan)">
+    <h3>§13 · Product Intelligence <span class="badge" style="background:var(--cyan-bg);color:var(--cyan)">ROI Prioritized</span></h3>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Product, eligibility, journey, pricing, approval logic, and onboarding changes — prioritized by ROI.</p>
+    <div id="d2d-product-intel"></div>
+  </div>
+
+  <!-- S14: Predictive Analysis -->
+  <div class="card" style="margin-bottom:24px;border-left:4px solid var(--gold)">
+    <h3>§14 · Predictive Analysis <span class="badge" style="background:var(--gold-bg);color:var(--gold)">Tomorrow's Forecast</span></h3>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Predicted bookings, approvals, applications, offer acceptance — with confidence levels and assumptions.</p>
+    <div id="d2d-predictive"></div>
+    <canvas id="chart-d2d-forecast" style="max-height:300px;margin-top:16px"></canvas>
+  </div>
+
+  <!-- S15: Executive Recommendations -->
+  <div class="card" style="margin-bottom:24px;border-left:4px solid var(--violet)">
+    <h3>§15 · Executive Recommendations <span class="badge" style="background:var(--violet-bg);color:var(--violet)">Impact × ROI</span></h3>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Quick Win (1 week) · Medium (30 days) · Strategic (90 days) — ranked by expected result.</p>
+    <div id="d2d-exec-recs"></div>
+  </div>
+
+  <!-- S16: Dashboard -->
+  <div class="card" style="margin-bottom:24px;border-left:4px solid var(--red)">
+    <h3>§16 · Executive Dashboard <span class="badge" style="background:var(--red-bg);color:var(--red)">Traffic Light</span></h3>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">KPIs, trend arrows, traffic lights, warnings, top risks, top opportunities, daily action items.</p>
+    <div id="d2d-dashboard"></div>
+  </div>
+
+  <!-- S17: Hidden Insights -->
+  <div class="card" style="margin-bottom:24px;border-left:4px solid #e040fb">
+    <h3>§17 · Hidden Insights <span class="badge" style="background:rgba(224,64,251,0.12);color:#e040fb">What Nobody Would Notice</span></h3>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Unusual correlations, anomalies, Simpson's paradox, seasonality, weak signals, future risks.</p>
+    <div id="d2d-hidden-insights"></div>
+  </div>
+
+  <!-- Self-Challenge -->
+  <div class="card" style="margin-bottom:24px;border-left:4px solid #536dfe">
+    <h3>🔬 Self-Challenge <span class="badge" style="background:rgba(83,109,254,0.12);color:#536dfe">External Consultant Bias Check</span></h3>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Challenging every conclusion: hidden assumptions, missing variables, confirmation bias, Simpson's paradox, correlation ≠ causation, selection bias, data quality.</p>
+    <div id="d2d-self-challenge"></div>
+  </div>
+</div>
+
 <div class="foot">Built for <a href="https://www.linkedin.com/in/emadayyash" target="_blank">Emad Ayyash</a> · Tasheel Finance</div>
 
 <script>
@@ -499,6 +645,7 @@ function renderTab(tab){
     case 'seasonality': renderSeasonality(); break;
     case 'learnings': renderLearnings(); break;
     case 'ai': renderAI(); break;
+    case 'day2day': renderDay2Day(); break;
   }
 }
 
@@ -2059,6 +2206,1042 @@ function renderPredictive(){
     });
   }
 }
+
+// ═══════════════════════ TAB 7: DAY2DAY INTELLIGENCE ═══════════════════════
+function renderDay2Day(){
+  if(rendered.day2day) return; rendered.day2day=true;
+
+  // ─── DATA AGGREGATION (mirrors renderAI preamble) ───
+  const filteredDays=getFilteredDays();
+  const filteredMonths=getFilteredMonths();
+  const allDays=(BPV.daily||[]).slice().sort((a,b)=>a.date<b.date?-1:1);
+  const nDays=filteredDays.length||1;
+  const periodLabel=(FILTER_FROM||FILTER_TO)?(FILTER_FROM===FILTER_TO?FILTER_FROM:(FILTER_FROM||'start')+' → '+(FILTER_TO||'latest')):'All Time';
+  document.getElementById('d2d-sub').innerHTML='Chief Data Scientist × CPO × Growth Strategist × Credit Risk Expert — cross-correlating Acquisition + SIMAH + Funnel as one connected ecosystem. <strong>Unlisted employers excluded</strong>. Period: <strong>'+periodLabel+'</strong> ('+nDays+' day'+(nDays>1?'s':'')+').';
+
+  let fTotalSub=0,fTotalInit=0,fTotalBook=0,fTotalVal=0;
+  filteredDays.forEach(d=>{fTotalSub+=d.sub;fTotalInit+=d.init;fTotalBook+=d.book;fTotalVal+=d.val;});
+  const fAvgLoan=fTotalBook?Math.round(fTotalVal/fTotalBook):BPV.kpi.avgLoan;
+
+  const D=getFilteredDims();
+  const avgLoan=fAvgLoan;
+  const EXL=c=>c!=='Unlisted'&&c!=='Unknown';
+
+  // Pipeline excl Unlisted
+  const emp=D.employer||{};
+  let rSub=0,rInit=0,rBook=0;
+  Object.entries(emp).filter(([k])=>EXL(k)).forEach(([,v])=>{rSub+=v.sub;rInit+=v.init;rBook+=v.book;});
+  const rVal=rBook*avgLoan,rE2E=rSub?(rBook/rSub*100):0,rI2B=rInit?(rBook/rInit*100):0,headlineRate=fTotalSub?(fTotalBook/fTotalSub*100):0;
+
+  // Previous period for day-over-day comparison
+  let pSub=0,pInit=0,pBook=0,pVal=0;
+  if(filteredDays.length>0){
+    const firstDate=filteredDays[0].date;
+    const idx=allDays.findIndex(d=>d.date===firstDate);
+    const prevSlice=allDays.slice(Math.max(0,idx-nDays),idx);
+    prevSlice.forEach(d=>{pSub+=d.sub;pInit+=d.init;pBook+=d.book;pVal+=d.val;});
+  }
+  const pAvgLoan=pBook?Math.round(pVal/pBook):avgLoan;
+  const pRate=pSub?(pBook/pSub*100):0;
+
+  // Funnel
+  const filteredMF=(BPV.monthlyFunnel||[]).filter(mf=>{
+    if(FILTER_FROM&&mf.mon<FILTER_FROM.slice(0,7))return false;
+    if(FILTER_TO&&mf.mon>FILTER_TO.slice(0,7))return false;return true;
+  });
+  const FF={};
+  filteredMF.forEach(mf=>{for(const [j,steps] of Object.entries(mf)){if(j==='mon')continue;if(!FF[j])FF[j]={};for(const [s,c] of Object.entries(steps)){FF[j][s]=(FF[j][s]||0)+c;}}});
+  const NC=FF['New Customer']||{};
+  const fSteps=['PG_Total_Visits','Application_Created','DELite_Called','DE_Approved','Offer_Displayed','Offer_Accepted','Yaqeen_Passed','NationalAddress_Verified','IVR_Completed','Booked'];
+  const fLabels=['PG Visits','App Created','DELite','DE Approved','Offer Shown','Offer Accepted','Yaqeen','NatAddr','IVR','Booked'];
+  const fVals=fSteps.map(s=>NC[s]||0);
+  const fRootCause=['Channel','Technology','Credit','Credit','Product','Customer','Process','Process','Operations','—'];
+
+  // Declines
+  const declineRaw={};
+  Object.entries(NC).forEach(([k,v])=>{if(k.startsWith('PG_Decline')||['CITC_Failed','Name_Missing','Email_Missing','Cancelled by BO','Cancelled by Customer Service Team','Rejected by UW/ Checker','Rejected by Fraud'].includes(k))declineRaw[k]=v;});
+
+  // SIMAH
+  const SM=BPV.simah||{};
+
+  // Dimensions
+  const dimNames=['employer','nationality','income','risk','simah','age','region','city','natdetail','source','product','gender','marital','scoreband','dbr','store'];
+  const DIM_LABELS={employer:'Employer',nationality:'Nationality',income:'Income',risk:'Risk',simah:'SIMAH',age:'Age',region:'Region',city:'City',natdetail:'Nationality Detail',source:'Source',product:'Product',gender:'Gender',marital:'Marital',scoreband:'Score Band',dbr:'DBR',store:'Store'};
+  const READABLE={SAU:'Saudi Arabia',SDN:'Sudan',TUN:'Tunisia',EGY:'Egypt',PHL:'Philippines',YEM:'Yemen',IND:'India',PAK:'Pakistan',BGD:'Bangladesh',SYR:'Syria',NGA:'Nigeria',LBN:'Lebanon',JOR:'Jordan',ZAF:'South Africa',MAR:'Morocco',LKA:'Sri Lanka',TUR:'Turkey',ABW:'Aruba',PSE:'Palestine',OTH:'Other Nationalities',M:'Male',F:'Female',H:'High Risk',L:'Low Risk',VH:'Very High Risk',VL:'Very Low Risk',UI:'Digital (UI)',backoffice:'Backoffice'};
+  const rl=c=>READABLE[c]||c;
+  const minSub=nDays<=7?5:nDays<=60?20:100;
+
+  // Helpers
+  const pct=(a,b)=>b?(a/b*100):0;
+  const chg=(cur,prev)=>prev?((cur-prev)/prev*100):cur>0?100:0;
+  const arrow=(cur,prev)=>{const c=chg(cur,prev);return c>5?'<span style="color:var(--green)">▲ '+Math.abs(c).toFixed(1)+'%</span>':c<-5?'<span style="color:var(--red)">▼ '+Math.abs(c).toFixed(1)+'%</span>':'<span style="color:var(--muted)">→ '+Math.abs(c).toFixed(1)+'%</span>';};
+  const light=(score)=>score>=75?'🟢':score>=50?'🟡':'🔴';
+  const sev=(s)=>s==='Critical'?'background:var(--red-bg);color:var(--red)':s==='High'?'background:var(--gold-bg);color:var(--gold)':'background:var(--blue-bg);color:var(--blue)';
+
+  // Products & channels
+  const prods=D.product||{},combo=prods['Combo']||{sub:0,init:0,book:0},tawarruq=prods['Tawarruq']||{sub:0,init:0,book:0};
+  const comboRate=pct(combo.book,combo.sub),tawRate=pct(tawarruq.book,tawarruq.sub);
+  const src=D.source||{},ui=src['UI']||{sub:0,init:0,book:0},bo=src['backoffice']||{sub:0,init:0,book:0};
+  const uiRate=pct(ui.book,ui.sub),boRate=pct(bo.book,bo.sub);
+
+  // Dim analysis helper — returns sorted categories for a dimension
+  function dimCats(dn){
+    const dim=D[dn]||{};
+    return Object.entries(dim).filter(([k,v])=>EXL(k)&&v.sub>=minSub).map(([k,v])=>({cat:rl(k),raw:k,sub:v.sub,init:v.init||0,book:v.book,rate:pct(v.book,v.sub),i2b:pct(v.book,v.init||1)})).sort((a,b)=>b.rate-a.rate);
+  }
+
+  // ═══════════════════════════════════════════════════
+  // §1 EXECUTIVE SUMMARY — Top 10 Insights
+  // ═══════════════════════════════════════════════════
+  (function s1(){
+    const insights=[];
+    // 1. Unlisted masking
+    const unl=emp['Unlisted']||{sub:0,book:0};
+    if(unl.sub>100){
+      const unlPct=pct(unl.sub,fTotalSub);
+      insights.push({sev:'Critical',title:'Unlisted Masking',text:'Unlisted employers account for '+fmt(unl.sub)+' submissions ('+unlPct.toFixed(1)+'%) with near-zero bookings. Headline rate of '+headlineRate.toFixed(1)+'% is misleading — real pipeline rate is '+rE2E.toFixed(1)+'%.',impact:'SAR '+fmtM(Math.round(unl.sub*rE2E/100*avgLoan))+' apparent opportunity if these were real applicants, but they are noise diluting your metrics.'});
+    }
+    // 2. Day-over-day booking change
+    if(pBook>0){
+      const bookChg=chg(fTotalBook,pBook);
+      insights.push({sev:bookChg<-20?'Critical':bookChg<-5?'High':'Medium',title:'Booking Velocity '+(bookChg>=0?'↑':'↓'),text:'Bookings moved from '+fmt(pBook)+' → '+fmt(fTotalBook)+' ('+bookChg.toFixed(1)+'% vs previous period). '+(bookChg<-10?'This decline needs immediate investigation.':bookChg>10?'Positive momentum — identify what drove this and double down.':'Stable trajectory.'),impact:bookChg<0?'SAR '+fmtM(Math.abs(fTotalBook-pBook)*avgLoan)+' revenue gap vs prior period.':'SAR '+fmtM(Math.abs(fTotalBook-pBook)*avgLoan)+' additional revenue captured.'});
+    }
+    // 3. Biggest funnel leak
+    let maxDrop=0,maxDropIdx=0;
+    for(let i=0;i<fVals.length-1;i++){const drop=fVals[i]-fVals[i+1];if(drop>maxDrop){maxDrop=drop;maxDropIdx=i;}}
+    if(maxDrop>0){
+      const downRate=fVals[fVals.length-1]/(fVals[maxDropIdx+1]||1);
+      insights.push({sev:'Critical',title:'Funnel Hemorrhage: '+fLabels[maxDropIdx]+' → '+fLabels[maxDropIdx+1],text:fmt(maxDrop)+' applicants lost between '+fLabels[maxDropIdx]+' and '+fLabels[maxDropIdx+1]+' — the single largest leak. Root cause: '+fRootCause[maxDropIdx]+'.',impact:'SAR '+fmtM(Math.round(maxDrop*downRate*avgLoan))+' estimated revenue lost at this stage.'});
+    }
+    // 4. Channel gap
+    if(ui.sub>0&&bo.sub>0){
+      const gap=boRate-uiRate;
+      insights.push({sev:Math.abs(gap)>5?'High':'Medium',title:'Channel Disparity: '+(gap>0?'Backoffice':'Digital')+' Wins',text:'Backoffice converts at '+boRate.toFixed(1)+'% vs Digital '+uiRate.toFixed(1)+'% — a '+Math.abs(gap).toFixed(1)+'pp gap. '+(gap>0?'Backoffice curated applications outperform digital self-service.':'Digital self-qualification is working better than manual.'),impact:gap>0?'Moving '+Math.round(ui.sub*0.05)+' UI applications to guided BO flow could yield ~'+fmt(Math.round(ui.sub*0.05*boRate/100))+' additional bookings.':'Scaling digital channel saves operational cost while converting better.'});
+    }
+    // 5. Product gap
+    if(combo.sub>0&&tawarruq.sub>0){
+      insights.push({sev:Math.abs(comboRate-tawRate)>3?'High':'Medium',title:'Product Split: Combo vs Tawarruq',text:'Combo: '+comboRate.toFixed(1)+'% booking rate ('+fmt(combo.sub)+' apps). Tawarruq: '+tawRate.toFixed(1)+'% ('+fmt(tawarruq.sub)+' apps).',impact:'SAR '+fmtM(Math.round(Math.abs(combo.book-tawarruq.book)*avgLoan))+' revenue difference between products.'});
+    }
+    // 6. Top decline volume
+    const decSorted=Object.entries(declineRaw).sort((a,b)=>b[1]-a[1]);
+    if(decSorted.length>0){
+      const [topDec,topDecV]=decSorted[0];
+      insights.push({sev:'High',title:'Top Decline: '+topDec.replace('PG_Decline_Reasons - ',''),text:fmt(topDecV)+' applications declined for "'+topDec.replace('PG_Decline_Reasons - ','')+'". This single rule blocks more applicants than any other.',impact:'If 10% of these were recoverable, that\'s ~'+fmt(Math.round(topDecV*0.1*rE2E/100))+' additional bookings (SAR '+fmtM(Math.round(topDecV*0.1*rE2E/100*avgLoan))+').'});
+    }
+    // 7. Post-approval leakage
+    const offerAcc=fVals[5]||0,booked=fVals[fVals.length-1]||0;
+    if(offerAcc>0){
+      const postLeak=offerAcc-booked;
+      insights.push({sev:postLeak/offerAcc>0.3?'Critical':'High',title:'Post-Approval Leakage',text:fmt(postLeak)+' customers accepted an offer but never booked — '+pct(postLeak,offerAcc).toFixed(1)+'% leakage after the hardest conversion step (offer acceptance).',impact:'These are the highest-value lost customers. SAR '+fmtM(postLeak*avgLoan)+' walked away after saying yes.'});
+    }
+    // 8-10. Top performing and underperforming dimensions
+    const allCats=[];
+    dimNames.forEach(dn=>{
+      const cats=dimCats(dn);
+      cats.forEach(c=>{c.dim=DIM_LABELS[dn]||dn;allCats.push(c);});
+    });
+    const topCat=allCats.filter(c=>c.book>=3).sort((a,b)=>b.rate-a.rate)[0];
+    if(topCat) insights.push({sev:'Medium',title:'Star Segment: '+topCat.dim+' = '+topCat.cat,text:topCat.cat+' books at '+topCat.rate.toFixed(1)+'% ('+fmt(topCat.book)+'/'+fmt(topCat.sub)+'). Significantly above average.',impact:'Scaling acquisition in this segment could yield high-ROI growth.'});
+    const worstCat=allCats.filter(c=>c.sub>=minSub*2&&c.book===0).sort((a,b)=>b.sub-a.sub)[0];
+    if(worstCat) insights.push({sev:'High',title:'Dead Segment: '+worstCat.dim+' = '+worstCat.cat,text:fmt(worstCat.sub)+' submissions, zero bookings. Complete dead-end.',impact:'SAR '+fmtM(Math.round(worstCat.sub*rE2E/100*avgLoan))+' in acquisition cost wasted on this segment.'});
+    // Emerging trend
+    if(filteredDays.length>=4){
+      const half=Math.floor(filteredDays.length/2);
+      const h1=filteredDays.slice(0,half),h2=filteredDays.slice(half);
+      const h1Book=h1.reduce((a,d)=>a+d.book,0),h2Book=h2.reduce((a,d)=>a+d.book,0);
+      const h1Sub=h1.reduce((a,d)=>a+d.sub,0),h2Sub=h2.reduce((a,d)=>a+d.sub,0);
+      const h1Rate=pct(h1Book,h1Sub),h2Rate=pct(h2Book,h2Sub);
+      if(Math.abs(h2Rate-h1Rate)>1) insights.push({sev:h2Rate<h1Rate?'High':'Medium',title:'Intra-Period Trend: '+(h2Rate>h1Rate?'Improving':'Deteriorating'),text:'First half rate: '+h1Rate.toFixed(1)+'% → Second half: '+h2Rate.toFixed(1)+'%. '+(h2Rate>h1Rate?'Positive momentum building.':'Rate is falling within your selected period — investigate recent changes.'),impact:'Trend direction matters more than absolute level.'});
+    }
+
+    insights.sort((a,b)=>{const o={Critical:0,High:1,Medium:2};return (o[a.sev]||2)-(o[b.sev]||2);});
+    const top10=insights.slice(0,10);
+    document.getElementById('d2d-exec-summary').innerHTML=top10.map((ins,i)=>`
+      <div style="padding:14px 16px;margin-bottom:10px;background:var(--panel2);border:1px solid var(--line);border-radius:10px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-family:'Space Grotesk';font-weight:700;font-size:18px;color:var(--muted);min-width:28px">#${i+1}</span>
+          <span style="${sev(ins.sev)};font-size:10px;padding:2px 8px;border-radius:6px;font-weight:600">${ins.sev}</span>
+          <strong style="font-size:13px">${ins.title}</strong>
+        </div>
+        <p style="font-size:12px;color:var(--ink2);line-height:1.6;margin:0 0 4px 36px">${ins.text}</p>
+        <p style="font-size:11px;color:var(--gold);font-weight:600;margin:0 0 0 36px">💰 ${ins.impact}</p>
+      </div>`).join('');
+  })();
+
+  // ═══════════════════════════════════════════════════
+  // §2 DAILY HEALTH SCORE
+  // ═══════════════════════════════════════════════════
+  (function s2(){
+    // Historical averages from all days
+    const allSub=allDays.reduce((a,d)=>a+d.sub,0)/Math.max(allDays.length,1);
+    const allBook=allDays.reduce((a,d)=>a+d.book,0)/Math.max(allDays.length,1);
+    const allRate=allSub?(allBook/allSub*100):0;
+    const dailySub=fTotalSub/nDays,dailyBook=fTotalBook/nDays,dailyInit=fTotalInit/nDays;
+    const curRate=pct(fTotalBook,fTotalSub);
+
+    const scores={};
+    // Traffic: current daily sub vs historical avg
+    scores.Traffic=Math.min(100,Math.round(dailySub/Math.max(allSub,1)*100));
+    // Conversion: current rate vs best observed monthly rate
+    const bestRate=Math.max(...(BPV.monthly||[]).map(m=>m.sub?(m.book/m.sub*100):0),1);
+    scores.Conversion=Math.min(100,Math.round(curRate/bestRate*100));
+    // Credit Quality: approval rate (init/sub excl Unlisted)
+    const approvalRate=pct(rInit,rSub);
+    scores['Credit Quality']=Math.min(100,Math.round(approvalRate/40*100));
+    // Operations: funnel completion rate (booked/offer accepted)
+    const opsRate=fVals[5]?(fVals[fVals.length-1]/fVals[5]*100):0;
+    scores.Operations=Math.min(100,Math.round(opsRate/50*100));
+    // Customer Journey: end-to-end funnel (booked/PG visits)
+    const journeyRate=fVals[0]?(fVals[fVals.length-1]/fVals[0]*100):0;
+    scores['Customer Journey']=Math.min(100,Math.round(journeyRate/5*100));
+    // Risk: SIMAH avg score normalized (if available)
+    const smScore=SM.avgScore||650;
+    scores.Risk=Math.min(100,Math.round((smScore-300)/550*100));
+    // Growth: period-over-period booking growth
+    const growthPct=pBook>0?chg(fTotalBook,pBook):0;
+    scores.Growth=Math.min(100,Math.max(0,50+Math.round(growthPct/2)));
+    // Booking: actual vs expected
+    const expected=rSub*allRate/100;
+    scores.Booking=expected>0?Math.min(100,Math.round(fTotalBook/expected*100)):50;
+
+    const weights={Traffic:15,Conversion:20,'Credit Quality':10,Operations:10,'Customer Journey':15,Risk:10,Growth:10,Booking:10};
+    let composite=0;
+    Object.entries(scores).forEach(([k,v])=>{composite+=v*(weights[k]||10)/100;});
+    composite=Math.round(composite);
+
+    // Previous period scores for comparison
+    const pRate2=pSub?(pBook/pSub*100):0;
+    const pDailySub=pSub/nDays;
+    const pScores={
+      Traffic:Math.min(100,Math.round(pDailySub/Math.max(allSub,1)*100)),
+      Conversion:Math.min(100,Math.round(pRate2/bestRate*100)),
+      'Credit Quality':scores['Credit Quality'],Operations:scores.Operations,
+      'Customer Journey':scores['Customer Journey'],Risk:scores.Risk,
+      Growth:50,Booking:expected>0?Math.min(100,Math.round(pBook/expected*100)):50
+    };
+
+    const scoreKeys=Object.keys(scores);
+    document.getElementById('d2d-health-score').innerHTML=`
+      <div style="text-align:center;margin-bottom:20px">
+        <div style="font-family:'Space Grotesk';font-size:64px;font-weight:700;color:${composite>=75?'var(--green)':composite>=50?'var(--gold)':'var(--red)'}">${composite}</div>
+        <div style="font-size:14px;color:var(--muted)">Overall Health Score /100 ${light(composite)}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+        ${scoreKeys.map(k=>`<div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">${k}</div>
+          <div style="font-family:'Space Grotesk';font-weight:700;font-size:22px;color:${scores[k]>=75?'var(--green)':scores[k]>=50?'var(--gold)':'var(--red)'}">${scores[k]}</div>
+          <div style="font-size:10px;color:var(--muted)">${light(scores[k])} ${arrow(scores[k],pScores[k])}</div>
+        </div>`).join('')}
+      </div>`;
+
+    // Radar chart
+    destroyChart('chart-d2d-health-radar');
+    chartInstances['chart-d2d-health-radar']=new Chart(document.getElementById('chart-d2d-health-radar'),{
+      type:'radar',
+      data:{labels:scoreKeys,datasets:[
+        {label:'Current Period',data:scoreKeys.map(k=>scores[k]),borderColor:'#dc2626',backgroundColor:'rgba(220,38,38,0.15)',pointBackgroundColor:'#dc2626',pointRadius:5},
+        {label:'Previous Period',data:scoreKeys.map(k=>pScores[k]),borderColor:'#5b6b83',backgroundColor:'rgba(91,107,131,0.08)',pointBackgroundColor:'#5b6b83',pointRadius:4,borderDash:[4,4]}
+      ]},
+      options:{responsive:true,scales:{r:{min:0,max:100,ticks:{stepSize:25,font:{size:9}},pointLabels:{font:{size:11}}}},plugins:{legend:{position:'top',labels:{usePointStyle:true,font:{size:10}}}}}
+    });
+  })();
+
+  // ═══════════════════════════════════════════════════
+  // §3 FUNNEL INTELLIGENCE
+  // ═══════════════════════════════════════════════════
+  (function s3(){
+    const rows=[];
+    for(let i=0;i<fVals.length;i++){
+      const conv=i===0?100:pct(fVals[i],fVals[i-1]||1);
+      const drop=i===0?0:(fVals[i-1]||0)-fVals[i];
+      const dropPct=i===0?0:pct(drop,fVals[i-1]||1);
+      const downstreamRate=fVals[fVals.length-1]/(fVals[i]||1);
+      const missedRev=drop*downstreamRate*avgLoan;
+      rows.push({stage:fLabels[i],count:fVals[i],conv,drop,dropPct,root:fRootCause[i],missedRev,downstreamRate});
+    }
+    // Top 20 opportunities (by missed revenue)
+    const opps=rows.filter(r=>r.drop>0).sort((a,b)=>b.missedRev-a.missedRev).slice(0,20);
+
+    document.getElementById('d2d-funnel-intel').innerHTML=`
+      <table class="perf-table"><thead><tr><th>Stage</th><th class="right">Count</th><th class="right">Conversion</th><th class="right">Drop</th><th class="right">Drop %</th><th>Root Cause</th><th class="right">Missed Revenue</th></tr></thead><tbody>
+      ${rows.map(r=>`<tr>
+        <td><strong>${r.stage}</strong></td>
+        <td class="right mono">${fmt(r.count)}</td>
+        <td class="right mono" style="color:${r.conv>=80?'var(--green)':r.conv>=50?'var(--gold)':'var(--red)'}">${r.conv.toFixed(1)}%</td>
+        <td class="right mono" style="color:var(--red)">${r.drop>0?'-'+fmt(r.drop):'—'}</td>
+        <td class="right mono">${r.dropPct>0?r.dropPct.toFixed(1)+'%':'—'}</td>
+        <td><span style="font-size:10px;padding:2px 6px;border-radius:4px;background:var(--panel2)">${r.root}</span></td>
+        <td class="right mono" style="color:var(--gold)">${r.missedRev>0?'SAR '+fmtM(Math.round(r.missedRev)):'—'}</td>
+      </tr>`).join('')}
+      </tbody></table>
+      <div style="margin-top:16px"><h4 style="font-size:13px;font-weight:600;margin-bottom:8px">🎯 Top Leakage Opportunities (10% recovery estimate)</h4>
+      ${opps.map((o,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:12px">
+        <span style="font-weight:600;color:var(--muted);min-width:20px">${i+1}.</span>
+        <span style="flex:1"><strong>${o.stage}</strong> — ${fmt(o.drop)} lost, root: ${o.root}</span>
+        <span class="mono" style="color:var(--green)">+SAR ${fmtM(Math.round(o.missedRev*0.1))} recoverable</span>
+      </div>`).join('')}
+      </div>`;
+
+    // Waterfall chart
+    destroyChart('chart-d2d-funnel-waterfall');
+    chartInstances['chart-d2d-funnel-waterfall']=new Chart(document.getElementById('chart-d2d-funnel-waterfall'),{
+      type:'bar',data:{labels:fLabels,datasets:[{label:'Count',data:fVals,backgroundColor:fVals.map((v,i)=>i===0?'#2563eb':i===fVals.length-1?'#16a34a':'#3b82f6'),borderRadius:4}]},
+      options:{responsive:true,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:'Applicants',font:{size:10}}},y:{ticks:{font:{size:10}}}}}
+    });
+  })();
+
+  // ═══════════════════════════════════════════════════
+  // §4 BOOKING INTELLIGENCE
+  // ═══════════════════════════════════════════════════
+  (function s4(){
+    // Profile bookers vs non-bookers across top dimensions
+    const profileDims=['employer','nationality','income','age','region','source','product','gender','risk'];
+    const profiles=profileDims.map(dn=>{
+      const cats=dimCats(dn);
+      const bookers=cats.filter(c=>c.book>0).sort((a,b)=>b.rate-a.rate);
+      const nonBookers=cats.filter(c=>c.book===0&&c.sub>=minSub).sort((a,b)=>b.sub-a.sub);
+      const spread=bookers.length>0&&cats.length>1?(bookers[0].rate-(cats[cats.length-1]?.rate||0)):0;
+      return {dim:DIM_LABELS[dn],bookers:bookers.slice(0,3),nonBookers:nonBookers.slice(0,3),spread,bestRate:bookers[0]?.rate||0,bestCat:bookers[0]?.cat||'—',worstCat:nonBookers[0]?.cat||cats[cats.length-1]?.cat||'—'};
+    }).sort((a,b)=>b.spread-a.spread);
+
+    document.getElementById('d2d-booking-intel').innerHTML=`
+      <div style="margin-bottom:16px">
+        <h4 style="font-size:13px;font-weight:600;margin-bottom:6px">Who Books vs Who Doesn't — by Discriminative Power</h4>
+        <p style="font-size:11px;color:var(--muted)">Dimensions ranked by how well they separate bookers from non-bookers (rate spread).</p>
+      </div>
+      <table class="perf-table"><thead><tr><th>Dimension</th><th>Bookers Tend To Be</th><th class="right">Rate</th><th>Non-Bookers Tend To Be</th><th class="right">Spread</th></tr></thead><tbody>
+      ${profiles.map(p=>`<tr>
+        <td><strong>${p.dim}</strong></td>
+        <td style="color:var(--green)">${p.bookers.map(b=>b.cat).join(', ')||'—'}</td>
+        <td class="right mono" style="color:var(--green)">${p.bestRate.toFixed(1)}%</td>
+        <td style="color:var(--red)">${p.nonBookers.map(b=>b.cat).join(', ')||p.worstCat}</td>
+        <td class="right mono" style="font-weight:600">${p.spread.toFixed(1)}pp</td>
+      </tr>`).join('')}
+      </tbody></table>
+      <div style="margin-top:16px;padding:14px;background:var(--panel2);border:1px solid var(--line);border-radius:10px">
+        <h4 style="font-size:12px;font-weight:600;margin-bottom:6px">🧬 Ideal Booking Profile</h4>
+        <p style="font-size:12px;color:var(--ink2);line-height:1.7">${profiles.filter(p=>p.bestRate>0).map(p=>'<strong>'+p.dim+'</strong>: '+p.bestCat+' ('+p.bestRate.toFixed(1)+'%)').join(' · ')}</p>
+      </div>`;
+
+    // Chart: top 3 vs bottom 3 categories by dimension
+    const chartDims=profiles.slice(0,6);
+    const topRates=chartDims.map(p=>p.bookers[0]?.rate||0);
+    const bottomRates=chartDims.map(p=>{const cats=dimCats(profileDims[profileDims.indexOf(Object.entries(DIM_LABELS).find(([,v])=>v===p.dim)?.[0]||'')]);return cats.length>0?cats[cats.length-1].rate:0;});
+    destroyChart('chart-d2d-booking-compare');
+    chartInstances['chart-d2d-booking-compare']=new Chart(document.getElementById('chart-d2d-booking-compare'),{
+      type:'bar',data:{labels:chartDims.map(p=>p.dim),datasets:[
+        {label:'Best Category',data:topRates,backgroundColor:'#16a34a',borderRadius:4},
+        {label:'Worst Category',data:bottomRates,backgroundColor:'#dc2626',borderRadius:4}
+      ]},options:{responsive:true,plugins:{legend:{position:'top',labels:{usePointStyle:true,font:{size:10}}}},scales:{y:{title:{display:true,text:'Booking Rate %',font:{size:10}}}}}
+    });
+  })();
+
+  // ═══════════════════════════════════════════════════
+  // §5 SIMAH INTELLIGENCE
+  // ═══════════════════════════════════════════════════
+  (function s5(){
+    const el=document.getElementById('d2d-simah-intel');
+    if(!SM.scoreDist||SM.scoreDist.length===0){el.innerHTML='<p style="color:var(--muted)">No SIMAH data available in BPV.</p>';return;}
+
+    // Score distribution
+    const scoreBands=SM.scoreDist||[];
+    const enquiryBands=SM.enquiryBands||[];
+    const shoppingBands=SM.shoppingBands||[];
+    const compRank=SM.competitorRank||[];
+
+    // Which attribute predicts booking strongest?
+    const predictors=[];
+    if(scoreBands.length>1){
+      const rates=scoreBands.map(b=>b.bookRate||pct(b.book||0,b.count||1));
+      const spread=Math.max(...rates)-Math.min(...rates);
+      predictors.push({attr:'SIMAH Score Band',spread,detail:scoreBands.map(b=>b.band+': '+(b.bookRate||pct(b.book||0,b.count||1)).toFixed(1)+'%').join(' · ')});
+    }
+    if(enquiryBands.length>1){
+      const rates=enquiryBands.map(b=>b.bookRate||pct(b.book||0,b.count||1));
+      const spread=Math.max(...rates)-Math.min(...rates);
+      predictors.push({attr:'Enquiry Intensity',spread,detail:enquiryBands.map(b=>b.band+': '+(b.bookRate||pct(b.book||0,b.count||1)).toFixed(1)+'%').join(' · ')});
+    }
+    if(shoppingBands.length>1){
+      const rates=shoppingBands.map(b=>b.bookRate||pct(b.book||0,b.count||1));
+      const spread=Math.max(...rates)-Math.min(...rates);
+      predictors.push({attr:'Credit Shopping',spread,detail:shoppingBands.map(b=>b.band+': '+(b.bookRate||pct(b.book||0,b.count||1)).toFixed(1)+'%').join(' · ')});
+    }
+    predictors.sort((a,b)=>b.spread-a.spread);
+
+    el.innerHTML=`
+      <div style="padding:12px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;margin-bottom:16px;font-size:11px;color:var(--muted)">⚠️ SIMAH data reflects all-time portfolio (${fmt(SM.totalReports||0)} reports), not filtered period.</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+        <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase">Avg Score</div>
+          <div style="font-family:'Space Grotesk';font-weight:700;font-size:22px;color:var(--blue)">${SM.avgScore||'—'}</div>
+        </div>
+        <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase">Total Reports</div>
+          <div style="font-family:'Space Grotesk';font-weight:700;font-size:22px">${fmt(SM.totalReports||0)}</div>
+        </div>
+        <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase">Avg Enquiries</div>
+          <div style="font-family:'Space Grotesk';font-weight:700;font-size:22px">${(SM.avgEnquiries||0).toFixed(1)}</div>
+        </div>
+        <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase">Avg Active CIs</div>
+          <div style="font-family:'Space Grotesk';font-weight:700;font-size:22px">${(SM.avgActiveCIs||0).toFixed(1)}</div>
+        </div>
+      </div>
+      ${predictors.length>0?`<h4 style="font-size:13px;font-weight:600;margin-bottom:8px">🏆 Strongest Booking Predictors (by rate spread)</h4>
+      <table class="perf-table"><thead><tr><th>#</th><th>Attribute</th><th class="right">Rate Spread</th><th>Detail</th></tr></thead><tbody>
+      ${predictors.map((p,i)=>`<tr><td>${i+1}</td><td><strong>${p.attr}</strong></td><td class="right mono" style="color:var(--violet)">${p.spread.toFixed(1)}pp</td><td style="font-size:10px;color:var(--muted)">${p.detail}</td></tr>`).join('')}
+      </tbody></table>`:''}
+      ${compRank.length>0?`<h4 style="font-size:13px;font-weight:600;margin:16px 0 8px">🏦 Competitor Landscape</h4>
+      <table class="perf-table"><thead><tr><th>Lender</th><th class="right">Enquiries</th><th class="right">Share</th></tr></thead><tbody>
+      ${compRank.slice(0,10).map(c=>`<tr><td>${c.name||c.code}</td><td class="right mono">${fmt(c.count||0)}</td><td class="right mono">${(c.share||0).toFixed(1)}%</td></tr>`).join('')}
+      </tbody></table>`:''}`;
+
+    // Charts
+    destroyChart('chart-d2d-simah-score');destroyChart('chart-d2d-simah-predict');
+    if(scoreBands.length>0){
+      chartInstances['chart-d2d-simah-score']=new Chart(document.getElementById('chart-d2d-simah-score'),{
+        type:'bar',data:{labels:scoreBands.map(b=>b.band),datasets:[
+          {label:'Count',data:scoreBands.map(b=>b.count||0),backgroundColor:'#2563eb',borderRadius:4,yAxisID:'y'},
+          {label:'Book Rate %',data:scoreBands.map(b=>b.bookRate||pct(b.book||0,b.count||1)),type:'line',borderColor:'#16a34a',pointBackgroundColor:'#16a34a',yAxisID:'y1',tension:.3}
+        ]},options:{responsive:true,plugins:{legend:{position:'top',labels:{usePointStyle:true,font:{size:10}}}},scales:{y:{position:'left',title:{display:true,text:'Count'}},y1:{position:'right',title:{display:true,text:'Rate %'},grid:{drawOnChartArea:false}}}}
+      });
+    }
+  })();
+
+  // ═══════════════════════════════════════════════════
+  // §6 CREDIT DECISION ANALYSIS
+  // ═══════════════════════════════════════════════════
+  (function s6(){
+    const reasons=Object.entries(declineRaw).map(([k,v])=>{
+      const name=k.replace('PG_Decline_Reasons - ','').replace(/_/g,' ');
+      const type=['CITC_Failed','Rejected by Fraud'].includes(k)?'Necessary':['Name_Missing','Email_Missing','Cancelled by Customer Service Team'].includes(k)?'Operational':'Policy';
+      const revLost=Math.round(v*rE2E/100*avgLoan);
+      const recoverable=type==='Policy'?Math.round(v*0.1*rE2E/100*avgLoan):type==='Operational'?Math.round(v*0.3*rE2E/100*avgLoan):0;
+      return {name,type,count:v,revLost,recoverable};
+    }).filter(r=>r.count>0).sort((a,b)=>b.count-a.count);
+
+    const totalDec=reasons.reduce((a,r)=>a+r.count,0);
+    let cumPct=0;
+    reasons.forEach(r=>{cumPct+=r.count/totalDec*100;r.cumPct=cumPct;});
+
+    // Cluster by type
+    const clusters={};
+    reasons.forEach(r=>{if(!clusters[r.type])clusters[r.type]={count:0,revLost:0,recoverable:0};clusters[r.type].count+=r.count;clusters[r.type].revLost+=r.revLost;clusters[r.type].recoverable+=r.recoverable;});
+
+    document.getElementById('d2d-credit-decision').innerHTML=`
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+        ${Object.entries(clusters).map(([type,c])=>`<div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase">${type}</div>
+          <div style="font-family:'Space Grotesk';font-weight:700;font-size:20px">${fmt(c.count)}</div>
+          <div style="font-size:10px;color:var(--red)">Lost: SAR ${fmtM(c.revLost)}</div>
+          <div style="font-size:10px;color:var(--green)">Recoverable: SAR ${fmtM(c.recoverable)}</div>
+        </div>`).join('')}
+      </div>
+      <table class="perf-table"><thead><tr><th>Reason</th><th>Type</th><th class="right">Volume</th><th class="right">% Total</th><th class="right">Cumul %</th><th class="right">Rev Lost</th><th class="right">Recoverable</th></tr></thead><tbody>
+      ${reasons.map(r=>`<tr>
+        <td><strong>${r.name}</strong></td>
+        <td><span style="font-size:10px;padding:2px 6px;border-radius:4px;background:${r.type==='Necessary'?'var(--red-bg)':r.type==='Policy'?'var(--gold-bg)':'var(--blue-bg)'};color:${r.type==='Necessary'?'var(--red)':r.type==='Policy'?'var(--gold)':'var(--blue)'}">${r.type}</span></td>
+        <td class="right mono">${fmt(r.count)}</td>
+        <td class="right mono">${pct(r.count,totalDec).toFixed(1)}%</td>
+        <td class="right mono" style="color:var(--muted)">${r.cumPct.toFixed(1)}%</td>
+        <td class="right mono" style="color:var(--red)">SAR ${fmtM(r.revLost)}</td>
+        <td class="right mono" style="color:var(--green)">SAR ${fmtM(r.recoverable)}</td>
+      </tr>`).join('')}
+      </tbody></table>`;
+
+    // Pareto chart
+    destroyChart('chart-d2d-decline-pareto');
+    if(reasons.length>0){
+      chartInstances['chart-d2d-decline-pareto']=new Chart(document.getElementById('chart-d2d-decline-pareto'),{
+        type:'bar',data:{labels:reasons.map(r=>r.name.slice(0,20)),datasets:[
+          {label:'Volume',data:reasons.map(r=>r.count),backgroundColor:'#dc2626',borderRadius:4,yAxisID:'y'},
+          {label:'Cumulative %',data:reasons.map(r=>r.cumPct),type:'line',borderColor:'#bd7d12',pointBackgroundColor:'#bd7d12',yAxisID:'y1',tension:.3}
+        ]},options:{responsive:true,plugins:{legend:{position:'top',labels:{usePointStyle:true,font:{size:10}}}},scales:{y:{position:'left',title:{display:true,text:'Count'}},y1:{position:'right',min:0,max:100,title:{display:true,text:'Cumul %'},grid:{drawOnChartArea:false}},x:{ticks:{font:{size:9},maxRotation:45}}}}
+      });
+    }
+  })();
+
+  // ═══════════════════════════════════════════════════
+  // §7 CUSTOMER SEGMENTATION
+  // ═══════════════════════════════════════════════════
+  (function s7(){
+    // Build personas from cross-dimensional patterns
+    const personas=[];
+    const natCats=dimCats('nationality'),ageCats=dimCats('age'),empCats=dimCats('employer'),incCats=dimCats('income'),srcCats=dimCats('source'),riskCats=dimCats('risk');
+
+    // Auto-detect personas: segments with rate > 1.5x average
+    const avgRate=rE2E;
+    const segsFiltered=(BPV.segments||[]).filter(s=>EXL(s.emp)&&s.sub>=minSub);
+    segsFiltered.forEach(s=>{s.rate=pct(s.book,s.sub);s.rpa=s.rate/100*(s.avg||avgLoan);});
+    const starSegs=segsFiltered.filter(s=>s.rate>avgRate*1.5&&s.book>=3).sort((a,b)=>b.rpa-a.rpa).slice(0,8);
+    const deadSegs=segsFiltered.filter(s=>s.rate<avgRate*0.3&&s.sub>=minSub*2).sort((a,b)=>b.sub-a.sub).slice(0,8);
+
+    // Named personas
+    const personaList=starSegs.map(s=>({name:s.emp+' · '+s.nat+' · '+s.inc,sub:s.sub,book:s.book,rate:s.rate,avg:s.avg||avgLoan,rpa:s.rpa,type:'star'}));
+    deadSegs.forEach(s=>personaList.push({name:s.emp+' · '+s.nat+' · '+s.inc,sub:s.sub,book:s.book,rate:s.rate,avg:s.avg||avgLoan,rpa:s.rpa,type:'dead'}));
+
+    document.getElementById('d2d-customer-seg').innerHTML=`
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div>
+          <h4 style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:8px">⭐ Star Personas (rate > ${(avgRate*1.5).toFixed(1)}%)</h4>
+          ${starSegs.length===0?'<p style="font-size:11px;color:var(--muted)">No segments meet threshold in this period.</p>':
+          `<table class="perf-table"><thead><tr><th>Persona</th><th class="right">Apps</th><th class="right">Booked</th><th class="right">Rate</th><th class="right">Rev/App</th></tr></thead><tbody>
+          ${starSegs.map(s=>`<tr><td><strong>${s.emp}</strong><br><span style="font-size:10px;color:var(--muted)">${s.nat} · ${s.inc}</span></td><td class="right mono">${fmt(s.sub)}</td><td class="right mono" style="color:var(--green)">${fmt(s.book)}</td><td class="right mono" style="color:var(--green)">${s.rate.toFixed(1)}%</td><td class="right mono">SAR ${fmt(Math.round(s.rpa))}</td></tr>`).join('')}
+          </tbody></table>`}
+        </div>
+        <div>
+          <h4 style="font-size:13px;font-weight:600;color:var(--red);margin-bottom:8px">💀 Dead Personas (rate < ${(avgRate*0.3).toFixed(1)}%)</h4>
+          ${deadSegs.length===0?'<p style="font-size:11px;color:var(--muted)">No dead segments in this period.</p>':
+          `<table class="perf-table"><thead><tr><th>Persona</th><th class="right">Apps</th><th class="right">Booked</th><th class="right">Rate</th></tr></thead><tbody>
+          ${deadSegs.map(s=>`<tr><td><strong>${s.emp}</strong><br><span style="font-size:10px;color:var(--muted)">${s.nat} · ${s.inc}</span></td><td class="right mono">${fmt(s.sub)}</td><td class="right mono" style="color:var(--red)">${fmt(s.book)}</td><td class="right mono" style="color:var(--red)">${s.rate.toFixed(1)}%</td></tr>`).join('')}
+          </tbody></table>`}
+        </div>
+      </div>
+      <p style="font-size:11px;color:var(--muted)">Segments: cross-dimensional (Employer × Nationality × Income). All-time data — filtered by date where possible.</p>`;
+
+    // Scatter: volume vs rate
+    destroyChart('chart-d2d-seg-scatter');
+    const scatterData=segsFiltered.filter(s=>s.book>=1).slice(0,50);
+    if(scatterData.length>0){
+      chartInstances['chart-d2d-seg-scatter']=new Chart(document.getElementById('chart-d2d-seg-scatter'),{
+        type:'bubble',data:{datasets:[{label:'Segments',data:scatterData.map(s=>({x:s.sub,y:s.rate,r:Math.max(3,Math.min(20,Math.sqrt(s.book)*3))})),backgroundColor:'rgba(14,158,144,0.4)',borderColor:'#0e9e90'}]},
+        options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){const s=scatterData[ctx.dataIndex];return s.emp+' · '+s.nat+': '+s.rate.toFixed(1)+'% ('+s.sub+' apps, '+s.book+' booked)';}}}},scales:{x:{title:{display:true,text:'Submissions',font:{size:10}},type:'logarithmic'},y:{title:{display:true,text:'Booking Rate %',font:{size:10}},min:0}}}
+      });
+    }
+  })();
+
+  // ═══════════════════════════════════════════════════
+  // §8 GEOGRAPHIC INTELLIGENCE
+  // ═══════════════════════════════════════════════════
+  (function s8(){
+    const regions=dimCats('region');
+    const cities=dimCats('city').slice(0,30);
+    const stores=dimCats('store').slice(0,20);
+    const avgR=rE2E;
+
+    // Expansion opportunities: high rate, low volume
+    const medianSub=cities.length>0?cities[Math.floor(cities.length/2)].sub:100;
+    const expansion=cities.filter(c=>c.rate>avgR*1.3&&c.sub<medianSub&&c.book>=2);
+    const problem=cities.filter(c=>c.rate<avgR*0.5&&c.sub>medianSub);
+
+    document.getElementById('d2d-geo-intel').innerHTML=`
+      <h4 style="font-size:13px;font-weight:600;margin-bottom:8px">🗺️ Regional Overview</h4>
+      <table class="perf-table"><thead><tr><th>Region</th><th class="right">Submissions</th><th class="right">Booked</th><th class="right">Rate</th><th class="right">vs Avg</th></tr></thead><tbody>
+      ${regions.map(r=>`<tr><td><strong>${r.cat}</strong></td><td class="right mono">${fmt(r.sub)}</td><td class="right mono">${fmt(r.book)}</td><td class="right mono" style="color:${r.rate>avgR?'var(--green)':'var(--red)'}">${r.rate.toFixed(1)}%</td><td class="right mono">${arrow(r.rate,avgR)}</td></tr>`).join('')}
+      </tbody></table>
+      ${expansion.length>0?`<h4 style="font-size:13px;font-weight:600;margin:16px 0 8px;color:var(--green)">🚀 Expansion Opportunities (High Rate, Low Volume)</h4>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">${expansion.map(c=>`<span style="background:var(--green-bg);color:var(--green);font-size:11px;padding:4px 10px;border-radius:6px">${c.cat}: ${c.rate.toFixed(1)}% (${fmt(c.sub)} apps)</span>`).join('')}</div>`:''}
+      ${problem.length>0?`<h4 style="font-size:13px;font-weight:600;margin:16px 0 8px;color:var(--red)">⚠️ Problem Areas (Low Rate, High Volume)</h4>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">${problem.map(c=>`<span style="background:var(--red-bg);color:var(--red);font-size:11px;padding:4px 10px;border-radius:6px">${c.cat}: ${c.rate.toFixed(1)}% (${fmt(c.sub)} apps)</span>`).join('')}</div>`:''}`;
+
+    // Chart: top 15 cities
+    destroyChart('chart-d2d-geo-bar');
+    const top15=cities.filter(c=>c.book>=1).slice(0,15);
+    if(top15.length>0){
+      chartInstances['chart-d2d-geo-bar']=new Chart(document.getElementById('chart-d2d-geo-bar'),{
+        type:'bar',data:{labels:top15.map(c=>c.cat.slice(0,18)),datasets:[{label:'Booking Rate %',data:top15.map(c=>+c.rate.toFixed(1)),backgroundColor:top15.map(c=>c.rate>avgR?'#16a34a':'#dc2626'),borderRadius:4}]},
+        options:{responsive:true,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:'Booking Rate %'},min:0},y:{ticks:{font:{size:10}}}}}
+      });
+    }
+  })();
+
+  // ═══════════════════════════════════════════════════
+  // §9 MERCHANT INTELLIGENCE
+  // ═══════════════════════════════════════════════════
+  (function s9(){
+    const merchants=dimCats('employer').filter(c=>c.sub>=minSub);
+    merchants.forEach(m=>{m.abandon=pct(m.init-m.book,m.init);m.value=m.book*avgLoan;m.score=(m.rate/Math.max(...merchants.map(x=>x.rate),1)*40)+(m.book/Math.max(...merchants.map(x=>x.book),1)*30)+((100-m.abandon)/100*30);});
+    merchants.sort((a,b)=>b.score-a.score);
+
+    const best=merchants.slice(0,10),worst=merchants.slice(-10).reverse();
+    document.getElementById('d2d-merchant-intel').innerHTML=`
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div>
+          <h4 style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:8px">🏆 Top 10 Employers</h4>
+          <table class="perf-table"><thead><tr><th>Employer</th><th class="right">Apps</th><th class="right">Booked</th><th class="right">Rate</th><th class="right">Abandon</th><th class="right">Value</th></tr></thead><tbody>
+          ${best.map(m=>`<tr><td><strong>${m.cat}</strong></td><td class="right mono">${fmt(m.sub)}</td><td class="right mono">${fmt(m.book)}</td><td class="right mono" style="color:var(--green)">${m.rate.toFixed(1)}%</td><td class="right mono">${m.abandon.toFixed(0)}%</td><td class="right mono">SAR ${fmtM(m.value)}</td></tr>`).join('')}
+          </tbody></table>
+        </div>
+        <div>
+          <h4 style="font-size:13px;font-weight:600;color:var(--red);margin-bottom:8px">⚠️ Bottom 10 Employers</h4>
+          <table class="perf-table"><thead><tr><th>Employer</th><th class="right">Apps</th><th class="right">Booked</th><th class="right">Rate</th><th class="right">Abandon</th></tr></thead><tbody>
+          ${worst.map(m=>`<tr><td><strong>${m.cat}</strong></td><td class="right mono">${fmt(m.sub)}</td><td class="right mono" style="color:var(--red)">${fmt(m.book)}</td><td class="right mono" style="color:var(--red)">${m.rate.toFixed(1)}%</td><td class="right mono">${m.abandon.toFixed(0)}%</td></tr>`).join('')}
+          </tbody></table>
+        </div>
+      </div>`;
+  })();
+
+  // ═══════════════════════════════════════════════════
+  // §10 CHANNEL INTELLIGENCE
+  // ═══════════════════════════════════════════════════
+  (function s10(){
+    const channels=dimCats('source');
+    channels.forEach(c=>{c.valPerSub=c.book*avgLoan/Math.max(c.sub,1);c.abandon=pct(c.init-c.book,Math.max(c.init,1));});
+
+    document.getElementById('d2d-channel-intel').innerHTML=`
+      <table class="perf-table"><thead><tr><th>Channel</th><th class="right">Submissions</th><th class="right">Initiated</th><th class="right">Booked</th><th class="right">Sub→Book</th><th class="right">Init→Book</th><th class="right">Value/App</th><th class="right">Abandon</th></tr></thead><tbody>
+      ${channels.map(c=>`<tr>
+        <td><strong>${c.cat}</strong></td>
+        <td class="right mono">${fmt(c.sub)}</td>
+        <td class="right mono">${fmt(c.init)}</td>
+        <td class="right mono" style="color:var(--green)">${fmt(c.book)}</td>
+        <td class="right mono" style="color:${c.rate>rE2E?'var(--green)':'var(--red)'}">${c.rate.toFixed(1)}%</td>
+        <td class="right mono">${c.i2b.toFixed(1)}%</td>
+        <td class="right mono">SAR ${fmt(Math.round(c.valPerSub))}</td>
+        <td class="right mono" style="color:var(--red)">${c.abandon.toFixed(1)}%</td>
+      </tr>`).join('')}
+      </tbody></table>
+      <div style="margin-top:12px;padding:12px;background:var(--panel2);border:1px solid var(--line);border-radius:10px">
+        <p style="font-size:12px;color:var(--ink2);line-height:1.6">
+          <strong>Verdict:</strong> ${channels.length>=2?
+            (channels[0].rate>channels[1]?.rate?channels[0].cat+' is the fastest converter at '+channels[0].rate.toFixed(1)+'%.':channels[1].cat+' converts better at '+channels[1].rate.toFixed(1)+'%.')+
+            ' Value per application: '+channels.sort((a,b)=>b.valPerSub-a.valPerSub)[0].cat+' leads at SAR '+fmt(Math.round(channels[0].valPerSub))+'/app.':'Insufficient channel data.'}
+        </p>
+      </div>`;
+
+    // Channel comparison chart
+    destroyChart('chart-d2d-channel');
+    if(channels.length>=2){
+      chartInstances['chart-d2d-channel']=new Chart(document.getElementById('chart-d2d-channel'),{
+        type:'bar',data:{labels:channels.map(c=>c.cat),datasets:[
+          {label:'Booking Rate %',data:channels.map(c=>+c.rate.toFixed(1)),backgroundColor:'#2563eb',borderRadius:4},
+          {label:'Init→Book %',data:channels.map(c=>+c.i2b.toFixed(1)),backgroundColor:'#16a34a',borderRadius:4}
+        ]},options:{responsive:true,plugins:{legend:{position:'top',labels:{usePointStyle:true,font:{size:10}}}},scales:{y:{title:{display:true,text:'%'},min:0}}}
+      });
+    }
+  })();
+
+  // ═══════════════════════════════════════════════════
+  // §11 REVENUE INTELLIGENCE
+  // ═══════════════════════════════════════════════════
+  (function s11(){
+    const captured=rBook*avgLoan;
+    const lostToDeclines=Object.values(declineRaw).reduce((a,v)=>a+v,0)*rE2E/100*avgLoan;
+    const funnelDropout=(fVals[0]-fVals[fVals.length-1])*(fVals[fVals.length-1]/(fVals[0]||1))*avgLoan;
+    const recoverable=lostToDeclines*0.1+funnelDropout*0.05;
+    const monthlyEst=nDays>0?(captured+recoverable)/nDays*30:0;
+    const annualEst=monthlyEst*12;
+
+    document.getElementById('d2d-revenue-intel').innerHTML=`
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+        <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase">Captured</div>
+          <div style="font-family:'Space Grotesk';font-weight:700;font-size:20px;color:var(--green)">SAR ${fmtM(Math.round(captured))}</div>
+        </div>
+        <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase">Lost to Declines</div>
+          <div style="font-family:'Space Grotesk';font-weight:700;font-size:20px;color:var(--red)">SAR ${fmtM(Math.round(lostToDeclines))}</div>
+        </div>
+        <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase">Lost to Dropout</div>
+          <div style="font-family:'Space Grotesk';font-weight:700;font-size:20px;color:var(--red)">SAR ${fmtM(Math.round(funnelDropout))}</div>
+        </div>
+        <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase">Recoverable</div>
+          <div style="font-family:'Space Grotesk';font-weight:700;font-size:20px;color:var(--cyan)">SAR ${fmtM(Math.round(recoverable))}</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div style="background:var(--green-bg);border:1px solid rgba(22,163,74,.2);border-radius:10px;padding:14px;text-align:center">
+          <div style="font-size:10px;color:var(--green);text-transform:uppercase">Monthly Potential (with recovery)</div>
+          <div style="font-family:'Space Grotesk';font-weight:700;font-size:24px;color:var(--green)">SAR ${fmtM(Math.round(monthlyEst))}</div>
+        </div>
+        <div style="background:var(--green-bg);border:1px solid rgba(22,163,74,.2);border-radius:10px;padding:14px;text-align:center">
+          <div style="font-size:10px;color:var(--green);text-transform:uppercase">Annual Potential</div>
+          <div style="font-family:'Space Grotesk';font-weight:700;font-size:24px;color:var(--green)">SAR ${fmtM(Math.round(annualEst))}</div>
+        </div>
+      </div>`;
+
+    // Revenue waterfall
+    destroyChart('chart-d2d-revenue');
+    chartInstances['chart-d2d-revenue']=new Chart(document.getElementById('chart-d2d-revenue'),{
+      type:'bar',data:{labels:['Captured','Lost (Declines)','Lost (Dropout)','Recoverable'],datasets:[{data:[captured,lostToDeclines,funnelDropout,recoverable].map(v=>Math.round(v)),backgroundColor:['#16a34a','#dc2626','#ef4444','#0e9e90'],borderRadius:4}]},
+      options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'SAR '+fmtM(ctx.raw)}}},scales:{y:{title:{display:true,text:'SAR',font:{size:10}}}}}
+    });
+  })();
+
+  // ═══════════════════════════════════════════════════
+  // §12 OPERATIONAL INTELLIGENCE
+  // ═══════════════════════════════════════════════════
+  (function s12(){
+    // Operational steps from funnel
+    const opsSteps=[
+      {name:'DELite / SIMAH / Qarar',from:'Application_Created',to:'DE_Approved',category:'Credit'},
+      {name:'GOSI / MOF Verification',from:'DE_Approved',to:'Offer_Displayed',category:'Data'},
+      {name:'Offer Display → Acceptance',from:'Offer_Displayed',to:'Offer_Accepted',category:'Product'},
+      {name:'Yaqeen Identity Check',from:'Offer_Accepted',to:'Yaqeen_Passed',category:'Verification'},
+      {name:'National Address',from:'Yaqeen_Passed',to:'NationalAddress_Verified',category:'Verification'},
+      {name:'IVR / Approval Call',from:'NationalAddress_Verified',to:'IVR_Completed',category:'Operations'},
+      {name:'Final Booking',from:'IVR_Completed',to:'Booked',category:'Operations'}
+    ];
+
+    const opsData=opsSteps.map(op=>{
+      const fromVal=NC[op.from]||0,toVal=NC[op.to]||0;
+      const passRate=pct(toVal,fromVal);
+      const drop=fromVal-toVal;
+      const revImpact=drop*pct(fVals[fVals.length-1],toVal||1)/100*avgLoan;
+      const bottleneckScore=fromVal>0?drop*(100-passRate)/100:0;
+      return {...op,fromVal,toVal,passRate,drop,revImpact,bottleneckScore};
+    }).sort((a,b)=>b.bottleneckScore-a.bottleneckScore);
+
+    document.getElementById('d2d-ops-intel').innerHTML=`
+      <table class="perf-table"><thead><tr><th>Operation</th><th>Category</th><th class="right">In</th><th class="right">Out</th><th class="right">Pass Rate</th><th class="right">Drop</th><th class="right">Bottleneck</th><th class="right">Rev Impact</th></tr></thead><tbody>
+      ${opsData.map(o=>`<tr>
+        <td><strong>${o.name}</strong></td>
+        <td><span style="font-size:10px;padding:2px 6px;border-radius:4px;background:var(--panel2)">${o.category}</span></td>
+        <td class="right mono">${fmt(o.fromVal)}</td>
+        <td class="right mono">${fmt(o.toVal)}</td>
+        <td class="right mono" style="color:${o.passRate>=80?'var(--green)':o.passRate>=50?'var(--gold)':'var(--red)'}"> ${light(o.passRate)} ${o.passRate.toFixed(1)}%</td>
+        <td class="right mono" style="color:var(--red)">${o.drop>0?'-'+fmt(o.drop):'—'}</td>
+        <td class="right mono" style="font-weight:600">${Math.round(o.bottleneckScore)}</td>
+        <td class="right mono" style="color:var(--gold)">SAR ${fmtM(Math.round(o.revImpact))}</td>
+      </tr>`).join('')}
+      </tbody></table>
+      <p style="font-size:11px;color:var(--muted);margin-top:8px">Bottleneck score = Drop × (1 - Pass Rate). Higher = more urgent to fix.</p>`;
+  })();
+
+  // ═══════════════════════════════════════════════════
+  // §13 PRODUCT INTELLIGENCE
+  // ═══════════════════════════════════════════════════
+  (function s13(){
+    const prodData=dimCats('product');
+    const changes=[
+      {change:'Shift Tawarruq to Combo eligibility',impact:Math.round(tawarruq.sub*0.1*comboRate/100),effort:'High',roi:'Medium',timeline:'90 days',rationale:'Combo converts at '+comboRate.toFixed(1)+'% vs Tawarruq '+tawRate.toFixed(1)+'%. Cross-selling could unlock '+fmt(Math.round(tawarruq.sub*0.1*comboRate/100))+' additional bookings.'},
+      {change:'Reduce STP friction (auto-approve low-risk)',impact:Math.round(rSub*0.02),effort:'Medium',roi:'High',timeline:'30 days',rationale:'STP applications have near-zero manual friction. Expanding STP criteria for low-risk profiles could convert '+fmt(Math.round(rSub*0.02))+' more applications.'},
+      {change:'Pre-fill GOSI/MOF data automatically',impact:Math.round((NC['DE_Approved']||0)-(NC['Offer_Displayed']||0))*0.2,effort:'Medium',roi:'High',timeline:'30 days',rationale:'Data verification causes '+fmt((NC['DE_Approved']||0)-(NC['Offer_Displayed']||0))+' drops. Auto-fetching reduces manual entry.'},
+      {change:'Add offer comparison feature',impact:Math.round(((NC['Offer_Displayed']||0)-(NC['Offer_Accepted']||0))*0.1),effort:'Low',roi:'High',timeline:'7 days',rationale:fmt((NC['Offer_Displayed']||0)-(NC['Offer_Accepted']||0))+' see offers but don\'t accept. Better offer presentation could recover 10%.'},
+      {change:'Streamline IVR/approval call',impact:Math.round(((NC['NationalAddress_Verified']||0)-(NC['IVR_Completed']||0))*0.3),effort:'Medium',roi:'Medium',timeline:'30 days',rationale:'IVR step loses '+fmt((NC['NationalAddress_Verified']||0)-(NC['IVR_Completed']||0))+' applicants. SMS-based approval could bypass this.'}
+    ].sort((a,b)=>b.impact-a.impact);
+
+    document.getElementById('d2d-product-intel').innerHTML=`
+      ${changes.map((c,i)=>`<div style="display:flex;gap:12px;padding:12px;margin-bottom:8px;background:var(--panel2);border:1px solid var(--line);border-radius:10px">
+        <div style="font-family:'Space Grotesk';font-weight:700;font-size:18px;color:var(--muted);min-width:28px">#${i+1}</div>
+        <div style="flex:1">
+          <strong style="font-size:13px">${c.change}</strong>
+          <p style="font-size:11px;color:var(--ink2);margin:4px 0">${c.rationale}</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <span style="font-size:10px;padding:2px 8px;border-radius:6px;background:var(--green-bg);color:var(--green)">+${fmt(c.impact)} bookings</span>
+            <span style="font-size:10px;padding:2px 8px;border-radius:6px;background:var(--gold-bg);color:var(--gold)">ROI: ${c.roi}</span>
+            <span style="font-size:10px;padding:2px 8px;border-radius:6px;background:var(--blue-bg);color:var(--blue)">${c.timeline}</span>
+            <span style="font-size:10px;padding:2px 8px;border-radius:6px;background:var(--panel2);border:1px solid var(--line)">Effort: ${c.effort}</span>
+          </div>
+        </div>
+      </div>`).join('')}`;
+  })();
+
+  // ═══════════════════════════════════════════════════
+  // §14 PREDICTIVE ANALYSIS
+  // ═══════════════════════════════════════════════════
+  (function s14(){
+    // Monthly pipeline for trend
+    const mPipe=filteredMonths.filter(m=>m.sub>0).map(m=>{
+      let s=0,i=0,b=0;
+      Object.entries(m.emp||{}).filter(([k])=>EXL(k)).forEach(([,v])=>{s+=v.sub;i+=v.init;b+=v.book;});
+      return {mon:m.mon,sub:s,init:i,book:b,rate:pct(b,s)};
+    });
+
+    // Simple forecast: last 7 days average projected
+    const last7=allDays.slice(-7);
+    const avg7Sub=last7.reduce((a,d)=>a+d.sub,0)/Math.max(last7.length,1);
+    const avg7Book=last7.reduce((a,d)=>a+d.book,0)/Math.max(last7.length,1);
+    const avg7Init=last7.reduce((a,d)=>a+d.init,0)/Math.max(last7.length,1);
+    const avg7Rate=pct(avg7Book,avg7Sub);
+
+    // Linear trend on monthly rate
+    let trend=0,confidence='Medium';
+    if(mPipe.length>=3){
+      const n=mPipe.length;
+      const xMean=(n-1)/2;
+      const rates=mPipe.map(m=>m.rate);
+      const yMean=rates.reduce((a,v)=>a+v,0)/n;
+      let num=0,den=0;
+      rates.forEach((y,i)=>{num+=(i-xMean)*(y-yMean);den+=(i-xMean)*(i-xMean);});
+      trend=den>0?num/den:0;
+      // R-squared
+      const predicted=rates.map((_,i)=>yMean+trend*(i-xMean));
+      const ssTot=rates.reduce((a,y)=>a+(y-yMean)**2,0);
+      const ssRes=rates.reduce((a,y,i)=>a+(y-predicted[i])**2,0);
+      const r2=ssTot>0?1-ssRes/ssTot:0;
+      confidence=r2>0.7?'High':r2>0.4?'Medium':'Low';
+    }
+
+    const fcastRate=avg7Rate+trend;
+    const fcastBook=Math.round(avg7Sub*fcastRate/100);
+    const fcastInit=Math.round(avg7Init);
+
+    document.getElementById('d2d-predictive').innerHTML=`
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+        <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase">Tomorrow's Apps</div>
+          <div style="font-family:'Space Grotesk';font-weight:700;font-size:22px">~${fmt(Math.round(avg7Sub))}</div>
+        </div>
+        <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase">Tomorrow's Approvals</div>
+          <div style="font-family:'Space Grotesk';font-weight:700;font-size:22px">~${fmt(fcastInit)}</div>
+        </div>
+        <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase">Tomorrow's Bookings</div>
+          <div style="font-family:'Space Grotesk';font-weight:700;font-size:22px;color:var(--green)">~${fmt(fcastBook)}</div>
+        </div>
+        <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase">Confidence</div>
+          <div style="font-family:'Space Grotesk';font-weight:700;font-size:22px;color:${confidence==='High'?'var(--green)':confidence==='Medium'?'var(--gold)':'var(--red)'}">${confidence}</div>
+        </div>
+      </div>
+      <div style="padding:12px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;font-size:12px;color:var(--ink2)">
+        <strong>Assumptions:</strong> Based on 7-day moving average (${last7.length} days). Monthly trend slope: ${trend>=0?'+':''}${trend.toFixed(2)}pp/month. Rate forecast: ${fcastRate.toFixed(1)}%. ${confidence==='Low'?'⚠️ Low confidence — high variance in recent data.':''}
+      </div>`;
+
+    // Forecast chart: daily actuals + projection
+    destroyChart('chart-d2d-forecast');
+    const chartDays=allDays.slice(-30);
+    if(chartDays.length>0){
+      const labels=chartDays.map(d=>d.date.slice(5));
+      labels.push('Tomorrow');
+      const bookData=chartDays.map(d=>d.book);
+      bookData.push(null);
+      const fcastData=new Array(chartDays.length).fill(null);
+      fcastData[fcastData.length-1]=chartDays[chartDays.length-1].book;
+      fcastData.push(fcastBook);
+      chartInstances['chart-d2d-forecast']=new Chart(document.getElementById('chart-d2d-forecast'),{
+        type:'line',data:{labels,datasets:[
+          {label:'Actual Bookings',data:bookData,borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,0.1)',fill:true,tension:.3,pointRadius:3},
+          {label:'Forecast',data:fcastData,borderColor:'#bd7d12',borderDash:[6,4],tension:.3,pointRadius:6,pointStyle:'triangle'}
+        ]},options:{responsive:true,plugins:{legend:{position:'top',labels:{usePointStyle:true,font:{size:10}}}},scales:{y:{title:{display:true,text:'Bookings',font:{size:10}},min:0},x:{ticks:{font:{size:9},maxRotation:45,autoSkip:true,maxTicksLimit:15}}}}
+      });
+    }
+  })();
+
+  // ═══════════════════════════════════════════════════
+  // §15 EXECUTIVE RECOMMENDATIONS
+  // ═══════════════════════════════════════════════════
+  (function s15(){
+    const recs=[
+      {action:'Fix biggest funnel leak: '+fLabels[(function(){let mx=0,mi=0;for(let i=0;i<fVals.length-1;i++){const d=fVals[i]-fVals[i+1];if(d>mx){mx=d;mi=i;}}return mi;})()]+' → '+fLabels[(function(){let mx=0,mi=0;for(let i=0;i<fVals.length-1;i++){const d=fVals[i]-fVals[i+1];if(d>mx){mx=d;mi=i;}}return mi+1;})()],impact:5,roi:4,confidence:'High',timeline:'Quick Win',owner:'Product',result:'+10% recovery = '+fmt(Math.round((function(){let mx=0;for(let i=0;i<fVals.length-1;i++){mx=Math.max(mx,fVals[i]-fVals[i+1]);}return mx;})()*.1*rE2E/100))+' bookings'},
+      {action:'Expand backoffice model to UI applications',impact:4,roi:3,confidence:'Medium',timeline:'Medium (30d)',owner:'Product + Credit',result:'Closing the '+(boRate-uiRate).toFixed(1)+'pp channel gap could yield +'+fmt(Math.round(ui.sub*0.03*boRate/100))+' bookings'},
+      {action:'Auto-approve STP for low-risk Government employees',impact:4,roi:5,confidence:'High',timeline:'Quick Win',owner:'Credit + Ops',result:'Eliminating manual touch for clear approvals saves ops cost and converts faster'},
+      {action:'Re-engage post-offer dropouts via SMS follow-up',impact:3,roi:4,confidence:'Medium',timeline:'Quick Win',owner:'CRM',result:'Recovering 5% of '+(fVals[5]||0)-(fVals[fVals.length-1]||0)+' post-acceptance dropouts = +'+fmt(Math.round(((fVals[5]||0)-(fVals[fVals.length-1]||0))*0.05))+' bookings'},
+      {action:'Build merchant co-branded campaigns for top performers',impact:3,roi:3,confidence:'Medium',timeline:'Medium (30d)',owner:'Marketing + BD',result:'Top employers already convert well — dedicated campaigns could 2x their volume'},
+      {action:'Review conservative decline rules (Minimum Income, Loan Size)',impact:5,roi:3,confidence:'Medium',timeline:'Strategic (90d)',owner:'Credit Risk',result:'Policy declines are the #1 revenue blocker. Each 1% rule relaxation = significant booking uplift'},
+      {action:'Launch real-time funnel monitoring alerts',impact:2,roi:5,confidence:'High',timeline:'Quick Win',owner:'Engineering',result:'Catch funnel breaks within minutes vs days — prevent revenue loss'},
+      {action:'A/B test offer presentation (comparison view)',impact:3,roi:4,confidence:'Medium',timeline:'Medium (30d)',owner:'Product',result:'Offer acceptance is a conversion bottleneck. Better UX could lift acceptance by 5-10%'}
+    ].sort((a,b)=>(b.impact*b.roi)-(a.impact*a.roi));
+
+    document.getElementById('d2d-exec-recs').innerHTML=recs.map((r,i)=>`
+      <div style="display:flex;gap:12px;padding:14px;margin-bottom:8px;background:var(--panel2);border:1px solid var(--line);border-radius:10px">
+        <div style="font-family:'Space Grotesk';font-weight:700;font-size:22px;color:${i<3?'var(--green)':i<6?'var(--gold)':'var(--muted)'};min-width:32px">#${i+1}</div>
+        <div style="flex:1">
+          <strong style="font-size:13px">${r.action}</strong>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+            <span style="font-size:10px;padding:2px 8px;border-radius:6px;background:${r.timeline.includes('Quick')?'var(--green-bg)':r.timeline.includes('Medium')?'var(--gold-bg)':'var(--blue-bg)'};color:${r.timeline.includes('Quick')?'var(--green)':r.timeline.includes('Medium')?'var(--gold)':'var(--blue)'}">${r.timeline}</span>
+            <span style="font-size:10px;padding:2px 8px;border-radius:6px;background:var(--panel2);border:1px solid var(--line)">Impact: ${'★'.repeat(r.impact)}${'☆'.repeat(5-r.impact)}</span>
+            <span style="font-size:10px;padding:2px 8px;border-radius:6px;background:var(--panel2);border:1px solid var(--line)">ROI: ${'★'.repeat(r.roi)}${'☆'.repeat(5-r.roi)}</span>
+            <span style="font-size:10px;padding:2px 8px;border-radius:6px;background:var(--panel2);border:1px solid var(--line)">Confidence: ${r.confidence}</span>
+            <span style="font-size:10px;padding:2px 8px;border-radius:6px;background:var(--panel2);border:1px solid var(--line)">Owner: ${r.owner}</span>
+          </div>
+          <p style="font-size:11px;color:var(--green);margin:6px 0 0;font-weight:600">→ ${r.result}</p>
+        </div>
+      </div>`).join('');
+  })();
+
+  // ═══════════════════════════════════════════════════
+  // §16 EXECUTIVE DASHBOARD
+  // ═══════════════════════════════════════════════════
+  (function s16(){
+    const metrics=[
+      {label:'Submissions',val:fTotalSub,prev:pSub,fmt:v=>fmt(v)},
+      {label:'Initiated',val:fTotalInit,prev:pInit,fmt:v=>fmt(v)},
+      {label:'Booked',val:fTotalBook,prev:pBook,fmt:v=>fmt(v)},
+      {label:'Booking Rate',val:headlineRate,prev:pRate,fmt:v=>v.toFixed(1)+'%'},
+      {label:'Real Rate (excl Unlisted)',val:rE2E,prev:pSub>0?pct(pBook,pSub):0,fmt:v=>v.toFixed(1)+'%'},
+      {label:'Avg Loan',val:avgLoan,prev:pAvgLoan,fmt:v=>'SAR '+fmt(v)},
+      {label:'Total Funded',val:fTotalVal,prev:pVal,fmt:v=>'SAR '+fmtM(v)}
+    ];
+
+    // Warnings: any metric down > 20%
+    const warnings=metrics.filter(m=>m.prev>0&&chg(m.val,m.prev)<-20);
+    // Risks and opportunities from dimensions
+    const risks=[],opportunities=[];
+    dimNames.slice(0,8).forEach(dn=>{
+      const cats=dimCats(dn);
+      const worst=cats.filter(c=>c.sub>=minSub&&c.rate<rE2E*0.3);
+      worst.forEach(c=>risks.push(DIM_LABELS[dn]+': '+c.cat+' ('+c.rate.toFixed(1)+'%)'));
+      const best=cats.filter(c=>c.rate>rE2E*2&&c.book>=3);
+      best.forEach(c=>opportunities.push(DIM_LABELS[dn]+': '+c.cat+' ('+c.rate.toFixed(1)+'%)'));
+    });
+
+    document.getElementById('d2d-dashboard').innerHTML=`
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+        ${metrics.slice(0,4).map(m=>{
+          const ch=chg(m.val,m.prev);
+          const color=m.label.includes('Rate')?(ch>0?'var(--green)':ch<-5?'var(--red)':'var(--muted)'):(ch>0?'var(--green)':ch<-5?'var(--red)':'var(--muted)');
+          const tl=m.label.includes('Rate')?(m.val>=5?'🟢':m.val>=3?'🟡':'🔴'):(ch>0?'🟢':ch<-5?'🔴':'🟡');
+          return `<div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:4px">${m.label}</div>
+            <div style="font-family:'Space Grotesk';font-weight:700;font-size:22px">${tl} ${m.fmt(m.val)}</div>
+            <div style="font-size:11px;color:${color}">${arrow(m.val,m.prev)} vs prev period</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+        ${metrics.slice(4).map(m=>{
+          const ch=chg(m.val,m.prev);
+          return `<div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:4px">${m.label}</div>
+            <div style="font-family:'Space Grotesk';font-weight:700;font-size:20px">${m.fmt(m.val)}</div>
+            <div style="font-size:11px">${arrow(m.val,m.prev)}</div>
+          </div>`;
+        }).join('')}
+      </div>
+      ${warnings.length>0?`<div style="padding:12px;background:var(--red-bg);border:1px solid rgba(220,38,38,.2);border-radius:10px;margin-bottom:12px">
+        <strong style="font-size:12px;color:var(--red)">⚠️ Warnings (>20% decline vs previous period)</strong>
+        <ul style="margin:6px 0 0;padding-left:16px">${warnings.map(w=>`<li style="font-size:11px;color:var(--ink2)">${w.label}: ${w.fmt(w.val)} (${chg(w.val,w.prev).toFixed(1)}%)</li>`).join('')}</ul>
+      </div>`:''}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div style="padding:12px;background:var(--red-bg);border:1px solid rgba(220,38,38,.2);border-radius:10px">
+          <strong style="font-size:12px;color:var(--red)">🔴 Top Risks</strong>
+          <ul style="margin:6px 0 0;padding-left:16px">${(risks.slice(0,5).length>0?risks.slice(0,5):['No critical risks detected']).map(r=>`<li style="font-size:11px;color:var(--ink2)">${r}</li>`).join('')}</ul>
+        </div>
+        <div style="padding:12px;background:var(--green-bg);border:1px solid rgba(22,163,74,.2);border-radius:10px">
+          <strong style="font-size:12px;color:var(--green)">🟢 Top Opportunities</strong>
+          <ul style="margin:6px 0 0;padding-left:16px">${(opportunities.slice(0,5).length>0?opportunities.slice(0,5):['No standout opportunities in filtered period']).map(o=>`<li style="font-size:11px;color:var(--ink2)">${o}</li>`).join('')}</ul>
+        </div>
+      </div>`;
+  })();
+
+  // ═══════════════════════════════════════════════════
+  // §17 HIDDEN INSIGHTS
+  // ═══════════════════════════════════════════════════
+  (function s17(){
+    const findings=[];
+
+    // 1. Simpson's Paradox check: every category has higher rate than overall, or vice versa
+    dimNames.forEach(dn=>{
+      const cats=dimCats(dn);
+      if(cats.length<3) return;
+      const allAbove=cats.every(c=>c.rate>rE2E);
+      const allBelow=cats.every(c=>c.rate<rE2E);
+      if(allAbove) findings.push({type:'Simpson\'s Paradox',icon:'🔮',text:'Every '+DIM_LABELS[dn]+' category has a booking rate above the overall average ('+rE2E.toFixed(1)+'%). This is mathematically impossible unless Unlisted/Unknown segments are dragging the average down. The "overall" metric is distorted.',severity:'Critical'});
+    });
+
+    // 2. Anomalies: categories with rate > 2 standard deviations from mean
+    dimNames.forEach(dn=>{
+      const cats=dimCats(dn);
+      if(cats.length<4) return;
+      const rates=cats.map(c=>c.rate);
+      const mean=rates.reduce((a,v)=>a+v,0)/rates.length;
+      const std=Math.sqrt(rates.reduce((a,v)=>a+(v-mean)**2,0)/rates.length);
+      if(std<1) return;
+      cats.forEach(c=>{
+        if(Math.abs(c.rate-mean)>2*std&&c.book>=2){
+          findings.push({type:'Statistical Anomaly',icon:'📊',text:DIM_LABELS[dn]+' = '+c.cat+': rate '+c.rate.toFixed(1)+'% is '+(Math.abs(c.rate-mean)/std).toFixed(1)+' standard deviations from the mean ('+mean.toFixed(1)+'%). This is not random — investigate.',severity:'High'});
+        }
+      });
+    });
+
+    // 3. Weak signals: small volume, extreme rates
+    dimNames.forEach(dn=>{
+      const dim=D[dn]||{};
+      Object.entries(dim).filter(([k,v])=>EXL(k)&&v.sub>=5&&v.sub<minSub).forEach(([k,v])=>{
+        const rate=pct(v.book,v.sub);
+        if(rate>rE2E*3&&v.book>=2){
+          findings.push({type:'Weak Signal',icon:'📡',text:DIM_LABELS[dn]+' = '+rl(k)+': only '+fmt(v.sub)+' apps but converts at '+rate.toFixed(1)+'% ('+Math.round(rate/rE2E)+'× average). Too small to be conclusive, but worth monitoring.',severity:'Medium'});
+        }
+      });
+    });
+
+    // 4. Emerging trends (first half vs second half of period)
+    if(filteredDays.length>=6){
+      const half=Math.floor(filteredDays.length/2);
+      const h1=filteredDays.slice(0,half),h2=filteredDays.slice(half);
+      dimNames.slice(0,6).forEach(dn=>{
+        const d1={},d2={};
+        h1.forEach(day=>{const dd=day.dims[dn]||{};for(const [c,v] of Object.entries(dd)){if(!d1[c])d1[c]={sub:0,book:0};d1[c].sub+=v.sub||0;d1[c].book+=v.book||0;}});
+        h2.forEach(day=>{const dd=day.dims[dn]||{};for(const [c,v] of Object.entries(dd)){if(!d2[c])d2[c]={sub:0,book:0};d2[c].sub+=v.sub||0;d2[c].book+=v.book||0;}});
+        Object.keys(d2).filter(k=>EXL(k)&&(d2[k].sub>=minSub/2||d1[k]?.sub>=minSub/2)).forEach(k=>{
+          const r1=d1[k]?pct(d1[k].book,d1[k].sub):0;
+          const r2=pct(d2[k].book,d2[k].sub);
+          if(Math.abs(r2-r1)>5){
+            findings.push({type:'Emerging Trend',icon:'📈',text:DIM_LABELS[dn]+' = '+rl(k)+': rate moved from '+r1.toFixed(1)+'% → '+r2.toFixed(1)+'% between first and second half of the period. '+(r2>r1?'Positive momentum.':'Deteriorating — needs attention.'),severity:r2<r1?'High':'Medium'});
+          }
+        });
+      });
+    }
+
+    // 5. Correlation check: do two dimensions always appear together?
+    if(ui.book>0&&bo.book>0){
+      const uiComboRate=pct((D.product?.Combo?.book||0),(D.product?.Combo?.sub||1));
+      findings.push({type:'Correlation Note',icon:'🔗',text:'Backoffice channel and Combo product are correlated — BO primarily processes Combo applications. The "backoffice outperforms" finding may actually be "Combo outperforms." Disaggregate before acting.',severity:'High'});
+    }
+
+    findings.sort((a,b)=>{const o={Critical:0,High:1,Medium:2};return (o[a.severity]||2)-(o[b.severity]||2);});
+
+    document.getElementById('d2d-hidden-insights').innerHTML=findings.length===0?'<p style="color:var(--muted)">No anomalies detected in the filtered period.</p>':
+      findings.slice(0,15).map(f=>`
+        <div style="display:flex;gap:10px;padding:12px;margin-bottom:8px;background:var(--panel2);border:1px solid var(--line);border-radius:10px">
+          <span style="font-size:20px">${f.icon}</span>
+          <div>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+              <span style="font-size:10px;padding:2px 8px;border-radius:6px;${sev(f.severity)};font-weight:600">${f.severity}</span>
+              <strong style="font-size:12px">${f.type}</strong>
+            </div>
+            <p style="font-size:12px;color:var(--ink2);line-height:1.6;margin:0">${f.text}</p>
+          </div>
+        </div>`).join('');
+  })();
+
+  // ═══════════════════════════════════════════════════
+  // SELF-CHALLENGE
+  // ═══════════════════════════════════════════════════
+  (function sChallenge(){
+    const challenges=[
+      {title:'Hidden Assumptions',icon:'🧠',items:[
+        'Average loan amount (SAR '+fmt(avgLoan)+') is used as proxy for actual disbursed value — real values vary significantly per customer.',
+        'Unlisted = noise assumption: some Unlisted employers may be legitimate startups or freelancers.',
+        'Funnel data is month-level, not day-level — daily funnel metrics are interpolated.',
+        'SIMAH data is all-time, not filtered by period — credit quality conclusions may not apply to the filtered date range.',
+        'Cross-segment data (Employer × Nationality × Income) is all-time only, not re-calculated per date filter.'
+      ]},
+      {title:'Missing Variables',icon:'🕳️',items:[
+        'Time-to-decision: we don\'t know how long each step takes — a 90% pass rate with 7-day wait is worse than 80% instant.',
+        'Customer intent: we can\'t distinguish serious applicants from price-shoppers.',
+        'Competitor offers: applicants may have booked elsewhere — their "abandonment" is actually a lost competitive deal.',
+        'Macro factors: interest rate changes, salary payment cycles, seasonal shopping patterns.',
+        'Customer satisfaction: a high booking rate means nothing if NPS is collapsing.'
+      ]},
+      {title:'Confirmation Bias Check',icon:'🔄',items:[
+        'We highlight backoffice > UI conversion — but BO gets pre-screened applications. The comparison is not apples-to-apples.',
+        'Top employer segments "outperform" partly because they were already targeted — we\'re measuring our own selection bias.',
+        '"Star segments" may be small enough that their high rates are statistical noise, not real signal.',
+        'Revenue "recoverable" estimates assume linear scaling — in reality, marginal applicants may be lower quality.'
+      ]},
+      {title:'Correlation ≠ Causation',icon:'⚡',items:[
+        'Government employees book more → this doesn\'t mean "target Government." It may mean salary assignment guarantees enable booking.',
+        'Combo outperforms Tawarruq → the products serve different customer profiles, not just different structures.',
+        'Cities with high booking rates may simply have different employer mixes, not better markets.'
+      ]},
+      {title:'Selection Bias',icon:'🎯',items:[
+        'Data only includes people who applied — we have zero insight into people who considered but never started.',
+        'Booked customers are survivors of a selection funnel — their "profile" reflects the funnel\'s design, not customer demand.',
+        'SIMAH data covers only applicants, not the addressable market.'
+      ]},
+      {title:'Data Quality Issues',icon:'🔧',items:[
+        'Unlisted/Unknown categories contain '+(pct((emp['Unlisted']||{}).sub||0,fTotalSub)).toFixed(1)+'% of submissions — significant noise.',
+        'Excel serial dates in source data may have timezone drift (UTC vs AST).',
+        'Some dimensions have sparse data in narrow date ranges — rates become unreliable below '+minSub+' observations.',
+        'Funnel step names may not perfectly align between source systems (canonicalization assumptions).'
+      ]}
+    ];
+
+    document.getElementById('d2d-self-challenge').innerHTML=challenges.map(c=>`
+      <div style="margin-bottom:14px">
+        <h4 style="font-size:13px;font-weight:600;margin-bottom:6px">${c.icon} ${c.title}</h4>
+        <ul style="padding-left:18px;margin:0">${c.items.map(item=>`<li style="font-size:12px;color:var(--ink2);line-height:1.7;margin-bottom:2px">${item}</li>`).join('')}</ul>
+      </div>`).join('');
+  })();
+
+} // end renderDay2Day
 
 </script>
 </body></html>
