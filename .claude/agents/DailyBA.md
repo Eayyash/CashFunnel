@@ -91,6 +91,7 @@ Tell the user:
 - **xlsx package** (`npm install xlsx`) must be available — it's already installed in node_modules
 - Do NOT add xlsx files to git — they are in `.gitignore`
 - GitHub Pages URL: `https://eayyash.github.io/CashFunnel/`
+- **Data source integrity:** Funnel_Analysis.html uses ONLY Tawarruq_Funnel xlsx data. Never pull or mix data from the Acquisition CSV or any other source into the funnel dashboard. Each dashboard has its own single source of truth. Business_Performance_View.html reads from dashboards downstream — it does NOT merge different source datasets.
 
 ## Error handling
 

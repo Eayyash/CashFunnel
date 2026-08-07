@@ -98,6 +98,7 @@ Tell the user:
 - Only CSV files are supported by the aggregation scripts
 - All scripts are in `scripts/` relative to project root
 - GitHub Pages URL: `https://eayyash.github.io/CashFunnel/`
+- **Data source integrity:** Each dashboard uses data ONLY from its own source dataset. The Acquisition CSVs are the single source of truth for Acquisition_Command_Dashboard.html and Application_Cost.html. Funnel_Analysis.html uses only the Tawarruq_Funnel xlsx files. Business_Performance_View.html reads from these dashboards (not from raw files) — it does NOT merge or cross-reference different source datasets. Never add data from one source into another source's dashboard.
 
 ## Error handling
 
