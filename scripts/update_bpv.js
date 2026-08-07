@@ -335,6 +335,34 @@ for (const dim of AI_DIMS) {
 
 console.log('  Dimensions: %d, DOW entries: %d', Object.keys(dimTotals).length, dowArr.length);
 
+// ── 5c. Build daily array from DAILY_DEFAULT.days ───────────────────
+// Each entry: { date, sub, init, book, val, dims: { dim → { cat → {sub,init,book} } } }
+console.log('Building daily array …');
+const daily = Object.keys(DD.days).sort().map(date => {
+  const day = DD.days[date];
+  const k = day.k;
+  const dims = {};
+  for (const dim of AI_DIMS) {
+    const dd = day.d[dim];
+    if (!dd) continue;
+    dims[dim] = {};
+    // Collect all categories that have sub, init, or book
+    const allCats = new Set();
+    if (dd.sub) Object.keys(dd.sub).forEach(c => allCats.add(c));
+    if (dd.init) Object.keys(dd.init).forEach(c => allCats.add(c));
+    if (dd.book) Object.keys(dd.book).forEach(c => allCats.add(c));
+    for (const cat of allCats) {
+      dims[dim][cat] = {
+        sub:  (dd.sub  && dd.sub[cat])  || 0,
+        init: (dd.init && dd.init[cat]) || 0,
+        book: (dd.book && dd.book[cat]) || 0
+      };
+    }
+  }
+  return { date, sub: k.sub, init: k.init, book: k.book, val: k.val, dims };
+});
+console.log('  Daily entries: %d', daily.length);
+
 // ── 6. Build KPI ─────────────────────────────────────────────────────
 const totalSub  = monthly.reduce((s, m) => s + m.sub, 0);
 const totalBook = monthly.reduce((s, m) => s + m.book, 0);
@@ -356,6 +384,7 @@ console.log('  KPI: totalSub=%d  totalBook=%d  avgLoan=%d  bookRate=%s%%',
 
 // ── 7. Assemble BPV ─────────────────────────────────────────────────
 const BPV = {
+  daily,
   weekly,
   monthly,
   segments,
