@@ -18,13 +18,23 @@ header{padding:22px 30px;display:flex;align-items:center;gap:13px;position:relat
 .logo::before{content:"◎";position:absolute;inset:0;display:grid;place-items:center;z-index:2;font-family:'Space Grotesk';font-weight:700;color:var(--violet);font-size:18px}
 .brand .t{font-family:'Space Grotesk';font-weight:700;font-size:18px}
 .brand .s{font-size:11px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-top:1px}
-.back{position:absolute;right:30px;top:26px;color:var(--muted);text-decoration:none;font-size:12px;font-family:'JetBrains Mono';transition:.2s}
+.back{color:var(--muted);text-decoration:none;font-size:12px;font-family:'JetBrains Mono';transition:.2s;white-space:nowrap}
 .back:hover{color:var(--ink)}
 .container{max-width:1200px;margin:0 auto;padding:10px 24px 60px}
 
+/* From/To filter bar */
+.filterbar{display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap}
+.filterbar label{font-size:11px;color:var(--muted)}
+.filterbar input[type=date]{font-size:12px;padding:4px 8px;border:1px solid rgba(30,45,75,.17);border-radius:6px;font-family:'JetBrains Mono';background:var(--panel);color:var(--ink)}
+.hv-quick{font-size:11px;padding:4px 10px;border:1px solid rgba(30,45,75,.17);border-radius:6px;background:var(--panel);color:var(--ink2);cursor:pointer;transition:.15s;white-space:nowrap}
+.hv-quick:hover{border-color:var(--violet);color:var(--violet)}
+.hv-quick.on{background:var(--violet);border-color:var(--violet);color:#fff}
+@media(max-width:820px){header{flex-wrap:wrap}.back{order:3;margin-left:62px}.filterbar{order:4;margin-left:62px;width:100%}}
+
 /* Snap date */
-.snap{text-align:center;margin-bottom:18px}
+.snap{text-align:center;margin-bottom:8px}
 .snap span{display:inline-block;background:rgba(124,58,237,.08);color:var(--violet);font-size:11px;font-family:'JetBrains Mono';padding:5px 14px;border-radius:20px;letter-spacing:.06em}
+.snap-note{text-align:center;margin-bottom:18px;font-size:10.5px;color:var(--faint);font-family:'JetBrains Mono'}
 
 /* Executive Summary */
 .exec-summary{background:linear-gradient(135deg,rgba(124,58,237,.06),rgba(14,158,144,.06));border:1px solid rgba(124,58,237,.12);border-radius:16px;padding:24px 28px;margin-bottom:24px}
@@ -128,12 +138,23 @@ header{padding:22px 30px;display:flex;align-items:center;gap:13px;position:relat
  <div class="logo"></div>
  <div class="brand"><div class="t">Holistic View</div><div class="s">Tasheel Finance · Digital Products</div></div>
  <a class="back" href="index.html">← Command Center</a>
+ <div class="filterbar">
+   <label for="hv-from">From</label>
+   <input type="date" id="hv-from">
+   <label for="hv-to">To</label>
+   <input type="date" id="hv-to">
+   <button class="hv-quick" id="hv-last7">Last 7 days</button>
+   <button class="hv-quick" id="hv-thisMonth">This month</button>
+   <button class="hv-quick" id="hv-prevMonth">Prev month</button>
+   <button class="hv-quick on" id="hv-all">All</button>
+ </div>
 </header>
 
 <div class="container">
 
 <!-- Snap Date -->
 <div class="snap"><span>PORTFOLIO SNAPSHOT · AUG 2026 · 422,485 CONTRACTS</span></div>
+<div class="snap-note" id="hv-range-echo">Static single-snapshot report — date filter is not yet wired to portfolio data</div>
 
 <!-- ════════════ EXECUTIVE SUMMARY ════════════ -->
 <div class="exec-summary">
@@ -514,4 +535,77 @@ header{padding:22px 30px;display:flex;align-items:center;gap:13px;position:relat
 </div>
 
 <div class="foot">Built for <a href="https://www.linkedin.com/in/emadayyash" target="_blank">Emad Ayyash</a> · Tasheel Finance</div>
+
+<script>
+(function(){
+  // ── From/To date filter shell ──────────────────────────────────────
+  // This report is currently a single static snapshot built from
+  // FullInfo.xlsx (no per-contract origination-date breakdown embedded
+  // in the page). The filter is wired up structurally — window.HV_FILTER_FROM
+  // / HV_FILTER_TO stay in sync with the inputs and a 'hv:filterchange'
+  // event fires on every change — but no section re-aggregates yet.
+  // Once FullInfo.xlsx (with per-contract dates) is available, a rebuild
+  // pipeline (like scripts/update_bpv.js) can populate this page with a
+  // real time-series and this shell will already be ready to drive it.
+  const elFrom = document.getElementById('hv-from');
+  const elTo = document.getElementById('hv-to');
+  const echo = document.getElementById('hv-range-echo');
+  const quickBtns = {
+    last7: document.getElementById('hv-last7'),
+    thisMonth: document.getElementById('hv-thisMonth'),
+    prevMonth: document.getElementById('hv-prevMonth'),
+    all: document.getElementById('hv-all')
+  };
+
+  function ymd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  function prettyD(s){ if(!s) return ''; const d=new Date(s+'T00:00:00'); return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
+
+  const today = new Date();
+  const minDate = '2025-10-06'; // earliest date across Tasheel dashboards
+  const staticNote = 'Static single-snapshot report — date filter is not yet wired to portfolio data';
+
+  function setActive(btn){
+    Object.values(quickBtns).forEach(b=>b && b.classList.remove('on'));
+    if(btn) btn.classList.add('on');
+  }
+
+  function applyFilter(activeBtn){
+    window.HV_FILTER_FROM = elFrom.value || null;
+    window.HV_FILTER_TO = elTo.value || null;
+    setActive(activeBtn||null);
+    const isAll = window.HV_FILTER_FROM===minDate && window.HV_FILTER_TO===ymd(today);
+    echo.textContent = isAll ? staticNote
+      : prettyD(window.HV_FILTER_FROM)+'  →  '+prettyD(window.HV_FILTER_TO)+'  ·  '+staticNote;
+    document.dispatchEvent(new CustomEvent('hv:filterchange',{detail:{from:window.HV_FILTER_FROM,to:window.HV_FILTER_TO}}));
+  }
+
+  elFrom.addEventListener('change',()=>applyFilter(null));
+  elTo.addEventListener('change',()=>applyFilter(null));
+
+  quickBtns.last7.addEventListener('click',()=>{
+    const to = new Date(today); const from = new Date(today); from.setDate(from.getDate()-6);
+    elFrom.value = ymd(from); elTo.value = ymd(to);
+    applyFilter(quickBtns.last7);
+  });
+  quickBtns.thisMonth.addEventListener('click',()=>{
+    const first = new Date(today.getFullYear(), today.getMonth(), 1);
+    elFrom.value = ymd(first); elTo.value = ymd(today);
+    applyFilter(quickBtns.thisMonth);
+  });
+  quickBtns.prevMonth.addEventListener('click',()=>{
+    const pmFirst = new Date(today.getFullYear(), today.getMonth()-1, 1);
+    const pmLast = new Date(today.getFullYear(), today.getMonth(), 0);
+    elFrom.value = ymd(pmFirst); elTo.value = ymd(pmLast);
+    applyFilter(quickBtns.prevMonth);
+  });
+  quickBtns.all.addEventListener('click',()=>{
+    elFrom.value = minDate; elTo.value = ymd(today);
+    applyFilter(quickBtns.all);
+  });
+
+  // Default: All time
+  elFrom.value = minDate; elTo.value = ymd(today);
+  applyFilter(quickBtns.all);
+})();
+</script>
 </body></html>
