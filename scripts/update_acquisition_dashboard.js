@@ -293,12 +293,12 @@ const bookedRows = [];
 rows.forEach((r, i) => {
   const init = r['Approvalflag'] === 'Y';
   const fin = r['FinalApprovalFlag'] === 'Y';
-  flags[i] = (init ? 1 : 0) | (fin ? 2 : 0);
+  const booked = BOOKED_SET.has(String(r['Altitudestatus']));
+  flags[i] = (init ? 1 : 0) | (fin ? 2 : 0) | (booked ? 4 : 0);
 
   const sd = toYMD(r['submitted']);
   sday[i] = sd && dateIdx[sd] !== undefined ? dateIdx[sd] : 65535;
 
-  const booked = BOOKED_SET.has(String(r['Altitudestatus']));
   if (booked) {
     const bd = toYMD(r[CONFIG.bookCol]);
     bday[i] = bd && dateIdx[bd] !== undefined ? dateIdx[bd] : 65535;
