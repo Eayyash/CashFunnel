@@ -6,12 +6,13 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#eef1f7;--panel:#fff;--line:rgba(30,45,75,.10);--ink:#141c2b;--ink2:#3a475e;--muted:#5b6b83;--faint:#8493a8;
- --cyan:#0e9e90;--gold:#bd7d12;--violet:#7c3aed;--blue:#2563eb;--red:#dc2626;--green:#16a34a}
-*{box-sizing:border-box}html,body{margin:0;padding:0}
+ --cyan:#0e9e90;--gold:#bd7d12;--violet:#7c3aed;--blue:#2563eb;--red:#dc2626;--green:#16a34a;--orange:#ea580c;
+ --panel-shadow:0 1px 3px rgba(30,45,75,.06),0 6px 20px rgba(30,45,75,.04)}
+*{box-sizing:border-box;margin:0;padding:0}html,body{margin:0;padding:0}
 body{min-height:100vh;background:radial-gradient(1200px 700px at 82% -12%,rgba(124,58,237,.08),transparent 60%),radial-gradient(1000px 600px at -5% 5%,rgba(14,158,144,.07),transparent 55%),var(--bg);
  color:var(--ink);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 h1,h2,h3,.disp{font-family:'Space Grotesk',sans-serif}
-header{padding:22px 30px;display:flex;align-items:center;gap:13px}
+header{padding:22px 30px;display:flex;align-items:center;gap:13px;position:relative}
 .logo{width:40px;height:40px;border-radius:11px;position:relative;background:conic-gradient(from 210deg,var(--violet),var(--cyan),var(--violet));box-shadow:0 8px 26px -8px rgba(124,58,237,.45)}
 .logo::after{content:"";position:absolute;inset:5px;border-radius:7px;background:#fff}
 .logo::before{content:"◎";position:absolute;inset:0;display:grid;place-items:center;z-index:2;font-family:'Space Grotesk';font-weight:700;color:var(--violet);font-size:18px}
@@ -19,13 +20,108 @@ header{padding:22px 30px;display:flex;align-items:center;gap:13px}
 .brand .s{font-size:11px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-top:1px}
 .back{position:absolute;right:30px;top:26px;color:var(--muted);text-decoration:none;font-size:12px;font-family:'JetBrains Mono';transition:.2s}
 .back:hover{color:var(--ink)}
-.container{max-width:1100px;margin:0 auto;padding:20px 30px 60px}
-.coming{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:50vh;text-align:center}
-.coming .icon{font-size:72px;margin-bottom:20px;opacity:.7}
-.coming h1{font-size:28px;margin:0 0 10px;font-weight:700;color:var(--violet)}
-.coming p{font-size:14px;color:var(--muted);max-width:500px;line-height:1.7}
+.container{max-width:1200px;margin:0 auto;padding:10px 24px 60px}
+
+/* Snap date */
+.snap{text-align:center;margin-bottom:18px}
+.snap span{display:inline-block;background:rgba(124,58,237,.08);color:var(--violet);font-size:11px;font-family:'JetBrains Mono';padding:5px 14px;border-radius:20px;letter-spacing:.06em}
+
+/* Executive Summary */
+.exec-summary{background:linear-gradient(135deg,rgba(124,58,237,.06),rgba(14,158,144,.06));border:1px solid rgba(124,58,237,.12);border-radius:16px;padding:24px 28px;margin-bottom:24px}
+.exec-summary h2{font-size:16px;color:var(--violet);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.exec-summary h2::before{content:"📋";font-size:18px}
+.exec-summary ul{list-style:none;padding:0}
+.exec-summary li{padding:6px 0;font-size:13px;line-height:1.6;color:var(--ink2);border-bottom:1px solid rgba(124,58,237,.06)}
+.exec-summary li:last-child{border:none}
+.exec-summary li strong{color:var(--ink)}
+.tag{display:inline-block;font-size:10px;font-family:'JetBrains Mono';padding:2px 8px;border-radius:10px;margin-right:6px;font-weight:600}
+.tag-red{background:rgba(220,38,38,.1);color:var(--red)}
+.tag-green{background:rgba(22,163,74,.1);color:var(--green)}
+.tag-gold{background:rgba(189,125,18,.1);color:var(--gold)}
+.tag-blue{background:rgba(37,99,235,.1);color:var(--blue)}
+.tag-violet{background:rgba(124,58,237,.1);color:var(--violet)}
+
+/* Section */
+.section{margin-bottom:22px}
+.section-title{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;padding-left:4px;display:flex;align-items:center;gap:8px}
+.section-title::before{content:"";width:3px;height:16px;border-radius:2px;background:var(--violet)}
+
+/* KPI row */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--panel);border-radius:14px;padding:18px 20px;box-shadow:var(--panel-shadow);border:1px solid var(--line);transition:transform .15s}
+.kpi:hover{transform:translateY(-2px)}
+.kpi .label{font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;font-family:'JetBrains Mono'}
+.kpi .value{font-size:26px;font-weight:700;font-family:'Space Grotesk';color:var(--ink);line-height:1.1}
+.kpi .value.sm{font-size:20px}
+.kpi .sub{font-size:11px;color:var(--muted);margin-top:4px;font-family:'JetBrains Mono'}
+.kpi .value .unit{font-size:14px;font-weight:500;color:var(--muted);margin-left:2px}
+
+/* Cards */
+.card{background:var(--panel);border-radius:14px;padding:20px;box-shadow:var(--panel-shadow);border:1px solid var(--line);margin-bottom:12px}
+.card h3{font-size:14px;margin-bottom:14px;color:var(--ink);display:flex;align-items:center;gap:8px}
+
+/* Grid layouts */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+@media(max-width:800px){.grid-2,.grid-3{grid-template-columns:1fr}}
+
+/* Bar chart - horizontal */
+.hbar{margin-bottom:8px}
+.hbar .hbar-label{display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px}
+.hbar .hbar-label .name{color:var(--ink2);font-weight:500}
+.hbar .hbar-label .val{color:var(--muted);font-family:'JetBrains Mono';font-size:11px}
+.hbar .hbar-track{height:8px;background:rgba(124,58,237,.06);border-radius:4px;overflow:hidden}
+.hbar .hbar-fill{height:100%;border-radius:4px;transition:width .6s ease}
+
+/* Table */
+.data-table{width:100%;border-collapse:collapse;font-size:12px}
+.data-table th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-family:'JetBrains Mono';padding:8px 10px;border-bottom:2px solid var(--line);font-weight:600}
+.data-table td{padding:8px 10px;border-bottom:1px solid var(--line);color:var(--ink2)}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:rgba(124,58,237,.02)}
+.data-table .num{text-align:right;font-family:'JetBrains Mono';font-size:11px}
+.data-table .bold{font-weight:600;color:var(--ink)}
+.highlight-red{color:var(--red);font-weight:600}
+.highlight-green{color:var(--green);font-weight:600}
+.highlight-gold{color:var(--gold);font-weight:600}
+
+/* Insight box */
+.insight{background:rgba(124,58,237,.04);border-left:3px solid var(--violet);border-radius:0 10px 10px 0;padding:12px 16px;margin:12px 0;font-size:12px;color:var(--ink2);line-height:1.6}
+.insight strong{color:var(--violet)}
+.insight.warn{background:rgba(220,38,38,.04);border-color:var(--red)}
+.insight.warn strong{color:var(--red)}
+.insight.good{background:rgba(22,163,74,.04);border-color:var(--green)}
+.insight.good strong{color:var(--green)}
+
+/* DPD heatmap */
+.dpd-strip{display:flex;gap:3px;margin:8px 0}
+.dpd-cell{flex:1;text-align:center;border-radius:8px;padding:10px 4px;font-family:'JetBrains Mono'}
+.dpd-cell .dpd-label{font-size:9px;color:var(--muted);margin-bottom:4px}
+.dpd-cell .dpd-val{font-size:14px;font-weight:700}
+.dpd-cell .dpd-pct{font-size:9px;margin-top:2px}
+
+/* Pill */
+.pill{display:inline-block;font-size:10px;font-family:'JetBrains Mono';padding:3px 10px;border-radius:12px;font-weight:600}
+.pill-green{background:rgba(22,163,74,.1);color:var(--green)}
+.pill-red{background:rgba(220,38,38,.1);color:var(--red)}
+.pill-gold{background:rgba(189,125,18,.1);color:var(--gold)}
+
+/* Footer */
 .foot{text-align:center;color:var(--faint);font-size:11px;font-family:'JetBrains Mono';padding:22px}
 .foot a{color:var(--violet);text-decoration:none}
+
+/* Donut */
+.donut-row{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin:10px 0}
+.donut-item{text-align:center}
+.donut-item .donut-label{font-size:11px;color:var(--muted);margin-top:4px}
+.donut-item .donut-val{font-size:14px;font-weight:700;font-family:'Space Grotesk'}
+
+/* mini progress */
+.mini-bar{display:flex;height:6px;border-radius:3px;overflow:hidden;margin:4px 0}
+.mini-bar span{display:block}
+
+/* Scrollable table container */
+.table-scroll{overflow-x:auto}
 </style></head>
 <body>
 <header>
@@ -33,12 +129,389 @@ header{padding:22px 30px;display:flex;align-items:center;gap:13px}
  <div class="brand"><div class="t">Holistic View</div><div class="s">Tasheel Finance · Digital Products</div></div>
  <a class="back" href="index.html">← Command Center</a>
 </header>
+
 <div class="container">
- <div class="coming">
-   <div class="icon">◎</div>
-   <h1>Holistic View</h1>
-   <p>This scorecard is being prepared. It will provide a unified, cross-dashboard perspective across all Tasheel digital lending products.</p>
+
+<!-- Snap Date -->
+<div class="snap"><span>PORTFOLIO SNAPSHOT · AUG 2026 · 422,485 CONTRACTS</span></div>
+
+<!-- ════════════ EXECUTIVE SUMMARY ════════════ -->
+<div class="exec-summary">
+ <h2>C-Level Executive Summary</h2>
+ <ul>
+  <li><span class="tag tag-violet">SCALE</span> <strong>SAR 8.03B total portfolio</strong> across 422K+ contracts — Tawarruq dominates at 65% of financed value (SAR 5.21B), while Taqseet leads in volume (163K contracts). Avg ticket SAR 19,014.</li>
+  <li><span class="tag tag-green">COLLECTIONS</span> <strong>SAR 8.14B already collected</strong> against SAR 8.03B originated — healthy payback ratio. Total outstanding sits at SAR 3.99B with SAR 2.77B collected profit.</li>
+  <li><span class="tag tag-red">RISK ALERT</span> <strong>7.3% portfolio overdue</strong> (30,810 contracts, SAR 422M exposure). Tawarruq carries the heaviest delinquency at 11.6% vs Taqseet at 2.6%. 14,454 accounts are 360+ DPD — potential write-off pipeline.</li>
+  <li><span class="tag tag-red">WRITE-OFFS</span> <strong>8.3% write-off rate</strong> (35K contracts, SAR 866M financed value). This is a material credit loss warranting tighter underwriting on high-risk segments.</li>
+  <li><span class="tag tag-gold">SEGMENT RISK</span> <strong>Private-sector employees</strong> show the highest overdue rate at 9.2% vs Government at 4.6%. Expats at 9.2% vs Saudis at 6.6%. These segments need differentiated risk pricing.</li>
+  <li><span class="tag tag-gold">GEO RISK</span> <strong>Al Zahran (12.3% OVD)</strong>, Abu Arish (10.5%), and Tabuk (9.5%) are high-delinquency cities. Riyadh and Jeddah remain healthy at 6.4-6.6%.</li>
+  <li><span class="tag tag-blue">DIGITAL</span> <strong>40% online origination</strong> (168K) vs 58% BackOffice. Mobile/web contributing 97K+ through browser/app channels — digital adoption growing but still room to shift volume.</li>
+  <li><span class="tag tag-green">SCORING</span> <strong>Avg SIMAH 615 · Avg Scorecard 205</strong>. 55% of portfolio has SIMAH 620+ (low risk). Grade 1 is the largest risk rating segment (22%).</li>
+ </ul>
+</div>
+
+<!-- ════════════ PORTFOLIO SIZE ════════════ -->
+<div class="section">
+ <div class="section-title">Portfolio Overview</div>
+ <div class="kpi-row">
+  <div class="kpi"><div class="label">Total Financed</div><div class="value">8.03<span class="unit">B SAR</span></div><div class="sub">422,485 contracts</div></div>
+  <div class="kpi"><div class="label">Total Outstanding</div><div class="value">3.99<span class="unit">B SAR</span></div><div class="sub">Principal: 2.68B</div></div>
+  <div class="kpi"><div class="label">Total Collected</div><div class="value">8.14<span class="unit">B SAR</span></div><div class="sub">Paid + Profit</div></div>
+  <div class="kpi"><div class="label">Avg Ticket Size</div><div class="value sm">19,014<span class="unit">SAR</span></div><div class="sub">Per contract</div></div>
+  <div class="kpi"><div class="label">Avg Profit Rate</div><div class="value sm">20.45<span class="unit">%</span></div><div class="sub">APR ~38.7%</div></div>
+  <div class="kpi"><div class="label">Total Profit</div><div class="value sm">4.74<span class="unit">B SAR</span></div><div class="sub">Realized: 1.69B</div></div>
  </div>
 </div>
+
+<!-- ════════════ PRODUCT MIX ════════════ -->
+<div class="section">
+ <div class="section-title">Product Mix</div>
+ <div class="grid-2">
+  <div class="card">
+   <h3>📦 By Contract Volume</h3>
+   <div class="hbar"><div class="hbar-label"><span class="name">Tawarruq</span><span class="val">184,984 · 43.8%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:43.8%;background:var(--violet)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">Taqseet</span><span class="val">163,652 · 38.7%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:38.7%;background:var(--cyan)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">Combo</span><span class="val">60,124 · 14.2%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:14.2%;background:var(--blue)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">Retailer</span><span class="val">13,723 · 3.2%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:3.2%;background:var(--gold)"></div></div></div>
+  </div>
+  <div class="card">
+   <h3>💰 By Financed Amount (SAR)</h3>
+   <div class="hbar"><div class="hbar-label"><span class="name">Tawarruq</span><span class="val">5,212M · 64.9%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:64.9%;background:var(--violet)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">Combo</span><span class="val">1,355M · 16.9%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:16.9%;background:var(--blue)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">Taqseet</span><span class="val">1,297M · 16.1%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:16.1%;background:var(--cyan)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">Retailer</span><span class="val">169M · 2.1%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:2.1%;background:var(--gold)"></div></div></div>
+   <div class="insight"><strong>PM Insight:</strong> Tawarruq is 44% of volume but 65% of value — it's the revenue engine. Avg Tawarruq ticket is ~SAR 28K vs Taqseet at ~SAR 7.9K. Portfolio concentration risk in one product line.</div>
+  </div>
+ </div>
+</div>
+
+<!-- ════════════ CREDIT RISK ════════════ -->
+<div class="section">
+ <div class="section-title">Credit Quality & Risk</div>
+
+ <div class="kpi-row">
+  <div class="kpi"><div class="label">Overdue Rate</div><div class="value" style="color:var(--red)">7.29<span class="unit">%</span></div><div class="sub">30,810 contracts</div></div>
+  <div class="kpi"><div class="label">Overdue Exposure</div><div class="value sm" style="color:var(--red)">421.8<span class="unit">M SAR</span></div><div class="sub">5.3% of outstanding</div></div>
+  <div class="kpi"><div class="label">Write-off Rate</div><div class="value sm" style="color:var(--red)">8.28<span class="unit">%</span></div><div class="sub">34,994 contracts</div></div>
+  <div class="kpi"><div class="label">Write-off Value</div><div class="value sm" style="color:var(--red)">865.9<span class="unit">M SAR</span></div><div class="sub">10.8% of portfolio</div></div>
+  <div class="kpi"><div class="label">Non-Starters</div><div class="value sm">6,705</div><div class="sub">1.59% of book</div></div>
+  <div class="kpi"><div class="label">Avg SIMAH Score</div><div class="value sm">615</div><div class="sub">55% at 620+</div></div>
+ </div>
+
+ <!-- DPD Distribution -->
+ <div class="card">
+  <h3>📊 Days Past Due Distribution</h3>
+  <div class="dpd-strip">
+   <div class="dpd-cell" style="background:rgba(22,163,74,.08)"><div class="dpd-label">Current</div><div class="dpd-val" style="color:var(--green)">391,674</div><div class="dpd-pct" style="color:var(--green)">92.7%</div></div>
+   <div class="dpd-cell" style="background:rgba(189,125,18,.08)"><div class="dpd-label">1-30</div><div class="dpd-val" style="color:var(--gold)">5,075</div><div class="dpd-pct" style="color:var(--gold)">1.2%</div></div>
+   <div class="dpd-cell" style="background:rgba(234,88,12,.08)"><div class="dpd-label">31-60</div><div class="dpd-val" style="color:var(--orange)">2,625</div><div class="dpd-pct" style="color:var(--orange)">0.6%</div></div>
+   <div class="dpd-cell" style="background:rgba(234,88,12,.12)"><div class="dpd-label">61-90</div><div class="dpd-val" style="color:var(--orange)">1,719</div><div class="dpd-pct" style="color:var(--orange)">0.4%</div></div>
+   <div class="dpd-cell" style="background:rgba(220,38,38,.08)"><div class="dpd-label">91-180</div><div class="dpd-val" style="color:var(--red)">3,126</div><div class="dpd-pct" style="color:var(--red)">0.7%</div></div>
+   <div class="dpd-cell" style="background:rgba(220,38,38,.12)"><div class="dpd-label">181-360</div><div class="dpd-val" style="color:var(--red)">3,812</div><div class="dpd-pct" style="color:var(--red)">0.9%</div></div>
+   <div class="dpd-cell" style="background:rgba(220,38,38,.18)"><div class="dpd-label">360+</div><div class="dpd-val" style="color:var(--red)">14,454</div><div class="dpd-pct" style="color:var(--red)">3.4%</div></div>
+  </div>
+  <div class="insight warn"><strong>Critical:</strong> 14,454 accounts (3.4%) sit at 360+ DPD — these are likely irrecoverable and candidates for write-off or debt sale. Combined with existing 35K write-offs, total credit losses approach SAR 1.3B+.</div>
+ </div>
+
+ <!-- Overdue by product -->
+ <div class="grid-2">
+  <div class="card">
+   <h3>🔥 Overdue Rate by Product</h3>
+   <div class="table-scroll">
+   <table class="data-table">
+    <tr><th>Product</th><th class="num">Contracts</th><th class="num">Overdue</th><th class="num">Rate</th></tr>
+    <tr><td class="bold">Tawarruq</td><td class="num">184,984</td><td class="num highlight-red">21,384</td><td class="num highlight-red">11.6%</td></tr>
+    <tr><td class="bold">Combo</td><td class="num">60,124</td><td class="num highlight-gold">4,923</td><td class="num highlight-gold">8.2%</td></tr>
+    <tr><td class="bold">Taqseet</td><td class="num">163,652</td><td class="num highlight-green">4,314</td><td class="num highlight-green">2.6%</td></tr>
+    <tr><td class="bold">Retailer</td><td class="num">13,723</td><td class="num highlight-green">187</td><td class="num highlight-green">1.4%</td></tr>
+   </table>
+   </div>
+   <div class="insight warn"><strong>Tawarruq OVD at 11.6%</strong> — 4.5× worse than Taqseet. Larger ticket sizes + longer tenures + higher DBR drive this. Consider tightening LTV or requiring additional security for Tawarruq above SAR 50K.</div>
+  </div>
+  <div class="card">
+   <h3>🏢 Overdue Rate by Employer Type</h3>
+   <div class="table-scroll">
+   <table class="data-table">
+    <tr><th>Employer</th><th class="num">Contracts</th><th class="num">OVD</th><th class="num">Rate</th></tr>
+    <tr><td class="bold">Private Company</td><td class="num">215,604</td><td class="num highlight-red">19,798</td><td class="num highlight-red">9.2%</td></tr>
+    <tr><td class="bold">Military</td><td class="num">32,258</td><td class="num highlight-gold">2,593</td><td class="num highlight-gold">8.0%</td></tr>
+    <tr><td class="bold">Pension</td><td class="num">26,833</td><td class="num">1,623</td><td class="num">6.0%</td></tr>
+    <tr><td class="bold">Government</td><td class="num">147,720</td><td class="num highlight-green">6,793</td><td class="num highlight-green">4.6%</td></tr>
+   </table>
+   </div>
+   <div class="insight"><strong>PM Insight:</strong> Government employees are the safest segment at 4.6% OVD — 2× better than Private. Yet Private makes up 51% of the book. A government-first acquisition strategy would halve delinquency rates at the cost of addressable market.</div>
+  </div>
+ </div>
+</div>
+
+<!-- ════════════ CUSTOMER SEGMENTS ════════════ -->
+<div class="section">
+ <div class="section-title">Customer Demographics</div>
+
+ <div class="grid-3">
+  <div class="card">
+   <h3>🧑‍💼 Gender</h3>
+   <div class="hbar"><div class="hbar-label"><span class="name">Male</span><span class="val">319,709 · 75.7%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:75.7%;background:var(--blue)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">Female</span><span class="val">102,729 · 24.3%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:24.3%;background:var(--violet)"></div></div></div>
+   <div class="insight"><strong>Growth lever:</strong> Female segment at 24% — room to grow with targeted campaigns aligned with Vision 2030 workforce participation goals.</div>
+  </div>
+  <div class="card">
+   <h3>🇸🇦 Nationality</h3>
+   <div class="hbar"><div class="hbar-label"><span class="name">Saudi</span><span class="val">305,347 · 72.3%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:72.3%;background:var(--green)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">Expats</span><span class="val">117,138 · 27.7%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:27.7%;background:var(--cyan)"></div></div></div>
+   <div class="insight warn"><strong>Expat OVD at 9.2%</strong> vs Saudi 6.6%. Higher flight risk + income instability. Consider tiered pricing or mandatory salary assignment for expat Tawarruq.</div>
+  </div>
+  <div class="card">
+   <h3>💍 Marital Status</h3>
+   <div class="hbar"><div class="hbar-label"><span class="name">Married</span><span class="val">259,861 · 61.5%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:61.5%;background:var(--violet)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">Single</span><span class="val">148,854 · 35.2%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:35.2%;background:var(--blue)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">Divorced</span><span class="val">2,543 · 0.6%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:2%;background:var(--gold)"></div></div></div>
+  </div>
+ </div>
+
+ <div class="grid-2">
+  <div class="card">
+   <h3>🎂 Age Distribution</h3>
+   <div class="hbar"><div class="hbar-label"><span class="name">30-35</span><span class="val">104,615 · 24.8%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:60%;background:var(--violet)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">41-50</span><span class="val">103,581 · 24.5%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:59%;background:var(--blue)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">36-40</span><span class="val">78,251 · 18.5%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:45%;background:var(--cyan)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">25-29</span><span class="val">72,349 · 17.1%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:41%;background:var(--green)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">51-60</span><span class="val">44,140 · 10.4%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:25%;background:var(--gold)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">23-24</span><span class="val">12,348 · 2.9%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:7%;background:var(--orange)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">&gt;60</span><span class="val">4,778 · 1.1%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:3%;background:var(--red)"></div></div></div>
+   <div class="insight"><strong>Sweet spot is 30-50</strong> (67.8% of book) — mature earners with stable employment. Under-25 and 60+ are thin tails. Consider age-adjusted tenure caps for 55+ customers.</div>
+  </div>
+  <div class="card">
+   <h3>💵 Income Bands</h3>
+   <div class="hbar"><div class="hbar-label"><span class="name">14,000+</span><span class="val">123,548 · 29.3%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:70%;background:var(--violet)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">8,000-9,999</span><span class="val">59,716 · 14.1%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:34%;background:var(--blue)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">10,000-11,999</span><span class="val">51,797 · 12.3%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:29%;background:var(--cyan)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">5,000-5,999</span><span class="val">47,241 · 11.2%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:27%;background:var(--green)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">12,000-13,999</span><span class="val">42,300 · 10.0%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:24%;background:var(--gold)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">6,000-6,999</span><span class="val">41,912 · 9.9%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:24%;background:var(--orange)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">7,000-7,999</span><span class="val">33,624 · 8.0%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:19%;background:var(--red)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">&lt;5,000</span><span class="val">22,237 · 5.3%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:13%;background:var(--faint)"></div></div></div>
+   <div class="insight"><strong>Avg income SAR 26,424.</strong> 29% earn 14K+ (premium segment). The sub-5K segment (5.3%) likely carries elevated risk — verify against OVD data for possible floor increase.</div>
+  </div>
+ </div>
+</div>
+
+<!-- ════════════ UNDERWRITING & SCORING ════════════ -->
+<div class="section">
+ <div class="section-title">Underwriting & Scoring</div>
+ <div class="grid-2">
+  <div class="card">
+   <h3>⚖️ DBR Distribution</h3>
+   <div class="hbar"><div class="hbar-label"><span class="name">&gt;40-≤45%</span><span class="val">144,870 · 34.3% · OVD 7.9%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:60%;background:var(--red)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">≤20%</span><span class="val">100,511 · 23.8% · OVD 6.3%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:42%;background:var(--green)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">&gt;30-≤40%</span><span class="val">94,711 · 22.4% · OVD 6.7%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:40%;background:var(--gold)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">&gt;20-≤30%</span><span class="val">55,824 · 13.2% · OVD 8.0%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:23%;background:var(--blue)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">&gt;45%</span><span class="val">26,553 · 6.3% · OVD 8.0%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:11%;background:var(--violet)"></div></div></div>
+   <div class="insight warn"><strong>34% of borrowers are at 40-45% DBR</strong> — near SAMA's regulatory ceiling. Limited capacity for additional debt. OVD rates are surprisingly flat across DBR bands (6.3-8.0%), suggesting DBR alone is not a strong delinquency predictor — consider multi-factor risk scoring.</div>
+  </div>
+  <div class="card">
+   <h3>📈 SIMAH & Scorecard Bands</h3>
+   <div style="margin-bottom:14px">
+    <div style="font-size:11px;color:var(--muted);font-family:'JetBrains Mono';margin-bottom:6px">SIMAH SCORE BAND</div>
+    <div class="hbar"><div class="hbar-label"><span class="name">620+ (Low Risk)</span><span class="val">230,487 · 54.6%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:54.6%;background:var(--green)"></div></div></div>
+    <div class="hbar"><div class="hbar-label"><span class="name">&lt;580 (High Risk)</span><span class="val">129,816 · 30.7%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:30.7%;background:var(--red)"></div></div></div>
+    <div class="hbar"><div class="hbar-label"><span class="name">580-620 (Medium)</span><span class="val">62,163 · 14.7%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:14.7%;background:var(--gold)"></div></div></div>
+   </div>
+   <div>
+    <div style="font-size:11px;color:var(--muted);font-family:'JetBrains Mono';margin-bottom:6px">APP SCORE BAND</div>
+    <div class="hbar"><div class="hbar-label"><span class="name">&lt;205 (High Risk)</span><span class="val">202,870 · 48.0%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:48%;background:var(--red)"></div></div></div>
+    <div class="hbar"><div class="hbar-label"><span class="name">220+ (Low Risk)</span><span class="val">147,657 · 35.0%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:35%;background:var(--green)"></div></div></div>
+    <div class="hbar"><div class="hbar-label"><span class="name">205-220 (Medium)</span><span class="val">71,942 · 17.0%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:17%;background:var(--gold)"></div></div></div>
+   </div>
+   <div class="insight warn"><strong>48% of portfolio scored &lt;205 on App Score</strong> — nearly half classified as high risk by internal model. Cross-validate: are the SIMAH-620+ / AppScore-&lt;205 overlapping? If so, recalibrate the scorecard.</div>
+  </div>
+ </div>
+
+ <div class="grid-2">
+  <div class="card">
+   <h3>📋 Risk Rating Distribution</h3>
+   <div class="hbar"><div class="hbar-label"><span class="name">Grade 1 (Best)</span><span class="val">93,039 · 22.0%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:55%;background:var(--green)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">Grade 4</span><span class="val">88,371 · 20.9%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:52%;background:var(--cyan)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">Grade 9 (Worst)</span><span class="val">76,823 · 18.2%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:46%;background:var(--red)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">Grade 2</span><span class="val">39,275 · 9.3%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:23%;background:var(--blue)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">Grade 7</span><span class="val">37,675 · 8.9%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:22%;background:var(--orange)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">Grade 6</span><span class="val">33,837 · 8.0%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:20%;background:var(--gold)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">Grades 3,5,8</span><span class="val">53,446 · 12.7%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:32%;background:var(--faint)"></div></div></div>
+   <div class="insight"><strong>18% at Grade 9</strong> (worst) — this tail is outsized. Compare actual loss rates by grade to validate the model's predictive power.</div>
+  </div>
+  <div class="card">
+   <h3>🎯 Decision Engine & Pilot</h3>
+   <div style="margin-bottom:14px">
+    <div style="font-size:11px;color:var(--muted);font-family:'JetBrains Mono';margin-bottom:6px">DE DECISION</div>
+    <div class="hbar"><div class="hbar-label"><span class="name">Approved (A)</span><span class="val">386,820 · 91.6%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:91.6%;background:var(--green)"></div></div></div>
+    <div class="hbar"><div class="hbar-label"><span class="name">Referred (R)</span><span class="val">35,414 · 8.4%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:8.4%;background:var(--red)"></div></div></div>
+   </div>
+   <div>
+    <div style="font-size:11px;color:var(--muted);font-family:'JetBrains Mono';margin-bottom:6px">PILOT RATING</div>
+    <div class="hbar"><div class="hbar-label"><span class="name">P2 (Standard)</span><span class="val">306,403 · 72.5%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:72.5%;background:var(--blue)"></div></div></div>
+    <div class="hbar"><div class="hbar-label"><span class="name">P1A (Premium)</span><span class="val">50,960 · 12.1%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:12.1%;background:var(--green)"></div></div></div>
+    <div class="hbar"><div class="hbar-label"><span class="name">Military</span><span class="val">47,871 · 11.3%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:11.3%;background:var(--cyan)"></div></div></div>
+    <div class="hbar"><div class="hbar-label"><span class="name">P3 (Subprime)</span><span class="val">9,905 · 2.3%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:2.3%;background:var(--red)"></div></div></div>
+    <div class="hbar"><div class="hbar-label"><span class="name">P1B</span><span class="val">7,330 · 1.7%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:1.7%;background:var(--gold)"></div></div></div>
+   </div>
+   <div class="insight"><strong>8.4% R-decisions in portfolio</strong> — these were manually overridden to fund. Track their loss rates against A-decisions to measure override quality.</div>
+  </div>
+ </div>
+</div>
+
+<!-- ════════════ GEOGRAPHIC ════════════ -->
+<div class="section">
+ <div class="section-title">Geographic Footprint</div>
+ <div class="card">
+  <h3>🗺️ Top Cities — Volume, Value & Risk</h3>
+  <div class="table-scroll">
+  <table class="data-table">
+   <tr><th>City</th><th class="num">Contracts</th><th class="num">Financed (M)</th><th class="num">Avg Ticket</th><th class="num">OVD Rate</th><th>Signal</th></tr>
+   <tr><td class="bold">Riyadh</td><td class="num">73,075</td><td class="num">1,316M</td><td class="num">18,013</td><td class="num">6.4%</td><td><span class="pill pill-green">Healthy</span></td></tr>
+   <tr><td class="bold">Al Zahran</td><td class="num">51,670</td><td class="num">1,337M</td><td class="num">25,884</td><td class="num highlight-red">12.3%</td><td><span class="pill pill-red">⚠ High Risk</span></td></tr>
+   <tr><td class="bold">Jeddah</td><td class="num">50,374</td><td class="num">873M</td><td class="num">17,325</td><td class="num">6.6%</td><td><span class="pill pill-green">Healthy</span></td></tr>
+   <tr><td class="bold">Abha</td><td class="num">29,196</td><td class="num">630M</td><td class="num">21,565</td><td class="num highlight-gold">7.5%</td><td><span class="pill pill-gold">Monitor</span></td></tr>
+   <tr><td class="bold">Dammam</td><td class="num">15,974</td><td class="num">266M</td><td class="num">16,666</td><td class="num">5.7%</td><td><span class="pill pill-green">Healthy</span></td></tr>
+   <tr><td class="bold">Mecca</td><td class="num">14,770</td><td class="num">226M</td><td class="num">15,282</td><td class="num">5.3%</td><td><span class="pill pill-green">Healthy</span></td></tr>
+   <tr><td class="bold">Al Ahsa</td><td class="num">12,684</td><td class="num">236M</td><td class="num">18,585</td><td class="num">7.0%</td><td><span class="pill pill-gold">Monitor</span></td></tr>
+   <tr><td class="bold">Al Khubar</td><td class="num">11,433</td><td class="num">189M</td><td class="num">16,576</td><td class="num">5.7%</td><td><span class="pill pill-green">Healthy</span></td></tr>
+   <tr><td class="bold">Medina</td><td class="num">11,043</td><td class="num">163M</td><td class="num">14,804</td><td class="num">4.8%</td><td><span class="pill pill-green">Best</span></td></tr>
+   <tr><td class="bold">Abqyq</td><td class="num">10,143</td><td class="num">224M</td><td class="num">22,079</td><td class="num highlight-gold">8.7%</td><td><span class="pill pill-gold">Monitor</span></td></tr>
+   <tr><td class="bold">Abu Arish</td><td class="num">9,349</td><td class="num">219M</td><td class="num">23,455</td><td class="num highlight-red">10.5%</td><td><span class="pill pill-red">⚠ High Risk</span></td></tr>
+   <tr><td class="bold">Tabuk</td><td class="num">6,779</td><td class="num">118M</td><td class="num">17,365</td><td class="num highlight-red">9.5%</td><td><span class="pill pill-red">⚠ High Risk</span></td></tr>
+  </table>
+  </div>
+  <div class="insight warn"><strong>Al Zahran is the #1 city by financed value (SAR 1.34B) but also #1 in delinquency (12.3%).</strong> This is the single highest-concentration risk. Investigate: is this driven by specific employer closures, store-level underwriting quality, or customer mix? Abu Arish and Tabuk also need immediate review.</div>
+ </div>
+</div>
+
+<!-- ════════════ ORIGINATION ════════════ -->
+<div class="section">
+ <div class="section-title">Origination Channels</div>
+ <div class="grid-2">
+  <div class="card">
+   <h3>📱 Channel Mix</h3>
+   <div class="hbar"><div class="hbar-label"><span class="name">BackOffice (In-Store)</span><span class="val">243,859 · 57.7%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:57.7%;background:var(--blue)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">Online</span><span class="val">167,963 · 39.8%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:39.8%;background:var(--violet)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">Kiosk</span><span class="val">10,647 · 2.5%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:2.5%;background:var(--cyan)"></div></div></div>
+   <div class="insight"><strong>Digital is at 40%</strong> — significant but not dominant. Each % shifted from BackOffice to Online saves ~SAR 200-400 in origination cost per contract. Target: 60% digital by end of 2027.</div>
+  </div>
+  <div class="card">
+   <h3>🖥️ Online Submission Breakdown</h3>
+   <div class="hbar"><div class="hbar-label"><span class="name">Web</span><span class="val">51,797 · 30.8%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:50%;background:var(--blue)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">UI (Web App)</span><span class="val">45,129 · 26.9%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:44%;background:var(--violet)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">iOS Browser</span><span class="val">22,400 · 13.3%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:22%;background:var(--cyan)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">Android Browser</span><span class="val">14,983 · 8.9%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:14%;background:var(--green)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">iOS App</span><span class="val">9,420 · 5.6%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:9%;background:var(--gold)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">Android App</span><span class="val">4,400 · 2.6%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:4%;background:var(--orange)"></div></div></div>
+   <div class="insight"><strong>Native app adoption is low</strong> (8.2% of online). Browser dominates. Invest in deep-links and app-store optimization — native users typically have higher repeat rates and better completion funnels.</div>
+  </div>
+ </div>
+</div>
+
+<!-- ════════════ TENURE & STRUCTURE ════════════ -->
+<div class="section">
+ <div class="section-title">Loan Structure</div>
+ <div class="grid-2">
+  <div class="card">
+   <h3>📅 Tenure Distribution</h3>
+   <div class="hbar"><div class="hbar-label"><span class="name">24 months</span><span class="val">107,573 · 25.5%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:55%;background:var(--violet)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">60 months</span><span class="val">92,072 · 21.8%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:47%;background:var(--blue)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">36 months</span><span class="val">80,043 · 18.9%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:41%;background:var(--cyan)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">12 months</span><span class="val">74,030 · 17.5%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:38%;background:var(--green)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">18 months</span><span class="val">23,695 · 5.6%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:12%;background:var(--gold)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">48 months</span><span class="val">21,773 · 5.2%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:11%;background:var(--orange)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">6 months</span><span class="val">13,753 · 3.3%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:7%;background:var(--red)"></div></div></div>
+   <div class="insight"><strong>24-month is the modal tenure</strong> (25.5%), but 60-month (21.8%) is #2 — driven by Tawarruq. Longer tenures = more profit per contract but higher duration risk. Monitor 60-month vintage curves closely.</div>
+  </div>
+  <div class="card">
+   <h3>💳 Financing Amount Bands</h3>
+   <div class="hbar"><div class="hbar-label"><span class="name">20,000+ SAR</span><span class="val">130,189 · 30.8%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:55%;background:var(--violet)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">10,000-14,999</span><span class="val">95,117 · 22.5%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:40%;background:var(--blue)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">15,000-19,999</span><span class="val">46,548 · 11.0%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:20%;background:var(--cyan)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">5,000-5,999</span><span class="val">42,166 · 10.0%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:18%;background:var(--green)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">&lt;5,000</span><span class="val">40,776 · 9.7%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:17%;background:var(--gold)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">7,000-8,999</span><span class="val">28,961 · 6.9%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:12%;background:var(--orange)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">6,000-6,999</span><span class="val">27,004 · 6.4%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:11%;background:var(--red)"></div></div></div>
+   <div class="insight"><strong>31% of contracts are 20K+ SAR</strong> — the high-value tier driving revenue. But sub-5K contracts (9.7%) are likely low-margin after cost-to-serve. Evaluate minimum viable ticket size for profitability.</div>
+  </div>
+ </div>
+</div>
+
+<!-- ════════════ RETAIL PARTNERS ════════════ -->
+<div class="section">
+ <div class="section-title">Retail & Store Performance</div>
+ <div class="grid-2">
+  <div class="card">
+   <h3>🏬 Top Retailers</h3>
+   <div class="hbar"><div class="hbar-label"><span class="name">eXtra Stores</span><span class="val">223,719 · 53.0%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:53%;background:var(--violet)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">Direct (No Retailer)</span><span class="val">184,983 · 43.8%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:43.8%;background:var(--blue)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">Saudi-German Hospitals</span><span class="val">5,779 · 1.4%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:3%;background:var(--cyan)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">IKEA</span><span class="val">1,872 · 0.4%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:1%;background:var(--gold)"></div></div></div>
+   <div class="insight"><strong>53% concentration in eXtra Stores</strong> — significant partner dependency. The 44% "direct" volume is Tawarruq (no retailer). Diversifying retail partnerships (healthcare, furniture, auto) would reduce concentration risk and open new customer segments.</div>
+  </div>
+  <div class="card">
+   <h3>🏪 Top 10 Stores by Volume</h3>
+   <div class="table-scroll">
+   <table class="data-table">
+    <tr><th>Store</th><th class="num">Contracts</th></tr>
+    <tr><td>eXtra Khobar-Alraka</td><td class="num bold">19,010</td></tr>
+    <tr><td>eXtra Dammam-Alfaisalya</td><td class="num bold">17,610</td></tr>
+    <tr><td>eXtra Riyadh-Al-Swiady</td><td class="num bold">13,786</td></tr>
+    <tr><td>eXtra Jeddah-Safa</td><td class="num bold">13,218</td></tr>
+    <tr><td>eXtra Jeddah-Sultan Mall</td><td class="num bold">13,147</td></tr>
+    <tr><td>eXtra Jeddah-Al Tahliya</td><td class="num bold">13,132</td></tr>
+    <tr><td>eXtra Riyadh-Al Warroud</td><td class="num bold">13,091</td></tr>
+    <tr><td>eXtra Riyadh-Exit28-Badiya</td><td class="num bold">12,830</td></tr>
+    <tr><td>eXtra Riyadh-Alnasem</td><td class="num bold">12,662</td></tr>
+    <tr><td>eXtra Aljubail</td><td class="num bold">11,968</td></tr>
+   </table>
+   </div>
+  </div>
+ </div>
+</div>
+
+<!-- ════════════ LOS & STATUS ════════════ -->
+<div class="section">
+ <div class="section-title">Portfolio Maturity</div>
+ <div class="grid-2">
+  <div class="card">
+   <h3>⏱️ Length of Service (LOS)</h3>
+   <div class="hbar"><div class="hbar-label"><span class="name">≥120 months (10yr+)</span><span class="val">152,684 · 36.1%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:55%;background:var(--violet)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">&lt;24 months</span><span class="val">94,589 · 22.4%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:34%;background:var(--cyan)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">84-108 months</span><span class="val">40,926 · 9.7%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:15%;background:var(--blue)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">60-84 months</span><span class="val">40,216 · 9.5%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:14%;background:var(--green)"></div></div></div>
+   <div class="insight good"><strong>36% have 10+ years of service</strong> — a stable, seasoned borrower base. The 22% with &lt;2 years LOS is the riskiest segment for job stability. Consider LOS-adjusted limits.</div>
+  </div>
+  <div class="card">
+   <h3>📊 Contract Status</h3>
+   <div class="hbar"><div class="hbar-label"><span class="name">Active (109)</span><span class="val">270,800 · 64.1%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:64.1%;background:var(--green)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">Closed (14)</span><span class="val">127,220 · 30.1%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:30.1%;background:var(--blue)"></div></div></div>
+   <div class="hbar"><div class="hbar-label"><span class="name">Write-Off (174)</span><span class="val">24,462 · 5.8%</span></div><div class="hbar-track"><div class="hbar-fill" style="width:5.8%;background:var(--red)"></div></div></div>
+   <div class="insight"><strong>64% active book.</strong> The 30% closed contracts provide historical vintage data for model calibration. Use closed-book loss rates to benchmark current portfolio expected losses.</div>
+  </div>
+ </div>
+</div>
+
+<!-- ════════════ STRATEGIC RECS ════════════ -->
+<div class="section">
+ <div class="section-title">Strategic Recommendations</div>
+ <div class="card" style="background:linear-gradient(135deg,rgba(124,58,237,.04),rgba(14,158,144,.04))">
+  <h3>🎯 PM Action Items & C-Level Priorities</h3>
+  <table class="data-table">
+   <tr><th style="width:30%">Priority</th><th>Action</th><th style="width:15%">Impact</th></tr>
+   <tr><td class="bold"><span class="tag tag-red">P0</span> Al Zahran Risk</td><td>Investigate 12.3% OVD in the #1 city by value. Could be driven by sector layoffs or specific employer issues. Implement city-level exposure caps.</td><td class="highlight-red">High</td></tr>
+   <tr><td class="bold"><span class="tag tag-red">P0</span> Tawarruq OVD</td><td>11.6% OVD on the largest product. Tighten underwriting: lower LTV for 60-month tenure, require salary assignment for expats, increase SIMAH threshold for tickets &gt;50K.</td><td class="highlight-red">High</td></tr>
+   <tr><td class="bold"><span class="tag tag-gold">P1</span> Digital Shift</td><td>Accelerate from 40% to 60% online origination. Invest in native app UX, deep-link campaigns, and in-app pre-approval flows. Each 1% shift saves ~SAR 500K/yr in ops cost.</td><td class="highlight-gold">Medium</td></tr>
+   <tr><td class="bold"><span class="tag tag-gold">P1</span> Scorecard Recalibration</td><td>48% of portfolio is &lt;205 AppScore but coexists with 55% SIMAH 620+. These signals conflict. Run a Gini/KS analysis and rebuild the scorecard with refreshed actuals.</td><td class="highlight-gold">Medium</td></tr>
+   <tr><td class="bold"><span class="tag tag-blue">P2</span> Retailer Diversification</td><td>53% of Taqseet through eXtra Stores = concentration risk. Expand healthcare (SGH is proving out at 5.8K contracts), home (IKEA), and automotive verticals.</td><td class="highlight-gold">Medium</td></tr>
+   <tr><td class="bold"><span class="tag tag-blue">P2</span> Female Segment Growth</td><td>24% female share — below market potential. Launch targeted products aligned with NPWP (National Program for Working Women). Female government employees could be lowest-risk micro-segment.</td><td class="highlight-green">Growth</td></tr>
+   <tr><td class="bold"><span class="tag tag-violet">P3</span> 360+ DPD Resolution</td><td>14,454 accounts at 360+ DPD. Evaluate for debt-sale vs write-off. Each month of delay reduces recovery value. Establish a quarterly NPA resolution cadence.</td><td class="highlight-red">Recovery</td></tr>
+  </table>
+ </div>
+</div>
+
+</div>
+
 <div class="foot">Built for <a href="https://www.linkedin.com/in/emadayyash" target="_blank">Emad Ayyash</a> · Tasheel Finance</div>
 </body></html>
