@@ -19,7 +19,8 @@ header{padding:22px 30px;display:flex;align-items:center;gap:13px}
 .brand .t{font-family:'Space Grotesk';font-weight:700;font-size:18px}
 .brand .s{font-size:11px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-top:1px}
 main{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:24px 26px 60px;max-width:1000px;margin:0 auto;width:100%}
-.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;width:100%}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;width:100%}
+@media(max-width:1100px){.cards{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:900px){.cards{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:560px){.cards{grid-template-columns:1fr}}
 
@@ -43,6 +44,8 @@ main{flex:1;display:flex;flex-direction:column;justify-content:center;align-item
 .pcard.ac .card-icon svg{color:#991b1b}
 .pcard.mj .card-icon{background:rgba(47,158,106,.13)}
 .pcard.mj .card-icon svg{color:#1c7d50}
+.pcard.hv .card-icon{background:rgba(139,92,246,.12)}
+.pcard.hv .card-icon svg{color:#7c3aed}
 .pcard.bp .card-icon{background:rgba(59,130,246,.12)}
 .pcard.bp .card-icon svg{color:#2563eb}
 
@@ -115,6 +118,19 @@ main{flex:1;display:flex;flex-direction:column;justify-content:center;align-item
        <polyline points="16,20 19,23 24,17"/>
      </svg></div>
      <h2>Mobile Journey</h2>
+   </a>
+
+   <a class="pcard hv" href="Holistic_View.html">
+     <div class="card-icon"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+       <circle cx="20" cy="20" r="15"/>
+       <circle cx="20" cy="20" r="7" opacity=".5"/>
+       <circle cx="20" cy="20" r="1.5" fill="currentColor" stroke="none"/>
+       <line x1="20" y1="5" x2="20" y2="13"/>
+       <line x1="20" y1="27" x2="20" y2="35"/>
+       <line x1="5" y1="20" x2="13" y2="20"/>
+       <line x1="27" y1="20" x2="35" y2="20"/>
+     </svg></div>
+     <h2>Holistic View</h2>
    </a>
 
    <a class="pcard bp" href="Business_Performance_View.html">

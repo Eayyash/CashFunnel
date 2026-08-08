@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tasheel · Holistic View</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eef1f7;--panel:#fff;--line:rgba(30,45,75,.10);--ink:#141c2b;--ink2:#3a475e;--muted:#5b6b83;--faint:#8493a8;
+ --cyan:#0e9e90;--gold:#bd7d12;--violet:#7c3aed;--blue:#2563eb;--red:#dc2626;--green:#16a34a}
+*{box-sizing:border-box}html,body{margin:0;padding:0}
+body{min-height:100vh;background:radial-gradient(1200px 700px at 82% -12%,rgba(124,58,237,.08),transparent 60%),radial-gradient(1000px 600px at -5% 5%,rgba(14,158,144,.07),transparent 55%),var(--bg);
+ color:var(--ink);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+h1,h2,h3,.disp{font-family:'Space Grotesk',sans-serif}
+header{padding:22px 30px;display:flex;align-items:center;gap:13px}
+.logo{width:40px;height:40px;border-radius:11px;position:relative;background:conic-gradient(from 210deg,var(--violet),var(--cyan),var(--violet));box-shadow:0 8px 26px -8px rgba(124,58,237,.45)}
+.logo::after{content:"";position:absolute;inset:5px;border-radius:7px;background:#fff}
+.logo::before{content:"◎";position:absolute;inset:0;display:grid;place-items:center;z-index:2;font-family:'Space Grotesk';font-weight:700;color:var(--violet);font-size:18px}
+.brand .t{font-family:'Space Grotesk';font-weight:700;font-size:18px}
+.brand .s{font-size:11px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-top:1px}
+.back{position:absolute;right:30px;top:26px;color:var(--muted);text-decoration:none;font-size:12px;font-family:'JetBrains Mono';transition:.2s}
+.back:hover{color:var(--ink)}
+.container{max-width:1100px;margin:0 auto;padding:20px 30px 60px}
+.coming{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:50vh;text-align:center}
+.coming .icon{font-size:72px;margin-bottom:20px;opacity:.7}
+.coming h1{font-size:28px;margin:0 0 10px;font-weight:700;color:var(--violet)}
+.coming p{font-size:14px;color:var(--muted);max-width:500px;line-height:1.7}
+.foot{text-align:center;color:var(--faint);font-size:11px;font-family:'JetBrains Mono';padding:22px}
+.foot a{color:var(--violet);text-decoration:none}
+</style></head>
+<body>
+<header>
+ <div class="logo"></div>
+ <div class="brand"><div class="t">Holistic View</div><div class="s">Tasheel Finance · Digital Products</div></div>
+ <a class="back" href="index.html">← Command Center</a>
+</header>
+<div class="container">
+ <div class="coming">
+   <div class="icon">◎</div>
+   <h1>Holistic View</h1>
+   <p>This scorecard is being prepared. It will provide a unified, cross-dashboard perspective across all Tasheel digital lending products.</p>
+ </div>
+</div>
+<div class="foot">Built for <a href="https://www.linkedin.com/in/emadayyash" target="_blank">Emad Ayyash</a> · Tasheel Finance</div>
+</body></html>
