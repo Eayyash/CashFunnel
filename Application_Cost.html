@@ -284,8 +284,30 @@ const NB_EXPAT_COSTS=[
   [{cost:3.45,k:'e'}],
   [{cost:69,k:'en69'},{cost:35,k:'en35'}],
 ];
-function calcNotBookedCost(){
-  const sts=COST_DATA.statuses; if(!sts) return {local:0,expat:0,total:0};
+function calcNotBookedCost(from,to){
+  // Use the date-filtered per-status breakdown (statusByDay) when a range is
+  // given, same source the Status tab's aggregateStatuses() reads — falls
+  // back to the all-time COST_DATA.statuses only when no range is selected.
+  let sts=COST_DATA.statuses;
+  const sbd=COST_DATA.statusByDay;
+  if(sbd&&from&&to){
+    const agg={};
+    for(const s in MASTER_DEF){
+      agg[s]={l:0,e:0,gl:0,ge:0,ml:0,me:0,ln69:0,ln35:0,en69:0,en35:0};
+    }
+    COST_DATA.dates.forEach(d=>{
+      if(d<from||d>to) return;
+      const dayMap=sbd[d]; if(!dayMap) return;
+      for(const s in dayMap){
+        if(!agg[s]) continue;
+        const sd=dayMap[s], a=agg[s];
+        a.l+=sd.l; a.e+=sd.e; a.gl+=sd.gl; a.ge+=sd.ge; a.ml+=sd.ml; a.me+=sd.me;
+        a.ln69+=sd.ln69; a.ln35+=sd.ln35; a.en69+=sd.en69; a.en35+=sd.en35;
+      }
+    });
+    sts=agg;
+  }
+  if(!sts) return {local:0,expat:0,total:0};
   let lc=0, ec=0;
   for(const s in sts){
     if(BOOKED_STATUSES.has(s)) continue;
@@ -318,7 +340,7 @@ function render(from,to){
   const bTable=buildTable(true,bL.count,bE.count,bL.nafith69+bE.nafith69,bL.nafith35+bE.nafith35,D.booked.gosi,D.booked.mof);
   const localCost=calcSegmentCost(bL.count,true,bL.gosi,bL.mof,bL.nafith69,bL.nafith35);
   const expatCost=calcSegmentCost(bE.count,false,bE.gosi,bE.mof,bE.nafith69,bE.nafith35);
-  const nbCost=calcNotBookedCost();
+  const nbCost=calcNotBookedCost(from,to);
 
   document.getElementById('content').innerHTML=`
   <div class="kpi-strip">
