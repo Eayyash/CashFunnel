@@ -145,34 +145,54 @@ const VOCAB = RS_RAW.vocab;
 console.log('  RAWSTORE: %d rows decoded', N);
 
 // Build cross-segments: employer × nationality × income
-const segMap = {};  // key → {sub, book, valSum}
+// Bucketed by month (sub counted in its submission month, book/val counted in
+// its booking month — same split DAILY_DEFAULT already uses) so the BPV
+// Overview tab's Top/Low Performing Segments table can be filtered by date
+// range instead of being frozen to one all-time tally.
+const segMap = {};        // key → {sub, book, valSum}                (all-time, back-compat)
+const monthSegMap = {};   // mon → key → {emp, nat, inc, sub, book, valSum}
 const empArr   = RS.employer;
 const natArr   = RS.nationality;
 const incArr   = RS.income;
-const flagsArr = RS.flags;
+const sdayArr  = RS.sday;
 const bvalArr  = RS.bval;
 const bdayArr  = RS.bday;
 
+function segBucket(map, mon, key, emp, nat, inc) {
+  if (!map[mon]) map[mon] = {};
+  const sm = map[mon];
+  if (!sm[key]) sm[key] = { emp, nat, inc, sub: 0, book: 0, valSum: 0 };
+  return sm[key];
+}
+
 let bptr = 0;
 for (let i = 0; i < N; i++) {
+  const si = sdayArr[i];
   const bi = bdayArr[i];                     // Int16: 65535 → -1 = not booked
   const booked = bi >= 0;
 
-  const empIdx = empArr[i];
-  const natIdx = natArr[i];
-  const incIdx = incArr[i];
-
-  const emp = VOCAB.employer[empIdx] || 'Unknown';
-  const nat = VOCAB.nationality[natIdx] || 'Unknown';
-  const inc = VOCAB.income[incIdx] || 'Unknown';
-
+  const emp = VOCAB.employer[empArr[i]] || 'Unknown';
+  const nat = VOCAB.nationality[natArr[i]] || 'Unknown';
+  const inc = VOCAB.income[incArr[i]] || 'Unknown';
   const key = emp + '|' + nat + '|' + inc;
+
   if (!segMap[key]) segMap[key] = { emp, nat, inc, sub: 0, book: 0, valSum: 0 };
   segMap[key].sub++;
+
+  if (si >= 0) {
+    const subMon = DTS[si].slice(0, 7);
+    segBucket(monthSegMap, subMon, key, emp, nat, inc).sub++;
+  }
 
   if (booked) {
     segMap[key].book++;
     segMap[key].valSum += bvalArr[bptr];
+    if (bi >= 0) {
+      const bookMon = DTS[bi].slice(0, 7);
+      const mb = segBucket(monthSegMap, bookMon, key, emp, nat, inc);
+      mb.book++;
+      mb.valSum += bvalArr[bptr];
+    }
     bptr++;
   }
 }
@@ -191,6 +211,23 @@ const segments = Object.values(segMap)
   }));
 
 console.log('  Cross-segments (≥50 subs): %d', segments.length);
+
+// Format monthly segments (no per-month threshold — client aggregates across
+// the filtered range and applies its own display threshold, same as it
+// already does with book>10 on the all-time table)
+const monthlySegments = Object.keys(monthSegMap).sort().map(mon => ({
+  mon,
+  segs: Object.values(monthSegMap[mon]).map(s => ({
+    emp: s.emp,
+    nat: s.nat,
+    inc: s.inc,
+    sub: s.sub,
+    book: s.book,
+    valSum: Math.round(s.valSum)
+  }))
+}));
+console.log('  Monthly cross-segments: %d months, %d total combos', monthlySegments.length,
+  monthlySegments.reduce((a, m) => a + m.segs.length, 0));
 
 // ── 4. Read Funnel data ──────────────────────────────────────────────
 console.log('Reading Funnel_Analysis.html …');
@@ -388,6 +425,7 @@ const BPV = {
   weekly,
   monthly,
   segments,
+  monthlySegments,
   funnel: funnelTotal,
   monthlyFunnel,
   simah: SIMAH,
