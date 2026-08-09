@@ -405,6 +405,7 @@ function buildAggregates(features, acqMap) {
         stp: isStp ? 'Y' : 'N',
         approved: isApproved ? 'Y' : 'N',
         booked: isBooked ? 'Y' : 'N',
+        stagingId: acq?.StagingID || '',
         declineReason: acq?.SimplifiedDeclinedReason || '',
         deDecision: acq?.DE_Decision || '',
         lightDE: acq?.Light_DE_Decision || '',
