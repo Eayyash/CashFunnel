@@ -13,6 +13,7 @@ const ROOT = path.resolve(__dirname, '..');
 const ACQ_HTML  = path.join(ROOT, 'Acquisition_Command_Dashboard.html');
 const FUN_HTML  = path.join(ROOT, 'Funnel_Analysis.html');
 const SIM_HTML  = path.join(ROOT, 'SIMAH_Intelligence.html');
+const COST_HTML = path.join(ROOT, 'Application_Cost.html');
 const BPV_HTML  = path.join(ROOT, 'Business_Performance_View.html');
 
 // ── helpers ──────────────────────────────────────────────────────────
@@ -274,6 +275,159 @@ const simHtml = fs.readFileSync(SIM_HTML, 'utf8');
 const SIMAH = extractJSON(simHtml, 'SIMAH_DATA');
 console.log('  SIMAH total: %d, matched: %d', SIMAH.meta.total, SIMAH.meta.matched);
 
+// ── 5a. Read Application Cost data ────────────────────────────────────
+console.log('Reading Application_Cost.html …');
+const costHtml = fs.readFileSync(COST_HTML, 'utf8');
+const COST_DATA = extractJSON(costHtml, 'COST_DATA');
+console.log('  Application Cost total: %d apps, %d dates', COST_DATA.meta.total, COST_DATA.dates.length);
+
+// Service cost model — mirrors Application_Cost.html's SERVICES/NAFITH exactly.
+const SERVICES = [
+  { name: 'Yaqeen (Local)', cost: 3.34, localOnly: true },
+  { name: 'Yaqeen Expat Legal', cost: 3.45, expatOnly: true },
+  { name: 'Yaqeen Expat Iqama', cost: 3.22, expatOnly: true },
+  { name: 'CITC', cost: 2.3 },
+  { name: 'National Address', cost: 2.3 },
+  { name: 'SIMAH', cost: 18.4 },
+  { name: 'GOSI', cost: 4.8645, key: 'gosi' },
+  { name: 'MOF', cost: 10.35, key: 'mof' },
+  { name: 'Qarar', cost: 5.98 },
+  { name: 'Sayen', cost: 6.9 },
+  { name: 'Emdha', cost: 8.21 },
+  { name: 'Nafath', cost: 3.45 },
+  { name: 'KYC Absher', cost: 0 }
+];
+const NAFITH = { above50k: 69, below50k: 35 };
+
+// Master service-usage matrix per status — mirrors Application_Cost.html's
+// MASTER_DEF default config (before any manual per-status override).
+const MASTER_DEF = {
+  'Completed [C]':        [1,1,1,1,1,1,1,1,1,1],
+  'Declined [D]':         [1,1,1,1,1,1,0,0,0,0],
+  'Abandoned [B]':        [1,1,1,1,1,1,0,0,0,0],
+  'Incomplete [I]':       [1,1,1,1,1,1,0,0,0,0],
+  'Sales Vetting':        [0,1,1,1,1,1,0,0,0,0],
+  'Offered [F]':          [1,1,1,1,1,1,0,0,0,0],
+  'Cancelled [X]':        [0,1,1,1,1,1,0,0,0,0],
+  'Referred [R]':         [1,1,1,1,1,1,0,0,0,0],
+  'Pending Final Approval':[1,1,1,1,1,1,0,0,0,0],
+  'Approved [P]':         [1,1,1,1,1,1,0,0,0,0],
+  'Withdrawn [W]':        [1,1,1,1,1,1,0,0,0,0],
+  'Pending Nafath Authorization':[1,1,1,1,1,1,0,0,0,0],
+  'Policy Team':          [0,1,1,1,1,1,0,0,0,0],
+  'Pending Contract Signature [G]':[1,1,1,1,1,1,1,1,1,0],
+  'Pre-Approval [E]':     [1,1,1,1,1,1,0,0,0,0],
+  'Pending Electronic Promissory Note Confirmation [J]':[1,1,1,1,1,1,1,1,1,1],
+  'Pending STP Verification':[1,1,1,1,1,1,1,1,1,1],
+  'Second Loan on Hold':  [1,1,1,1,1,1,0,0,0,0]
+};
+const BOOKED_STATUSES = new Set(['Completed [C]', 'Pending Final Approval']);
+const NB_LOCAL_COSTS = [
+  [{ cost: 4.8645, k: 'gl' }, { cost: 10.35, k: 'ml' }],
+  [{ cost: 18.4, k: 'l' }], [{ cost: 5.98, k: 'l' }], [{ cost: 3.34, k: 'l' }],
+  [{ cost: 2.3, k: 'l' }], [{ cost: 2.3, k: 'l' }], [{ cost: 6.9, k: 'l' }],
+  [{ cost: 8.21, k: 'l' }], [{ cost: 3.45, k: 'l' }],
+  [{ cost: 69, k: 'ln69' }, { cost: 35, k: 'ln35' }]
+];
+const NB_EXPAT_COSTS = [
+  [{ cost: 4.8645, k: 'ge' }, { cost: 10.35, k: 'me' }],
+  [{ cost: 18.4, k: 'e' }], [{ cost: 5.98, k: 'e' }],
+  [{ cost: 3.45, k: 'e' }, { cost: 3.22, k: 'e' }],
+  [{ cost: 2.3, k: 'e' }], [{ cost: 2.3, k: 'e' }], [{ cost: 6.9, k: 'e' }],
+  [{ cost: 8.21, k: 'e' }], [{ cost: 3.45, k: 'e' }],
+  [{ cost: 69, k: 'en69' }, { cost: 35, k: 'en35' }]
+];
+
+function calcSegCost(count, isLocal, gosiCount, mofCount, nafith69, nafith35) {
+  let cost = 0;
+  SERVICES.forEach(s => {
+    if (s.key === 'gosi') cost += s.cost * (gosiCount || 0);
+    else if (s.key === 'mof') cost += s.cost * (mofCount || 0);
+    else if (s.expatOnly) cost += isLocal ? 0 : s.cost * count;
+    else if (s.localOnly) cost += isLocal ? s.cost * count : 0;
+    else cost += s.cost * count;
+  });
+  if (nafith69 != null) { cost += NAFITH.above50k * (nafith69 || 0); cost += NAFITH.below50k * (nafith35 || 0); }
+  return cost;
+}
+function calcNotBookedCostAllTime() {
+  const sts = COST_DATA.statuses;
+  let lc = 0, ec = 0;
+  for (const s in sts) {
+    if (BOOKED_STATUSES.has(s)) continue;
+    const bits = MASTER_DEF[s]; if (!bits) continue;
+    const st = sts[s];
+    for (let i = 0; i < 10; i++) {
+      if (!bits[i]) continue;
+      NB_LOCAL_COSTS[i].forEach(sv => { lc += sv.cost * (st[sv.k] || 0); });
+      NB_EXPAT_COSTS[i].forEach(sv => { ec += sv.cost * (st[sv.k] || 0); });
+    }
+  }
+  return { local: lc, expat: ec, total: lc + ec };
+}
+
+// All-time booked cost (local + expat combined, by service)
+let bl = 0, be = 0, bn69 = 0, bn35 = 0, bval = 0, bgl = 0, bge = 0, bml = 0, bme = 0;
+let notBookedLocal = 0, notBookedExpat = 0;
+COST_DATA.dates.forEach(d => {
+  const day = COST_DATA.days[d]; if (!day) return;
+  bl += day.bl; be += day.be; bn69 += day.bn69 + day.be69; bn35 += day.bn35 + day.be35;
+  bval += day.bv + day.bev; bgl += day.bgl || 0; bge += day.bge || 0; bml += day.bml || 0; bme += day.bme || 0;
+  notBookedLocal += day.nl; notBookedExpat += day.ne;
+});
+// Nafith split per local/expat (needed separately from the combined bn69/bn35 above)
+let bLn69=0,bLn35=0,bEn69=0,bEn35=0;
+COST_DATA.dates.forEach(d=>{ const day=COST_DATA.days[d]; if(!day) return; bLn69+=day.bn69; bLn35+=day.bn35; bEn69+=day.be69; bEn35+=day.be35; });
+const localCost = calcSegCost(bl, true, bgl, bml, bLn69, bLn35);
+const expatCost = calcSegCost(be, false, bge, bme, bEn69, bEn35);
+const bookedTotalCost = localCost + expatCost;
+const nb = calcNotBookedCostAllTime();
+
+// Service-level cost breakdown (booked, local+expat combined) for "top cost drivers"
+const serviceBreakdown = SERVICES.map(s => {
+  let cost;
+  if (s.key === 'gosi') cost = s.cost * (bgl + bge);
+  else if (s.key === 'mof') cost = s.cost * (bml + bme);
+  else if (s.expatOnly) cost = s.cost * be;
+  else if (s.localOnly) cost = s.cost * bl;
+  else cost = s.cost * (bl + be);
+  return { name: s.name, cost };
+}).concat([
+  { name: 'Nafith (≥50K)', cost: NAFITH.above50k * (bLn69 + bEn69) },
+  { name: 'Nafith (<50K)', cost: NAFITH.below50k * (bLn35 + bEn35) }
+]).sort((a, b) => b.cost - a.cost);
+
+// Monthly booked cost trend (booked cost only — not-booked needs the full
+// status matrix per day, which COST_DATA.statusByDay supports but is kept
+// all-time here for simplicity; booked cost is a straightforward per-day formula).
+const costMonthlyMap = {};
+COST_DATA.dates.forEach(d => {
+  const day = COST_DATA.days[d]; if (!day) return;
+  const mon = monOf(d);
+  if (!costMonthlyMap[mon]) costMonthlyMap[mon] = { mon, bl: 0, be: 0, bval: 0, cost: 0, sub: 0 };
+  const m = costMonthlyMap[mon];
+  const c = calcSegCost(day.bl, true, day.bgl, day.bml, day.bn69, day.bn35) +
+            calcSegCost(day.be, false, day.bge, day.bme, day.be69, day.be35);
+  m.bl += day.bl; m.be += day.be; m.bval += day.bv + day.bev; m.cost += c;
+  m.sub += day.bl + day.be + day.nl + day.ne;
+});
+const costMonthly = Object.values(costMonthlyMap).sort((a, b) => a.mon < b.mon ? -1 : 1);
+
+const totalSubmitted = COST_DATA.meta.total;
+const totalBooked = bl + be;
+const costSummary = {
+  meta: { total: COST_DATA.meta.total, dateRange: COST_DATA.meta.min + ' → ' + COST_DATA.meta.max },
+  bookedCost: { local: localCost, expat: expatCost, total: bookedTotalCost, count: totalBooked },
+  notBookedCost: { local: nb.local, expat: nb.expat, total: nb.total, count: notBookedLocal + notBookedExpat },
+  costPerBookedApp: totalBooked ? bookedTotalCost / totalBooked : 0,
+  costPerSubmittedApp: totalSubmitted ? (bookedTotalCost + nb.total) / totalSubmitted : 0,
+  totalCost: bookedTotalCost + nb.total,
+  serviceBreakdown,
+  monthly: costMonthly
+};
+console.log('  Cost summary: booked SAR %s, not-booked SAR %s, cost/booked-app SAR %s',
+  bookedTotalCost.toFixed(0), nb.total.toFixed(0), costSummary.costPerBookedApp.toFixed(2));
+
 // ── 5b. Build AI-tab data: all dimensions + day-of-week + momentum ───
 console.log('Building AI-tab data …');
 
@@ -429,6 +583,7 @@ const BPV = {
   funnel: funnelTotal,
   monthlyFunnel,
   simah: SIMAH,
+  cost: costSummary,
   kpi,
   // AI tab data
   dims: dimTotals,
