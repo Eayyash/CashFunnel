@@ -414,6 +414,9 @@ header button:hover{filter:brightness(1.15);}
   <h3 style="margin-bottom:12px;">Applicant Profiles <span class="badge badge-blue" id="rec-count"></span></h3>
   <input type="text" class="search-bar" id="profile-search" placeholder="Search by Civil ID, store, region, outcome, decline reason...">
   <div class="tabs" id="profile-filter" style="margin-bottom:12px;"></div>
+  <div id="profile-export" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:6px;">
+    <span style="font-size:.78rem;color:var(--muted);font-weight:600;">📥 Export to Excel (CSV):</span>
+  </div>
   <div class="profile-grid" id="profile-grid"></div>
 </div>
 
@@ -1324,6 +1327,81 @@ function renderRecords(){
   filterEl.querySelectorAll('button').forEach(b=>b.onclick=()=>{profileFilter=b.dataset.f;renderProfileCards();
     filterEl.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.f===profileFilter));});
   renderProfileCards();
+  renderExportButtons(counts);
+}
+
+// ── Excel/CSV export, split by the same Booked / Approved / Declined / STP
+// sub-filters used by the profile cards above (identical predicates, so the
+// export always matches what's on screen for that filter). ──
+function renderExportButtons(counts){
+  const el=document.getElementById('profile-export');
+  const btns=[
+    {k:'booked',l:'Booked',n:counts.booked},
+    {k:'approved',l:'Approved',n:counts.approved},
+    {k:'declined',l:'Declined',n:counts.declined},
+    {k:'stp',l:'STP',n:counts.stp},
+    {k:'all',l:'All',n:counts.all}
+  ];
+  el.innerHTML='<span style="font-size:.78rem;color:var(--muted);font-weight:600;">📥 Export to Excel (CSV):</span>'+
+    btns.map(b=>`<button class="export-btn" data-ek="${b.k}" style="font-size:.76rem;padding:5px 12px;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--text);cursor:pointer;">${b.l} (${fmt(b.n)})</button>`).join('');
+  el.querySelectorAll('.export-btn').forEach(b=>b.onclick=()=>exportProfilesCSV(b.dataset.ek));
+}
+
+function profileMatchesFilter(r,filterKey){
+  if(filterKey==='booked')return r.booked==='Y';
+  if(filterKey==='approved')return r.approved==='Y'&&r.booked!=='Y';
+  if(filterKey==='declined')return r.approved!=='Y';
+  if(filterKey==='stp')return r.stp==='Y';
+  return true; // 'all'
+}
+
+const EXPORT_COLUMNS=[
+  {h:'Civil ID',k:'civilId'},{h:'Name',k:'name'},
+  {h:'Outcome',f:r=>r.booked==='Y'?'Booked':r.approved==='Y'?'Approved':'Declined'},
+  {h:'SIMAH Score',k:'score'},{h:'Score Card',k:'scoreCard'},
+  {h:'Risk Rating',k:'riskRating'},{h:'SC Risk Grade',k:'scRiskGrade'},{h:'SIMAH Band',k:'smhBand'},
+  {h:'Gender',k:'gender'},{h:'Marital Status',k:'maritalStatus'},{h:'Nationality',k:'nationality'},
+  {h:'Age Band',k:'ageBand'},{h:'City',k:'city'},
+  {h:'Employer Name',k:'employerName'},{h:'Employer Type',k:'employerType'},
+  {h:'Declared Income',k:'declaredIncome'},{h:'Income Band',k:'incomeBand'},{h:'SIMAH Income',k:'simahIncome'},
+  {h:'Estimated DBR %',k:'estDBR'},{h:'Revised DBR %',k:'revisedDBR'},{h:'Utilization %',k:'utilization'},
+  {h:'Total Limits',k:'totalLimits'},{h:'Total Liabilities',k:'totalLiabilities'},
+  {h:'Total Outstanding',k:'totalOutstanding'},{h:'Total Past Due',k:'totalPastDue'},
+  {h:'Active Loans',k:'activeLoans'},{h:'Active Credit Instruments',k:'activeCreditInstruments'},
+  {h:'Defaults',k:'defaults'},{h:'Defaults Active',k:'defaultsActive'},{h:'Total Default Amount',k:'totalDefaultAmt'},
+  {h:'Current Delinquent',k:'currentDelinquent'},
+  {h:'BNPL Count',k:'bnpl'},{h:'BNPL Balance',k:'bnplBalance'},
+  {h:'Enquiries 30d',k:'enq30'},{h:'Enquiries 90d',k:'enq90'},{h:'Enquiries 180d',k:'enq180'},{h:'Total Enquiries',k:'totalEnquiries'},
+  {h:'Product',k:'product'},{h:'Source',k:'source'},{h:'Store',k:'store'},{h:'Region',k:'region'},
+  {h:'Submitted Date',k:'submitted'},
+  {h:'STP',k:'stp'},{h:'Approved',k:'approved'},{h:'Booked',k:'booked'},
+  {h:'Decline Reason',k:'declineReason'},{h:'DE Decision',k:'deDecision'},{h:'Light DE',k:'lightDE'},
+  {h:'GOSI Called',k:'gosiCalled'},{h:'MOF Called',k:'mofCalled'}
+];
+
+function csvEscape(v){
+  if(v==null)return '';
+  const s=String(v);
+  if(/[",\n\r]/.test(s))return '"'+s.replace(/"/g,'""')+'"';
+  return s;
+}
+
+function exportProfilesCSV(filterKey){
+  const recs=(D.rawRecords||[]).filter(r=>profileMatchesFilter(r,filterKey));
+  if(!recs.length){alert('No '+filterKey+' records to export in the current date range.');return;}
+  const header=EXPORT_COLUMNS.map(c=>csvEscape(c.h)).join(',');
+  const rows=recs.map(r=>EXPORT_COLUMNS.map(c=>csvEscape(c.f?c.f(r):r[c.k])).join(','));
+  const csv='﻿'+[header,...rows].join('\r\n'); // BOM so Excel opens UTF-8 (Arabic names etc) correctly
+  const blob=new Blob([csv],{type:'application/vnd.ms-excel;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const stamp=new Date().toISOString().slice(0,10);
+  a.href=url;
+  a.download=`SIMAH_${filterKey}_${stamp}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 function renderProfileCards(){
