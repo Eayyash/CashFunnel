@@ -1107,10 +1107,7 @@ const RAWSTORE = {"n":751400,"dates":["2025-10-06","2025-10-07","2025-10-08","20
     return {dates,onlinePct,empPct,bookRate,initRate};
   }
   function summaryDailyExtremes(){
-    const capMax=capToYesterday(cD.meta.max);
-    const mxD=parseD(cD.meta.max);
-    const first=ymd(new Date(mxD.getFullYear(),mxD.getMonth(),1));
-    const monthFrom=first<cD.meta.min?cD.meta.min:first, monthTo=capMax;
+    const monthFrom=RANGE.from, monthTo=RANGE.to;
     const monthDates=cD.dates.filter(d=>d>=monthFrom&&d<=monthTo);
     const rows=monthDates.map(d=>{const k=cD.days[d]?cD.days[d].k:{sub:0,init:0,final:0,book:0,val:0};
       return {date:d,sub:k.sub,init:k.init,final:k.final,book:k.book,val:k.val,
@@ -1124,10 +1121,7 @@ const RAWSTORE = {"n":751400,"dates":["2025-10-06","2025-10-07","2025-10-08","20
     return {max,min};
   }
   function topSegments(){
-    const capMax=capToYesterday(cD.meta.max);
-    const mxD=parseD(cD.meta.max);
-    const mFirst=ymd(new Date(mxD.getFullYear(),mxD.getMonth(),1));
-    const monthFrom=mFirst<cD.meta.min?cD.meta.min:mFirst, monthTo=capMax;
+    const monthFrom=RANGE.from, monthTo=RANGE.to;
     const monthDates=cD.dates.filter(d=>d>=monthFrom&&d<=monthTo);
     const dims=['employer','nationality'];
     const out={};
