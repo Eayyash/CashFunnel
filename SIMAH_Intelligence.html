@@ -460,6 +460,12 @@ function rebuildFromRecords(recs){
   const addO=(t,o)=>{t.sub+=o.sub;t.approved+=o.approved;t.booked+=o.booked;t.stp+=o.stp;};
   const emptyO=()=>({sub:0,approved:0,booked:0,stp:0});
   const sd={},db={},ei={},cr={},ub={};
+  // These 4 were previously left stale (always all-time) after a date filter:
+  // enqByType/totalEnquiries, enqByMonth, scoreReasonFreq, declineByScore.
+  // Recomputed here from each record's own eq[]/scoreReasons/declineReason —
+  // no rebuild pipeline needed, the raw per-record detail is already embedded.
+  const enqByType={},enqByMonth={},scoreReasonFreq={},scoreReasonDescs={},declineByScore={};
+  let totalEnquiries=0;
   ['300-399','400-499','500-549','550-599','600-649','650-699','700-749','750-850','No Score'].forEach(k=>sd[k]=emptyO());
   ['0-20%','21-30%','31-40%','41-50%','50%+','Unknown'].forEach(k=>db[k]=emptyO());
   ['0','1-2','3-5','6-10','11+'].forEach(k=>ei[k]=emptyO());
@@ -470,14 +476,40 @@ function rebuildFromRecords(recs){
     const dbb=dbrBand(r.estDBR); if(db[dbb])addO(db[dbb],o); else{db[dbb]=emptyO();addO(db[dbb],o);}
     const eb=enqBand(r.enq90!=null?r.enq90:r.totalEnquiries); if(ei[eb])addO(ei[eb],o); else{ei[eb]=emptyO();addO(ei[eb],o);}
     const ubb=utilBand(r.utilization); if(ub[ubb])addO(ub[ubb],o); else{ub[ubb]=emptyO();addO(ub[ubb],o);}
-    (r.topCompetitors||[]).forEach(c=>{cr[c]=(cr[c]||0)+1;});
+    (r.topCompetitors||[]).forEach(c=>{const k=c&&c.name?c.name:c;cr[k]=(cr[k]||0)+(c&&c.cnt?c.cnt:1);});
+
+    totalEnquiries+=r.totalEnquiries||0;
+    (r.eq||[]).forEach(e=>{
+      const type=e[2]||'Unknown',fullDate=e[4]; // fullDate is DD/MM/YYYY, matching update_simah_from_combined.js's eType fallback
+      enqByType[type]=(enqByType[type]||0)+1;
+      if(fullDate){
+        const parts=fullDate.split('/'); // [DD,MM,YYYY]
+        if(parts.length===3){const mo=parts[2]+'-'+parts[1];enqByMonth[mo]=(enqByMonth[mo]||0)+1;}
+      }
+    });
+    (r.scoreReasons||[]).forEach((code,i)=>{
+      if(!code) return;
+      scoreReasonFreq[code]=(scoreReasonFreq[code]||0)+1;
+      if(!scoreReasonDescs[code]&&r.scoreReasonTexts&&r.scoreReasonTexts[i]) scoreReasonDescs[code]=r.scoreReasonTexts[i];
+    });
+    if(r.declineReason){
+      const dbs=declineByScore[sb]||(declineByScore[sb]={});
+      dbs[r.declineReason]=(dbs[r.declineReason]||0)+1;
+    }
   });
+  const enqByMonthObj={};
+  Object.keys(enqByMonth).sort().forEach(mo=>{enqByMonthObj[mo]={ym:mo,count:enqByMonth[mo]};});
+  const enqByTypeObj={};
+  Object.keys(enqByType).forEach(t=>{enqByTypeObj[t]={type:t,count:enqByType[t]};});
   const matched=recs.filter(r=>r.outcome==='Matched').length;
   return {
     ...SIMAH_ORIG,
     rawRecords:recs,
     scoreDistribution:sd, dbrBands:db, enqIntensity:ei, utilizationBands:ub,
     competitorRank:cr,
+    enqByType:enqByTypeObj, enqByMonth:enqByMonthObj, totalEnquiries,
+    scoreReasonFreq, scoreReasonDescs:{...SIMAH_ORIG.scoreReasonDescs,...scoreReasonDescs},
+    declineByScore,
     meta:{...SIMAH_ORIG.meta, total:recs.length, matched, unmatched:recs.length-matched}
   };
 }
@@ -1160,7 +1192,8 @@ function renderCompetitors(){
 function renderLoanAmountChart(){
   const el=document.getElementById('chart-loan-amount');
   if(!el) return;
-  const stats=(D.institutionLoanStats||[]).filter(s=>s.avgLoanAmount>0).slice(0,10);
+  const ilsArr=Array.isArray(D.institutionLoanStats)?D.institutionLoanStats:Object.values(D.institutionLoanStats||{});
+  const stats=ilsArr.filter(s=>s.avgLoanAmount>0).slice(0,10);
   const ucfsAvg=D.ucfsAvgFinAmount||0;
   const maxAmt=Math.max(ucfsAvg,...stats.map(s=>s.avgLoanAmount),1);
   let html='<div style="margin-bottom:12px;padding:10px 12px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.15);border-radius:6px;font-size:.82rem;">'+
@@ -1178,7 +1211,8 @@ function renderLoanAmountChart(){
 function renderProfitRateChart(){
   const el=document.getElementById('chart-profit-rate');
   if(!el) return;
-  const stats=(D.institutionLoanStats||[]).filter(s=>s.avgProfitRate!==null&&s.avgProfitRate>0);
+  const ilsArr2=Array.isArray(D.institutionLoanStats)?D.institutionLoanStats:Object.values(D.institutionLoanStats||{});
+  const stats=ilsArr2.filter(s=>s.avgProfitRate!==null&&s.avgProfitRate>0);
   if(stats.length===0){el.innerHTML='<div style="color:var(--muted);padding:20px;text-align:center;">No profit rate data available</div>';return;}
   const sorted=[...stats].sort((a,b)=>b.avgProfitRate-a.avgProfitRate);
   const maxRate=sorted[0]?.avgProfitRate||1;
