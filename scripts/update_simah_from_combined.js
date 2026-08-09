@@ -432,6 +432,7 @@ function buildAggregates(features, acqMap) {
 
   agg.allYears = [...agg.allYears].sort();
   agg.ucfsAvgFinAmount = ucfsN ? Math.round(ucfsSum / ucfsN) : 0;
+  agg._ucfsSum = ucfsSum; agg._ucfsN = ucfsN; // exposed for mergeAggregates(); stripped before injection
 
   // Enquirer/product/type name maps
   features.forEach(f => {
@@ -450,6 +451,92 @@ function findLatestAcqFile() {
   return fs.readdirSync(ROOT)
     .filter(f => /^Acquisition_for_Loans_\d{4}-\d{2}-\d{2}\.csv$/i.test(f))
     .sort().pop();
+}
+
+// --- Additive merge of two aggregate objects (old dataset + newly-processed file) ---
+// Used because the raw source file behind an existing SIMAH_Intelligence.html is
+// often not kept around (privacy — rawRecords.civilId is pre-masked), so we can't
+// re-derive per-report features from it. Merging at the aggregate level instead:
+// every field here is either a running count/sum (safe to add) or a small lookup
+// map (safe to union). This intentionally does NOT dedupe people who appear in
+// both the old and new report batches — SIMAH data is point-in-time bureau
+// snapshots, so some overlap across batches is normal and expected.
+function sumCounters(a, b, fields) {
+  const out = { ...a };
+  fields.forEach(f => { out[f] = (a[f] || 0) + (b[f] || 0); });
+  return out;
+}
+function mergeBandMap(a, b) {
+  // {band: {sub,approved,booked,stp,...}} -> deep-summed union
+  const out = {};
+  const keys = new Set([...Object.keys(a || {}), ...Object.keys(b || {})]);
+  keys.forEach(k => {
+    const av = a[k] || {}, bv = b[k] || {};
+    const subKeys = new Set([...Object.keys(av), ...Object.keys(bv)]);
+    out[k] = {};
+    subKeys.forEach(sk => { out[k][sk] = (av[sk] || 0) + (bv[sk] || 0); });
+  });
+  return out;
+}
+function mergeCountMap(a, b) {
+  // {key: count} -> summed union
+  const out = { ...a };
+  Object.entries(b || {}).forEach(([k, v]) => { out[k] = (out[k] || 0) + v; });
+  return out;
+}
+function mergeLabelMap(a, b) {
+  // {code: label} -> union, new fills gaps without overwriting existing labels
+  return { ...b, ...a };
+}
+function mergeAggregates(oldAgg, newAgg) {
+  const merged = {
+    meta: {
+      total: oldAgg.meta.total + newAgg.meta.total,
+      matched: oldAgg.meta.matched + newAgg.meta.matched,
+      unmatched: oldAgg.meta.unmatched + newAgg.meta.unmatched,
+      reportDate: newAgg.meta.reportDate > oldAgg.meta.reportDate ? newAgg.meta.reportDate : oldAgg.meta.reportDate,
+      simahFiles: (oldAgg.meta.simahFiles || 0) + (newAgg.meta.simahFiles || 0),
+      parseErrors: (oldAgg.meta.parseErrors || 0) + (newAgg.meta.parseErrors || 0),
+      acqFile: newAgg.meta.acqFile || oldAgg.meta.acqFile,
+      mergedBatches: (oldAgg.meta.mergedBatches || 1) + 1
+    },
+    scoreDistribution: mergeBandMap(oldAgg.scoreDistribution, newAgg.scoreDistribution),
+    enqIntensity: mergeBandMap(oldAgg.enqIntensity, newAgg.enqIntensity),
+    competitorRank: mergeCountMap(oldAgg.competitorRank, newAgg.competitorRank),
+    competitorByOutcome: mergeBandMap(oldAgg.competitorByOutcome, newAgg.competitorByOutcome),
+    productEnquiries: mergeCountMap(oldAgg.productEnquiries, newAgg.productEnquiries),
+    utilizationBands: mergeBandMap(oldAgg.utilizationBands, newAgg.utilizationBands),
+    dbrBands: mergeBandMap(oldAgg.dbrBands, newAgg.dbrBands),
+    scoreReasonFreq: mergeCountMap(oldAgg.scoreReasonFreq, newAgg.scoreReasonFreq),
+    incomeMatch: {
+      match: (oldAgg.incomeMatch.match || 0) + (newAgg.incomeMatch.match || 0),
+      mismatch: (oldAgg.incomeMatch.mismatch || 0) + (newAgg.incomeMatch.mismatch || 0),
+      noData: (oldAgg.incomeMatch.noData || 0) + (newAgg.incomeMatch.noData || 0)
+    },
+    declineByScore: mergeBandMap(oldAgg.declineByScore, newAgg.declineByScore),
+    rawRecords: [...oldAgg.rawRecords, ...newAgg.rawRecords].slice(0, 5000),
+    scoreReasonDescs: mergeLabelMap(oldAgg.scoreReasonDescs, newAgg.scoreReasonDescs),
+    enquirerNames: mergeLabelMap(oldAgg.enquirerNames, newAgg.enquirerNames),
+    productNames: mergeLabelMap(oldAgg.productNames, newAgg.productNames),
+    typeNames: mergeLabelMap(oldAgg.typeNames, newAgg.typeNames),
+    allYears: [...new Set([...(oldAgg.allYears || []), ...(newAgg.allYears || [])])].sort(),
+    enquirerStats: mergeBandMap(oldAgg.enquirerStats, newAgg.enquirerStats),
+    shoppingBands: mergeBandMap(oldAgg.shoppingBands, newAgg.shoppingBands),
+    institutionLoanStats: mergeBandMap(oldAgg.institutionLoanStats, newAgg.institutionLoanStats),
+    enqByMember: mergeCountMap(oldAgg.enqByMember, newAgg.enqByMember),
+    enqByProduct: mergeCountMap(oldAgg.enqByProduct, newAgg.enqByProduct),
+    enqByType: mergeCountMap(oldAgg.enqByType, newAgg.enqByType),
+    enqByMonth: mergeCountMap(oldAgg.enqByMonth, newAgg.enqByMonth),
+    totalEnquiries: (oldAgg.totalEnquiries || 0) + (newAgg.totalEnquiries || 0)
+  };
+  // Weighted average for ucfsAvgFinAmount using exposed sum/count (falls back to
+  // a matched-count-weighted approximation if an old dataset predates this field).
+  const oldSum = oldAgg._ucfsSum != null ? oldAgg._ucfsSum : (oldAgg.ucfsAvgFinAmount || 0) * (oldAgg.meta.matched || 0);
+  const oldN = oldAgg._ucfsN != null ? oldAgg._ucfsN : (oldAgg.meta.matched || 0);
+  const newSum = newAgg._ucfsSum || 0, newN = newAgg._ucfsN || 0;
+  const totalN = oldN + newN;
+  merged.ucfsAvgFinAmount = totalN ? Math.round((oldSum + newSum) / totalN) : 0;
+  return merged;
 }
 
 // ═══════════════════════ MAIN ═══════════════════════
@@ -495,27 +582,51 @@ agg.meta.simahFiles = features.length;
 agg.meta.parseErrors = parseErrors;
 agg.meta.acqFile = acqFile || 'none';
 
-// Inject into HTML
-console.log('Updating SIMAH_Intelligence.html…');
+// Read existing HTML + any prior SIMAH_DATA (default behavior: merge additively
+// with whatever's already there, same pattern the Acquisition/BPV pipelines use.
+// Pass --replace to discard the existing dataset instead.)
+console.log('Reading SIMAH_Intelligence.html…');
 const htmlTemplate = fs.readFileSync(HTML_OUT, 'utf-8');
-const dataLine = `const SIMAH_DATA = ${JSON.stringify(agg)};`;
 const marker = 'const SIMAH_DATA = {';
 const startIdx = htmlTemplate.indexOf(marker);
 if (startIdx === -1) {
   console.error('ERROR: Could not find SIMAH_DATA marker in HTML template');
   process.exit(1);
 }
-// Find the end of the SIMAH_DATA assignment (match balanced braces then semicolon)
 let depth = 0, endIdx = startIdx + marker.length - 1;
 for (let i = endIdx; i < htmlTemplate.length; i++) {
   if (htmlTemplate[i] === '{') depth++;
   else if (htmlTemplate[i] === '}') { depth--; if (depth === 0) { endIdx = i + 1; break; } }
 }
-// Include the trailing semicolon
 if (htmlTemplate[endIdx] === ';') endIdx++;
 
+const replaceMode = process.argv.includes('--replace');
+let finalAgg = agg;
+if (!replaceMode) {
+  try {
+    const existingRaw = htmlTemplate.slice(startIdx + marker.length - 1, htmlTemplate[endIdx - 1] === ';' ? endIdx - 1 : endIdx);
+    const existing = JSON.parse(existingRaw);
+    if (existing && existing.meta && existing.meta.total > 0) {
+      console.log(`Merging with existing dataset (${existing.meta.total} reports already present)…`);
+      finalAgg = mergeAggregates(existing, agg);
+    } else {
+      console.log('No existing dataset found — writing fresh.');
+    }
+  } catch (e) {
+    console.warn('Could not parse existing SIMAH_DATA, writing fresh:', e.message.slice(0, 100));
+  }
+} else {
+  console.log('--replace passed — discarding any existing dataset.');
+}
+
+// Strip merge-only temp fields before injection
+delete finalAgg._ucfsSum; delete finalAgg._ucfsN;
+
+// Inject into HTML
+console.log('Updating SIMAH_Intelligence.html…');
+const dataLine = `const SIMAH_DATA = ${JSON.stringify(finalAgg)};`;
 const updated = htmlTemplate.slice(0, startIdx) + dataLine + htmlTemplate.slice(endIdx);
 fs.writeFileSync(HTML_OUT, updated, 'utf-8');
 
-console.log(`\nDone — ${features.length} SIMAH reports processed, ${agg.meta.matched} matched to acquisitions.`);
-console.log(`Score distribution: ${JSON.stringify(agg.scoreDistribution)}`);
+console.log(`\nDone — ${features.length} new SIMAH reports processed, ${finalAgg.meta.total} total in dataset (${finalAgg.meta.matched} matched to acquisitions).`);
+console.log(`Score distribution: ${JSON.stringify(finalAgg.scoreDistribution)}`);
