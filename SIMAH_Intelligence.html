@@ -205,7 +205,7 @@ header button:hover{filter:brightness(1.15);}
 <header>
   <div>
     <h1>SIMAH Intelligence</h1>
-    <h2>Portfolio Intelligence &mdash; 143 PLN Applicants &middot; 74 matched to Acquisition</h2>
+    <h2 id="portfolio-subtitle">Portfolio Intelligence</h2>
     <a href="index.html" style="margin-left:10px;padding:5px 12px;border:1px solid var(--border);border-radius:6px;color:var(--text);text-decoration:none;font-size:.8rem;font-weight:500;opacity:.75;transition:opacity .2s;vertical-align:middle;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.75'">← Home</a>
   </div>
   <div class="actions">
@@ -1059,6 +1059,8 @@ function renderMeta(){
   const m=D.meta;
   document.getElementById('meta-line').textContent=
     `${fmt(m.total)} SIMAH reports · ${fmt(m.matched)} matched to acquisitions · ${fmt(m.unmatched)} unmatched · Source: ${m.acqFile||'N/A'} · ${m.reportDate||''}`;
+  document.getElementById('portfolio-subtitle').textContent=
+    `Portfolio Intelligence — ${fmt(m.total)} PLN Applicants · ${fmt(m.matched)} matched to Acquisition`;
 }
 
 function renderKPI(){
