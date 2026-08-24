@@ -735,10 +735,12 @@ function destroyChart(id){if(chartInstances[id]){chartInstances[id].destroy();de
   // Helper: YYYY-MM-DD from Date (local timezone)
   function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 
-  // Default: yesterday
+  // Default: last 7 days (not "Yesterday" alone — the most recent day's data
+  // may still be settling, so we don't want it as the sole headline view).
   const now=new Date();
   const yesterday=new Date(now); yesterday.setDate(yesterday.getDate()-1);
-  const defFrom=ymd(yesterday);
+  const defFromD=new Date(now); defFromD.setDate(defFromD.getDate()-7);
+  const defFrom=ymd(defFromD);
   const defTo=ymd(yesterday);
   elFrom.value=defFrom; elTo.value=defTo;
   FILTER_FROM=defFrom; FILTER_TO=defTo;
@@ -786,10 +788,10 @@ function destroyChart(id){if(chartInstances[id]){chartInstances[id].destroy();de
     elFrom.value=allDates[0]||''; elTo.value=maxDate; applyFilter(btnAll);
   });
 
-  // Highlight default (Yesterday)
-  btnYesterday.style.background='var(--cyan)';
-  btnYesterday.style.color='#fff';
-  btnYesterday.style.borderColor='var(--cyan)';
+  // Highlight default (Last 7 days)
+  btnLast7.style.background='var(--cyan)';
+  btnLast7.style.color='#fff';
+  btnLast7.style.borderColor='var(--cyan)';
 })();
 
 // ═══════════════════════ CHART DEFAULTS ═══════════════════════

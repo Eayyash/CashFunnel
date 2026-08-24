@@ -238,10 +238,10 @@ table.dt tr:hover td{background:var(--muted-bg)}
     <div class="dfield"><label>From</label><input type="date" id="d-from"></div>
     <div class="dfield"><label>To</label><input type="date" id="d-to"></div>
     <div class="presets" id="presets">
-      <button data-r="yesterday" class="on">Yesterday</button>
+      <button data-r="yesterday">Yesterday</button>
       <button data-r="all">All</button>
       <button data-r="30d">Last 30d</button>
-      <button data-r="7d">Last 7d</button>
+      <button data-r="7d" class="on">Last 7d</button>
       <button data-r="mtd">This month</button>
     </div>
     <span style="width:1px;height:22px;background:var(--line2);margin:0 4px"></span>
@@ -432,10 +432,13 @@ const V=(o,s)=>o[s]||0;
 const rate=(a,b)=>b?+(100*a/b).toFixed(1):0;
 function jdata(agg,j){return j==='ALL'?agg.all:(agg.byJ[j]||{});}
 
-// Default to yesterday
+// Default: last 7 days (not "Yesterday" alone — the most recent day's data
+// may still be settling, so we don't want it as the sole headline view).
 const _now=new Date(),_yd=new Date(_now.getFullYear(),_now.getMonth(),_now.getDate()-1);
 const _yds=ymd(_yd);
-let RANGE={from:_yds<=cD.meta.max?_yds:cD.meta.max,to:_yds<=cD.meta.max?_yds:cD.meta.max};
+const _rangeTo=_yds<=cD.meta.max?_yds:cD.meta.max;
+const _rangeFrom7=addDays(_rangeTo,-6);
+let RANGE={from:_rangeFrom7<cD.meta.min?cD.meta.min:_rangeFrom7,to:_rangeTo};
 let JSEL='ALL';
 let CUR=null;
 function computeCUR(){

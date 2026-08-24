@@ -239,10 +239,10 @@ body.gate-locked>*:not(#login-gate){display:none!important}
     <div class="dfield"><label>From</label><input type="date" id="d-from"></div>
     <div class="dfield"><label>To</label><input type="date" id="d-to"></div>
     <div class="presets" id="presets">
-      <button data-r="yesterday" class="on">Yesterday</button>
+      <button data-r="yesterday">Yesterday</button>
       <button data-r="mtd">This month</button>
       <button data-r="prev">Prev month</button>
-      <button data-r="7d">Last 7 days</button>
+      <button data-r="7d" class="on">Last 7 days</button>
       <button data-r="all">All</button>
     </div>
     <span class="spacer"></span>
@@ -512,7 +512,9 @@ function mergeDay(a,day){
 function sumRange(from,to){const a=freshAcc();let n=0;for(const d of cD.dates){if(d>=from&&d<=to){mergeDay(a,cD.days[d]);n++;}}a._days=n;return a;}
 function presentDays(from,to){let n=0;for(const d of cD.dates)if(d>=from&&d<=to)n++;return n;}
 
-let RANGE={from:capToYesterday(cD.meta.max)<cD.meta.min?cD.meta.min:capToYesterday(cD.meta.max),to:capToYesterday(cD.meta.max)};
+// Default: last 7 days (not "Yesterday" alone — the most recent day's data
+// may still be settling, so we don't want it as the sole headline view).
+let RANGE={from:addDays(capToYesterday(cD.meta.max),-6)<cD.meta.min?cD.meta.min:addDays(capToYesterday(cD.meta.max),-6),to:capToYesterday(cD.meta.max)};
 let CUR=null;
 function computeCUR(){
   const {from,to}=RANGE;
@@ -779,7 +781,7 @@ function updateChips(){
 }
 function setDateInputs(){const f=document.getElementById('d-from'),t=document.getElementById('d-to');
   f.min=t.min=cD.meta.min;f.max=t.max=cD.meta.max;f.value=RANGE.from;t.value=RANGE.to;}
-function defaultRange(){const y=capToYesterday(cD.meta.max);const from=y<cD.meta.min?cD.meta.min:y;
+function defaultRange(){const y=capToYesterday(cD.meta.max);const from7=addDays(y,-6);const from=from7<cD.meta.min?cD.meta.min:from7;
   RANGE={from,to:y};}
 
 /* ============ presets & pickers ============ */
@@ -855,7 +857,7 @@ function buildDaily(rows,name){
   for(const d in days){days[d].k.val=Math.round(days[d].k.val);for(const dm in days[d].d){const bv=days[d].d[dm].bval;for(const kk in bv)bv[kk]=Math.round(bv[kk]);}}
   return {meta:{min:dates[0],max:dates[dates.length-1],total:rows.length,name},dates,days};
 }
-function loadDataset(nd){cD=nd;defaultRange();setDateInputs();document.querySelectorAll('#presets button').forEach((x,i)=>x.classList.toggle('on',i===0));renderAll();}
+function loadDataset(nd){cD=nd;defaultRange();setDateInputs();document.querySelectorAll('#presets button').forEach((x,i)=>x.classList.toggle('on',i===3));renderAll();}
 
 document.getElementById('btn-upload').onclick=()=>document.getElementById('file-xlsx').click();
 document.getElementById('file-xlsx').onchange=e=>{const f=e.target.files[0];if(!f)return;overlay(true,'Reading workbook…',f.name);
