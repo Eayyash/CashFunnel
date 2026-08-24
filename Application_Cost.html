@@ -134,7 +134,7 @@ tr:hover td{background:var(--accent-soft)}
       <label>From <input type="date" id="date-from"></label>
       <label>To <input type="date" id="date-to"></label>
       <span class="range-info" id="range-info"></span>
-      <span class="reset" id="reset-btn">Reset to last 7 days</span>
+      <span class="reset" id="reset-btn">Reset to yesterday</span>
     </div>
     <div id="content"></div>
   </div>
@@ -420,13 +420,10 @@ function render(from,to){
   fromEl.min=M.min; fromEl.max=M.max;
   toEl.min=M.min; toEl.max=M.max;
 
-  // Default: last 7 days (not "Yesterday" alone — the most recent day's data
-  // may still be settling, so we don't want it as the sole headline view).
+  // Default: yesterday only.
   const yd=yesterday();
   const defaultDate=yd<=M.max?yd:M.max;
-  const d7=new Date(defaultDate+'T00:00:00'); d7.setDate(d7.getDate()-6);
-  const d7Str=d7.toISOString().slice(0,10);
-  const defaultFrom=d7Str<M.min?M.min:d7Str;
+  const defaultFrom=defaultDate;
   fromEl.value=defaultFrom;
   toEl.value=defaultDate;
 
@@ -675,12 +672,10 @@ function render(from,to){
   sfBar.style.display='flex';
   const sfFrom=document.getElementById('s-date-from');
   const sfTo=document.getElementById('s-date-to');
-  // Default: last 7 days (not "Yesterday" alone — the most recent day's data
-  // may still be settling, so we don't want it as the sole headline view).
+  // Default: yesterday only.
   const yd2=new Date();yd2.setDate(yd2.getDate()-1);const yds2=yd2.toISOString().slice(0,10);
   const defaultDayTo=yds2<M.min?M.min:yds2>M.max?M.max:yds2;
-  const sd7=new Date(defaultDayTo+'T00:00:00'); sd7.setDate(sd7.getDate()-6);
-  const defaultDayFrom=sd7.toISOString().slice(0,10)<M.min?M.min:sd7.toISOString().slice(0,10);
+  const defaultDayFrom=defaultDayTo;
   sfFrom.min=M.min; sfFrom.max=M.max;
   sfTo.min=M.min; sfTo.max=M.max;
   sfFrom.value=defaultDayFrom; sfTo.value=defaultDayTo;

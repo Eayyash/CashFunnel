@@ -390,8 +390,9 @@ function updateChips(){
 }
 function setDateInputs(){const f=document.getElementById('d-from'),t=document.getElementById('d-to');
   f.min=t.min=cD.meta.min;f.max=t.max=cD.meta.max;f.value=RANGE.from;t.value=RANGE.to;}
-function defaultRange(){const mx=parseD(cD.meta.max);const first=ymd(new Date(mx.getFullYear(),mx.getMonth(),1));
-  RANGE={from:first<cD.meta.min?cD.meta.min:first,to:cD.meta.max};}
+function defaultRange(){const mx=cD.meta.max;const mxD=parseD(mx);const yd=new Date(mxD.getFullYear(),mxD.getMonth(),mxD.getDate()-1);const yds=ymd(yd);
+  const y=yds<cD.meta.min?cD.meta.min:yds>mx?mx:yds;
+  RANGE={from:y,to:y};}
 
 /* ============ presets & pickers ============ */
 function applyPreset(r){const mn=cD.meta.min,mx=cD.meta.max,mxD=parseD(mx);

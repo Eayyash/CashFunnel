@@ -541,8 +541,10 @@ function initDateFilter(){
   dfMinD=dates[0]; dfMaxD=dates[dates.length-1];
   const elFrom=document.getElementById('df-from'), elTo=document.getElementById('df-to');
   elFrom.min=dfMinD; elFrom.max=dfMaxD; elTo.min=dfMinD; elTo.max=dfMaxD;
-  elFrom.value=dfMinD; elTo.value=dfMaxD;
-  dfFrom=dfMinD; dfTo=dfMaxD;
+  const _yd=new Date();_yd.setDate(_yd.getDate()-1);const _yds=_yd.toISOString().slice(0,10);
+  const defaultDay=_yds<dfMinD?dfMinD:_yds>dfMaxD?dfMaxD:_yds;
+  elFrom.value=defaultDay; elTo.value=defaultDay;
+  dfFrom=defaultDay; dfTo=defaultDay;
   elFrom.addEventListener('change',()=>{dfFrom=elFrom.value;applyDateFilter();});
   elTo.addEventListener('change',()=>{dfTo=elTo.value;applyDateFilter();});
   document.getElementById('df-reset').addEventListener('click',()=>{
