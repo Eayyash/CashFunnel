@@ -91,7 +91,7 @@ function buildDaily(rows, name) {
   const ALLD = [...Object.keys(DIMCOL), ...Object.keys(LONGCOL)];
   const days = {};
   const bucket = d => days[d] || (days[d] = {
-    k: { sub: 0, init: 0, final: 0, book: 0, val: 0, tsum: 0, tn: 0, clim_sum: 0, clim_n: 0 },
+    k: { sub: 0, init: 0, final: 0, book: 0, val: 0, tsum: 0, tn: 0, clim_sum: 0, clim_n: 0, utilsum: 0, utiln: 0 },
     d: {}, mg: { sub: {}, book: {} }, dec: {}
   });
   const inc = (m, k) => { if (k != null) m[k] = (m[k] || 0) + 1; };
@@ -143,6 +143,8 @@ function buildDaily(rows, name) {
         if (!isNaN(tn)) { b.k.tsum += tn; b.k.tn++; }
         const cl = Number(r['CREDIT_LIMIT']);
         if (!isNaN(cl)) { b.k.clim_sum += cl; b.k.clim_n++; }
+        const mp = Number(r['Max_Principal']);
+        if (!isNaN(iv) && mp > 0) { b.k.utilsum += iv / mp; b.k.utiln++; }
         for (const dm of ALLD) {
           const dd = b.d[dm] || (b.d[dm] = { sub: {}, init: {}, book: {}, bval: {} });
           inc(dd.book, dval[dm]);
@@ -222,6 +224,16 @@ const DIMCOL_MAP = {
 const LONGCOL_MAP = { store: 'StoreName', city: 'CITY', natdetail: 'NATIONALITY' };
 const EXTRA_DIMS = { de_decision: 'DE_Decision', referreasons: 'referreasons', gosi: 'Is_GOSI_Called', mof: 'Is_MOF_Called', dec: 'SimplifiedDeclinedReason' };
 
+// Smart Finance: the column holds reason-text when flagged, blank otherwise.
+function smartVal(r) { return String(r['SmartFinance'] || '').trim() !== '' ? 'Smart Finance' : 'Normal'; }
+// Income split at exactly 15,000 SAR (raw Income, not the pre-bucketed DeclaredIncomeBand
+// which tops out at an open-ended "14000+" and can't cut cleanly at 15K).
+function incBand15Val(r) {
+  const inc = parseFloat(r['Income']);
+  if (isNaN(inc)) return 'Unknown';
+  return inc >= 15000 ? '15K+' : '<15K';
+}
+
 // Count values for LONGCOL to pick top 20
 const longCnt = {};
 for (const k in LONGCOL_MAP) longCnt[k] = {};
@@ -240,8 +252,8 @@ for (const k in longCnt) {
 
 // Build vocab and collect all dates
 const allDims = { ...DIMCOL_MAP, ...LONGCOL_MAP, ...EXTRA_DIMS };
-// region is special (derived from Region + is_panda)
-const vocabSets = { region: new Set() };
+// region is special (derived from Region + is_panda); smart/incband15 are also derived
+const vocabSets = { region: new Set(), smart: new Set(), incband15: new Set() };
 for (const k in allDims) vocabSets[k] = new Set();
 const dateSet = new Set();
 
@@ -253,6 +265,8 @@ rows.forEach(r => {
   // region
   const reg = (r['is_panda'] == 1 || r['is_panda'] === '1') ? 'Panda' : gv(r, 'Region');
   vocabSets.region.add(reg);
+  vocabSets.smart.add(smartVal(r));
+  vocabSets.incband15.add(incBand15Val(r));
   // standard dims
   for (const k in DIMCOL_MAP) vocabSets[k].add(gv(r, DIMCOL_MAP[k]));
   // long dims (top 20 + Other)
@@ -289,12 +303,28 @@ const bday = new Uint16Array(N);
 const dimCols = {};
 for (const k in vocabSets) dimCols[k] = new Uint8Array(N);
 const bookedRows = [];
+// Compact per-row customer id: maps each non-blank CivilID to a small integer so
+// duplicate-application analysis can group rows by customer without shipping raw
+// civil IDs to the client. Rows with no CivilID get the sentinel 0xFFFFFFFF.
+const NO_CIV = 0xFFFFFFFF;
+const civIdMap = new Map();
+const civIdx = new Uint32Array(N);
 
 rows.forEach((r, i) => {
   const init = r['Approvalflag'] === 'Y';
   const fin = r['FinalApprovalFlag'] === 'Y';
   const booked = BOOKED_SET.has(String(r['Altitudestatus']));
-  flags[i] = (init ? 1 : 0) | (fin ? 2 : 0) | (booked ? 4 : 0);
+  const declined = String(r['Altitudestatus']) === 'Declined [D]';
+  flags[i] = (init ? 1 : 0) | (fin ? 2 : 0) | (booked ? 4 : 0) | (declined ? 8 : 0);
+
+  const cid = String(r['CivilID'] || '').trim();
+  if (cid) {
+    let idx = civIdMap.get(cid);
+    if (idx === undefined) { idx = civIdMap.size; civIdMap.set(cid, idx); }
+    civIdx[i] = idx;
+  } else {
+    civIdx[i] = NO_CIV;
+  }
 
   const sd = toYMD(r['submitted']);
   sday[i] = sd && dateIdx[sd] !== undefined ? dateIdx[sd] : 65535;
@@ -310,6 +340,8 @@ rows.forEach((r, i) => {
   // region
   const reg = (r['is_panda'] == 1 || r['is_panda'] === '1') ? 'Panda' : gv(r, 'Region');
   dimCols.region[i] = vocabIdx.region[reg] || 0;
+  dimCols.smart[i] = vocabIdx.smart[smartVal(r)] || 0;
+  dimCols.incband15[i] = vocabIdx.incband15[incBand15Val(r)] || 0;
 
   // standard dims
   for (const k in DIMCOL_MAP) {
@@ -330,15 +362,20 @@ rows.forEach((r, i) => {
 const bval = new Float64Array(bookedRows.length);
 const bten = new Float64Array(bookedRows.length);
 const blim = new Float64Array(bookedRows.length);
+// Utilization = ItemValue / Max_Principal, booked rows only (both columns are only
+// ever populated once a contract books). NaN when Max_Principal isn't usable.
+const butil = new Float64Array(bookedRows.length);
 bookedRows.forEach((ri, j) => {
   const r = rows[ri];
   bval[j] = parseFloat(r['ItemValue']) || 0;
   bten[j] = parseFloat(r['TENURE']) || 0;
   blim[j] = parseFloat(r['CREDIT_LIMIT']) || 0;
+  const mp = parseFloat(r['Max_Principal']);
+  butil[j] = (mp > 0) ? (bval[j] / mp) : NaN;
 });
 
 // Assemble binary buffer
-const BSZ = { b: 1, h: 2, d: 8 };
+const BSZ = { b: 1, h: 2, d: 8, i: 4 };
 const header = {};
 let offset = 0;
 function addCol(name, arr, type) {
@@ -348,11 +385,13 @@ function addCol(name, arr, type) {
 addCol('flags', flags, 'b');
 addCol('sday', sday, 'h');
 addCol('bday', bday, 'h');
-const dimOrder = ['region', 'employer', 'nationality', 'income', 'risk', 'simah', 'age', 'gender', 'marital', 'product', 'source', 'scoreband', 'dbr', 'store', 'city', 'natdetail', 'de_decision', 'referreasons', 'gosi', 'mof', 'dec'];
+const dimOrder = ['region', 'employer', 'nationality', 'income', 'risk', 'simah', 'age', 'gender', 'marital', 'product', 'source', 'scoreband', 'dbr', 'store', 'city', 'natdetail', 'de_decision', 'referreasons', 'gosi', 'mof', 'dec', 'smart', 'incband15'];
 dimOrder.forEach(k => addCol(k, dimCols[k], 'b'));
+addCol('civIdx', civIdx, 'i');
 addCol('bval', bval, 'd');
 addCol('bten', bten, 'd');
 addCol('blim', blim, 'd');
+addCol('butil', butil, 'd');
 
 const totalBytes = offset;
 const buf = Buffer.alloc(totalBytes);
@@ -365,9 +404,11 @@ writeBuf(flags);
 writeBuf(sday);
 writeBuf(bday);
 dimOrder.forEach(k => writeBuf(dimCols[k]));
+writeBuf(civIdx);
 writeBuf(bval);
 writeBuf(bten);
 writeBuf(blim);
+writeBuf(butil);
 
 const compressed = zlib.deflateSync(buf, { level: 9 });
 const b64 = compressed.toString('base64');
