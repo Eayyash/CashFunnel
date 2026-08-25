@@ -38,6 +38,29 @@ const COMPETITOR_CATEGORY = {
 };
 function competitorCategory(name) { return COMPETITOR_CATEGORY[(name || '').trim()] || null; }
 
+// Excel RATE(nper, pmt, pv, [fv], [type], [guess]) — solves for the periodic
+// interest rate of an ordinary annuity via the secant method (same approach
+// Excel itself uses). No closed-form solution exists for this equation.
+function excelRate(nper, pmt, pv, fv, type, guess) {
+  fv = fv || 0; type = type || 0;
+  guess = (guess == null) ? 0.1 : guess;
+  const MAX_ITER = 128, PRECISION = 1e-8;
+  function calcY(r) {
+    if (Math.abs(r) < PRECISION) return pv * (1 + nper * r) + pmt * (1 + r * type) * nper + fv;
+    const term = Math.pow(1 + r, nper);
+    return pv * term + pmt * (1 / r + type) * (term - 1) + fv;
+  }
+  let x0 = 0, y0 = calcY(0), x1 = guess, y1 = calcY(guess), i = 0, rate = x1;
+  while (Math.abs(y1 - y0) > PRECISION && i < MAX_ITER) {
+    rate = (y1 * x0 - y0 * x1) / (y1 - y0);
+    if (Math.abs(rate) < PRECISION) rate += 1e-5;
+    x0 = x1; y0 = y1;
+    x1 = rate; y1 = calcY(rate);
+    i++;
+  }
+  return isFinite(rate) ? rate : null;
+}
+
 if (!CSV_FILE || !fs.existsSync(CSV_FILE)) {
   console.error('Usage: node scripts/update_simah_from_qarar_csv.js <SIMAH_Qarar_JSON_*.csv> [--replace]');
   process.exit(1);
@@ -225,9 +248,8 @@ function extractFeatures(rep) {
         const s = activePLNStats[cred] || (activePLNStats[cred] = { sum: 0, n: 0 });
         s.sum += Number(ci.ciLimit) || 0; s.n++; // ciLimit is inconsistently typed (string in ~44% of real records)
       }
-      // Per-loan detail for NBFI/BNPL exposure. Rate formula (user-specified):
-      // totalPayment = installment * tenure(months); profit = totalPayment - amount;
-      // totalProfitRate% = profit / amount * 100; annualRate% = totalProfitRate% / (tenure/12).
+      // Per-loan detail for NBFI/BNPL exposure. Annual rate (user-specified):
+      // Excel =RATE(tenure, -installment, loan amount) * 12.
       const cat = competitorCategory(cred);
       if (cat === 'NBFI' || cat === 'BNPL') {
         const amount = Number(ci.ciLimit) || 0;
@@ -235,11 +257,9 @@ function extractFeatures(rep) {
         const tenureMonths = Number(ci.ciTenure) || 0;
         competitorInstallmentSum += installment;
         let annualRatePct = null;
-        if (amount > 0 && tenureMonths > 0) {
-          const totalPayment = installment * tenureMonths;
-          const profit = totalPayment - amount;
-          const totalRatePct = (profit / amount) * 100;
-          annualRatePct = Math.round((totalRatePct / (tenureMonths / 12)) * 10) / 10;
+        if (amount > 0 && tenureMonths > 0 && installment > 0) {
+          const monthlyRate = excelRate(tenureMonths, -installment, amount);
+          if (monthlyRate != null && isFinite(monthlyRate)) annualRatePct = Math.round(monthlyRate * 12 * 1000) / 10;
         }
         competitorLoans.push({
           institution: cred, category: cat,
