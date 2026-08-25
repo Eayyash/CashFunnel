@@ -173,14 +173,30 @@ function extractFeatures(rep) {
   let totalOutstanding = 0, totalPastDue = 0;
   const productTypes = {};
   const creditors = {};
+  const activePLNStats = {}; // per-creditor {sum, n} of ciLimit for active Personal Loans
+  let hasMortgage = false;
   cis.forEach(ci => {
-    const isActive = ci.ciStatus?.creditInstrumentStatusCode === 'O';
+    // 'A' = Active per creditInstrumentStatusDescEn ("Active"/"Closed"/"Written-off"/
+    // "Suspended" -> codes A/C/W/S observed in real SIMAH payloads). The literal 'O'
+    // used previously never matches anything, so every active-loan metric derived
+    // from this loop (activeLoans, institutionLoanStats, totalOutstanding,
+    // totalPastDue, totalInstallments, estimatedDBR) was silently always zero.
+    const isActive = ci.ciStatus?.creditInstrumentStatusCode === 'A';
     const prod = ci.ciProductTypeDesc?.textEn || 'Unknown';
+    const prodCode = ci.ciProductTypeDesc?.code || '';
     if (isActive) {
       activeLoans++;
       productTypes[prod] = (productTypes[prod] || 0) + 1;
       const cred = ci.ciCreditor?.memberNameEN || 'Unknown';
       creditors[cred] = (creditors[cred] || 0) + 1;
+      // Mortgage product codes observed in real payloads: MTG, OMTG, RMTG,
+      // SMTG, TMTG, MMTG, AMTG, EMTG (all contain 'MTG'), plus AQAR
+      // (Government Mortgage Real Estate Fund).
+      if (prodCode.includes('MTG') || prodCode === 'AQAR') hasMortgage = true;
+      if (prodCode === 'PLN') {
+        const s = activePLNStats[cred] || (activePLNStats[cred] = { sum: 0, n: 0 });
+        s.sum += Number(ci.ciLimit) || 0; s.n++; // ciLimit is inconsistently typed (string in ~44% of real records)
+      }
     }
     if (prod === 'Buy Now Pay Later') {
       if (isActive) { bnplCount++; bnplBal += ci.ciOutstandingBalance || 0; }
@@ -199,6 +215,8 @@ function extractFeatures(rep) {
   f.totalInstallments = Math.round(totalInstallments);
   f.activeProductTypes = productTypes;
   f.activeCreditors = creditors;
+  f.activePLNStats = activePLNStats;
+  f.hasMortgage = hasMortgage;
 
   f.estimatedDBR = f.simahIncome > 0
     ? Math.round((f.totalInstallments / f.simahIncome) * 100) : null;
@@ -217,7 +235,9 @@ function extractFeatures(rep) {
   f.employerIncome = currentEmp?.empIncome || 0;
 
   f.enquiryDetails = enqs.slice(0, 50).map(e => [
-    e.prevEnqEnquirer?.memberShortNameEN || '',
+    // memberShortNameEN is frequently blank in real SIMAH payloads — fall back
+    // to the full member name rather than leaving the institution unidentified.
+    e.prevEnqEnquirer?.memberShortNameEN || e.prevEnqEnquirer?.memberNameEN || '',
     e.prevEnqProductTypeDesc?.textEn || '',
     e.prevEnqType?.textEn || '',
     e.prevEnqDate ? e.prevEnqDate.slice(-4) : '',
@@ -378,9 +398,14 @@ function buildAggregates(features, acqMap) {
     agg.totalEnquiries += f.totalEnquiries;
 
     for (const [inst, cnt] of Object.entries(f.activeCreditors || {})) {
-      if (!agg.institutionLoanStats[inst]) agg.institutionLoanStats[inst] = { loans: 0, customers: 0 };
+      if (!agg.institutionLoanStats[inst]) agg.institutionLoanStats[inst] = { loans: 0, customers: 0, plnSum: 0, plnN: 0 };
       agg.institutionLoanStats[inst].loans += cnt;
       agg.institutionLoanStats[inst].customers++;
+    }
+    for (const [inst, s] of Object.entries(f.activePLNStats || {})) {
+      if (!agg.institutionLoanStats[inst]) agg.institutionLoanStats[inst] = { loans: 0, customers: 0, plnSum: 0, plnN: 0 };
+      agg.institutionLoanStats[inst].plnSum += s.sum;
+      agg.institutionLoanStats[inst].plnN += s.n;
     }
 
     if (matched && acq.FIN_AMOUNT) {
@@ -445,7 +470,9 @@ function buildAggregates(features, acqMap) {
         smhBand: acq?.SMHBand || '',
         gosiCalled: acq?.Is_GOSI_Called || '',
         mofCalled: acq?.Is_MOF_Called || '',
-        employerType: acq?.FinalEmployerType || ''
+        employerType: acq?.FinalEmployerType || '',
+        hasMortgage: f.hasMortgage ? 'Y' : 'N',
+        altitudeIncome: parseFloat(acq?.AltitudeIncome) || 0
       });
     }
   });

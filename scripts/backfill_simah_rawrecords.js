@@ -1,6 +1,6 @@
 /**
- * One-off backfill: rebuild ONLY the `rawRecords` cache (and derived
- * submittedMin/submittedMax) in SIMAH_Intelligence.html from the raw
+ * One-off backfill: rebuild rawRecords, meta.submittedMin/submittedMax, and
+ * institutionLoanStats in SIMAH_Intelligence.html from the raw
  * SIMAH_Qarar_JSON_*.csv files still available on disk, joined against the
  * latest cumulative Acquisition_for_Loans CSV.
  *
@@ -9,8 +9,13 @@
  * batches), so every batch merged after the cache filled up (long ago)
  * silently vanished from the rawRecords cache — even though the numeric
  * aggregates (score distributions, totals, etc.) correctly reflect all
- * merged batches. This script does NOT touch any aggregate field — only
- * rawRecords + meta.submittedMin/submittedMax are replaced.
+ * merged batches. Separately, institutionLoanStats was NEVER populated at
+ * all across any historical merge, because extractFeatures() checked
+ * creditInstrumentStatusCode === 'O' for "active" when the real code is
+ * 'A' (confirmed against real payloads: A/C/W/S all appear, 'O' never
+ * does). This script does NOT touch any other aggregate field (score
+ * distributions, totals, matched/unmatched, etc.) — only rawRecords,
+ * meta.submittedMin/submittedMax, and institutionLoanStats are replaced.
  *
  * Usage: node scripts/backfill_simah_rawrecords.js <file1.csv> [file2.csv ...]
  */
@@ -125,20 +130,41 @@ function extractFeatures(rep) {
   f.competitors = competitors;
   const cis = asArray(rep.creditInstrumentDetails);
   let bnplCount = 0, bnplBal = 0, totalInstallments = 0, activeLoans = 0, totalOutstanding = 0, totalPastDue = 0;
+  const activePLNStats = {};
+  const activeCreditors = {};
+  let hasMortgage = false;
   cis.forEach(ci => {
-    const isActive = ci.ciStatus?.creditInstrumentStatusCode === 'O';
+    // 'A' = Active (confirmed against real payloads; 'O' never appears).
+    const isActive = ci.ciStatus?.creditInstrumentStatusCode === 'A';
     const prod = ci.ciProductTypeDesc?.textEn || 'Unknown';
-    if (isActive) activeLoans++;
+    const prodCode = ci.ciProductTypeDesc?.code || '';
+    if (isActive) {
+      activeLoans++;
+      const cred = ci.ciCreditor?.memberNameEN || 'Unknown';
+      activeCreditors[cred] = (activeCreditors[cred] || 0) + 1;
+      // Mortgage product codes observed in real payloads: MTG, OMTG, RMTG,
+      // SMTG, TMTG, MMTG, AMTG, EMTG (all contain 'MTG'), plus AQAR
+      // (Government Mortgage Real Estate Fund).
+      if (prodCode.includes('MTG') || prodCode === 'AQAR') hasMortgage = true;
+    }
     if (prod === 'Buy Now Pay Later' && isActive) { bnplCount++; bnplBal += ci.ciOutstandingBalance || 0; }
     if (isActive) {
       totalOutstanding += ci.ciOutstandingBalance || 0;
       totalPastDue += ci.ciPastDue || 0;
       totalInstallments += ci.ciInstallmentAmount || 0;
+      if (prodCode === 'PLN') {
+        const cred = ci.ciCreditor?.memberNameEN || 'Unknown';
+        const s = activePLNStats[cred] || (activePLNStats[cred] = { sum: 0, n: 0 });
+        s.sum += Number(ci.ciLimit) || 0; s.n++; // ciLimit is inconsistently typed (string in ~44% of real records)
+      }
     }
   });
   f.bnplCount = bnplCount; f.bnplBalance = Math.round(bnplBal); f.activeLoans = activeLoans;
   f.totalOutstanding = Math.round(totalOutstanding); f.totalPastDue = Math.round(totalPastDue);
   f.totalInstallments = Math.round(totalInstallments);
+  f.activePLNStats = activePLNStats;
+  f.activeCreditors = activeCreditors;
+  f.hasMortgage = hasMortgage;
   f.estimatedDBR = f.simahIncome > 0 ? Math.round((f.totalInstallments / f.simahIncome) * 100) : null;
   const pDefs = asArray(rep.personalDefaults || rep.primaryDefaults);
   f.defaultCount = pDefs.length;
@@ -148,7 +174,7 @@ function extractFeatures(rep) {
   const currentEmp = emps.find(e => e.empStatusType?.employerStatusTypeCode?.trim() === 'C');
   f.employerName = currentEmp?.empEmployerNameDescEn || '';
   f.enquiryDetails = enqs.slice(0, 50).map(e => [
-    e.prevEnqEnquirer?.memberShortNameEN || '',
+    e.prevEnqEnquirer?.memberShortNameEN || e.prevEnqEnquirer?.memberNameEN || '',
     e.prevEnqProductTypeDesc?.textEn || '',
     e.prevEnqType?.textEn || '',
     e.prevEnqDate ? e.prevEnqDate.slice(-4) : '',
@@ -161,7 +187,7 @@ function findLatestAcqFile() {
 }
 
 // --- Main ---
-console.log('=== SIMAH rawRecords backfill ===');
+console.log('=== SIMAH rawRecords + institutionLoanStats backfill ===');
 
 const acqFile = findLatestAcqFile();
 console.log(`Reading ${acqFile}…`);
@@ -172,6 +198,7 @@ console.log(`  ${acqRows.length.toLocaleString()} acquisition rows, ${Object.key
 
 const BOOKED = new Set(['Completed [C]', 'Pending Final Approval']);
 const freshRecords = [];
+const institutionLoanStats = {}; // inst -> {loans, customers, plnSum, plnN}
 
 files.forEach(fp => {
   console.log(`Reading ${path.basename(fp)}…`);
@@ -220,8 +247,20 @@ files.forEach(fp => {
         smhDBR: acq?.SIMAH_DBR || '', smhInstallments: acq?.SIMAH_Installments || '',
         smhScore: acq?.SIMAH_Score || '', smhBand: acq?.SIMAH_Band || '',
         gosiCalled: acq?.Is_GOSI_Called || '', mofCalled: acq?.Is_MOF_Called || '',
-        employerType: acq?.FinalEmployerType || ''
+        employerType: acq?.FinalEmployerType || '',
+        hasMortgage: f.hasMortgage ? 'Y' : 'N',
+        altitudeIncome: parseFloat(acq?.AltitudeIncome) || 0
       });
+      for (const [inst, cnt] of Object.entries(f.activeCreditors || {})) {
+        if (!institutionLoanStats[inst]) institutionLoanStats[inst] = { loans: 0, customers: 0, plnSum: 0, plnN: 0 };
+        institutionLoanStats[inst].loans += cnt;
+        institutionLoanStats[inst].customers++;
+      }
+      for (const [inst, s] of Object.entries(f.activePLNStats || {})) {
+        if (!institutionLoanStats[inst]) institutionLoanStats[inst] = { loans: 0, customers: 0, plnSum: 0, plnN: 0 };
+        institutionLoanStats[inst].plnSum += s.sum;
+        institutionLoanStats[inst].plnN += s.n;
+      }
       n++;
     } catch (e) { errs++; }
   });
@@ -229,6 +268,7 @@ files.forEach(fp => {
 });
 
 console.log(`Total fresh records built: ${freshRecords.length}`);
+console.log(`Institutions with active PLN data: ${Object.keys(institutionLoanStats).length}`);
 
 // Prioritize records with a real submitted date (most recent first); unmatched
 // (no submitted date) fill any remaining capacity at the end.
@@ -242,7 +282,7 @@ const submittedMax = dates[dates.length - 1] || null;
 console.log(`Final rawRecords: ${finalRecords.length} (capped at ${RAW_CAP})`);
 console.log(`submittedMin: ${submittedMin}, submittedMax: ${submittedMax}`);
 
-// --- Splice into SIMAH_Intelligence.html (only rawRecords + meta.submittedMin/Max) ---
+// --- Splice into SIMAH_Intelligence.html (rawRecords + meta.submittedMin/Max + institutionLoanStats) ---
 console.log('Reading SIMAH_Intelligence.html…');
 const html = fs.readFileSync(HTML_OUT, 'utf-8');
 const startTag = 'const SIMAH_DATA = ';
@@ -252,12 +292,13 @@ const endIdx = html.indexOf(endTag, startIdx);
 if (startIdx < 0 || endIdx < 0) { console.error('Could not locate SIMAH_DATA blob'); process.exit(1); }
 const data = JSON.parse(html.slice(startIdx, endIdx));
 
-console.log(`Old rawRecords: ${data.rawRecords.length}`);
+console.log(`Old rawRecords: ${data.rawRecords.length}, old institutionLoanStats keys: ${Object.keys(data.institutionLoanStats || {}).length}`);
 data.rawRecords = finalRecords;
 data.meta.submittedMin = submittedMin;
 data.meta.submittedMax = submittedMax;
+data.institutionLoanStats = institutionLoanStats;
 
 const newBlob = JSON.stringify(data);
 const newHtml = html.slice(0, startIdx) + newBlob + html.slice(endIdx);
 fs.writeFileSync(HTML_OUT, newHtml, 'utf-8');
-console.log('✅ Done — rawRecords + submittedMin/Max backfilled. All other aggregates untouched.');
+console.log('✅ Done — rawRecords, submittedMin/Max, and institutionLoanStats backfilled. All other aggregates untouched.');
