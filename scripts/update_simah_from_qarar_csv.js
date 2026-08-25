@@ -269,7 +269,7 @@ function shoppingBand(n) {
 
 function buildAggregates(features, acqMap) {
   const agg = {
-    meta: { total: features.length, matched: 0, unmatched: 0, reportDate: new Date().toISOString().slice(0, 10) },
+    meta: { total: features.length, matched: 0, unmatched: 0, reportDate: new Date().toISOString().slice(0, 10), submittedMin: null, submittedMax: null },
     scoreDistribution: {},
     enqIntensity: {},
     competitorRank: {},
@@ -305,6 +305,12 @@ function buildAggregates(features, acqMap) {
     const matched = !!acq;
     if (matched) agg.meta.matched++;
     else agg.meta.unmatched++;
+    // Track the true submitted-date span across ALL processed records, not
+    // just the ones retained in the capped rawRecords cache.
+    if (acq?.submitted) {
+      if (!agg.meta.submittedMin || acq.submitted < agg.meta.submittedMin) agg.meta.submittedMin = acq.submitted;
+      if (!agg.meta.submittedMax || acq.submitted > agg.meta.submittedMax) agg.meta.submittedMax = acq.submitted;
+    }
 
     const isApproved = acq?.Approvalflag === 'Y';
     const isBooked = acq ? BOOKED.has(acq.Altitudestatus) : false;
@@ -484,6 +490,12 @@ function mergeCountMap(a, b) {
 function mergeLabelMap(a, b) {
   return { ...b, ...a };
 }
+function mergeRawRecords(oldRecs, newRecs, cap) {
+  const all = [...oldRecs, ...newRecs];
+  const dated = all.filter(r => r.submitted).sort((a, b) => b.submitted.localeCompare(a.submitted));
+  const undated = all.filter(r => !r.submitted);
+  return [...dated, ...undated].slice(0, cap);
+}
 function mergeAggregates(oldAgg, newAgg) {
   const merged = {
     meta: {
@@ -494,7 +506,9 @@ function mergeAggregates(oldAgg, newAgg) {
       simahFiles: (oldAgg.meta.simahFiles || 0) + (newAgg.meta.simahFiles || 0),
       parseErrors: (oldAgg.meta.parseErrors || 0) + (newAgg.meta.parseErrors || 0),
       acqFile: newAgg.meta.acqFile || oldAgg.meta.acqFile,
-      mergedBatches: (oldAgg.meta.mergedBatches || 1) + 1
+      mergedBatches: (oldAgg.meta.mergedBatches || 1) + 1,
+      submittedMin: [oldAgg.meta.submittedMin, newAgg.meta.submittedMin].filter(Boolean).sort()[0] || null,
+      submittedMax: [oldAgg.meta.submittedMax, newAgg.meta.submittedMax].filter(Boolean).sort().pop() || null
     },
     scoreDistribution: mergeBandMap(oldAgg.scoreDistribution, newAgg.scoreDistribution),
     enqIntensity: mergeBandMap(oldAgg.enqIntensity, newAgg.enqIntensity),
@@ -510,7 +524,12 @@ function mergeAggregates(oldAgg, newAgg) {
       noData: (oldAgg.incomeMatch.noData || 0) + (newAgg.incomeMatch.noData || 0)
     },
     declineByScore: mergeBandMap(oldAgg.declineByScore, newAgg.declineByScore),
-    rawRecords: [...oldAgg.rawRecords, ...newAgg.rawRecords].slice(0, 5000),
+    // Keep the records with the most recent `submitted` (loan application) date
+    // first, capped — older batches previously stayed pinned in place forever
+    // (slice(0,5000) kept the FIRST 5000 ever added), which silently hid every
+    // later merge from the rawRecords cache used by the date filter and detail
+    // tables. Sorting by submitted-desc keeps the cache actually current.
+    rawRecords: mergeRawRecords(oldAgg.rawRecords, newAgg.rawRecords, 10000),
     scoreReasonDescs: mergeLabelMap(oldAgg.scoreReasonDescs, newAgg.scoreReasonDescs),
     enquirerNames: mergeLabelMap(oldAgg.enquirerNames, newAgg.enquirerNames),
     productNames: mergeLabelMap(oldAgg.productNames, newAgg.productNames),
