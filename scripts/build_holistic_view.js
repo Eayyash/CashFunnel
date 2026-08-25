@@ -29,7 +29,7 @@ const NEEDED = new Set([
   'DPD','WRITE_OFF_DATE','TOTAL_PAYMENT','Product_type','SMHBand','AppScoreBand',
   'RiskRating','Nationality_Flag','AgeBand','IncomeBand','DBRBand','AppSource',
   'SubmitSource','SmartFinance','PilotRating','calculatedApr','SNAP_DATE',
-  'DPD_450_Date','OVD_PRINCIPAL','OVD_PROFIT'
+  'DPD_450_Date','OVD_PRINCIPAL','OVD_PROFIT','STATUS'
 ]);
 
 function colIndexFromLetter(letter) {
@@ -150,19 +150,21 @@ async function main() {
 
     if (snapDateExcel == null && currentRow.SNAP_DATE) snapDateExcel = currentRow.SNAP_DATE;
 
-    // Total Outstanding only counts rows that are: not written off, Tawarruq
-    // or Combo product, not past DPD 450, and have both an OVD principal and
-    // OVD profit figure. Every other metric (fin, paid, profit, etc.) is
-    // unaffected by this filter — it applies to `outstanding` only.
+    // Total Outstanding calculation (per spec):
+    //   1. Exclude STATUS "109"
+    //   2. DPD_450_Date must be NULL
+    //   3. Only count rows where TOTAL_OUTSTANDING >= 10 SAR
+    //   4. Sum OUTSTANDING_PRIN (not TOTAL_OUTSTANDING) for qualifying rows
+    // Every other metric (fin, paid, profit, etc.) is unaffected — this
+    // filter/value-swap applies to `outstanding` only.
     const outstandingQualifies =
-      isNull(currentRow.WRITE_OFF_DATE) &&
-      (currentRow.Product_type === 'Tawarruq' || currentRow.Product_type === 'Combo') &&
+      currentRow.STATUS !== '109' &&
       isNull(currentRow.DPD_450_Date) &&
-      notNull(currentRow.OVD_PRINCIPAL) && notNull(currentRow.OVD_PROFIT);
+      num(currentRow.TOTAL_OUTSTANDING) >= 10;
 
     const row = {
       fin: num(currentRow.FIN_AMOUNT),
-      outstanding: outstandingQualifies ? num(currentRow.TOTAL_OUTSTANDING) : 0,
+      outstanding: outstandingQualifies ? num(currentRow.OUTSTANDING_PRIN) : 0,
       paid: num(currentRow.TOTAL_PAID),
       realizedProfit: num(currentRow.REALIZED_PROFIT),
       collectedProfit: num(currentRow.COLLECTED_PROFIT),
