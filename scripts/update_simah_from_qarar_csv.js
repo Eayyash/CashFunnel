@@ -12,6 +12,32 @@ const ROOT = path.resolve(__dirname, '..');
 const HTML_OUT = path.join(ROOT, 'SIMAH_Intelligence.html');
 const CSV_FILE = process.argv[2];
 
+// User-specified competitor classification (BNPL / NBFI / Bank). Names are
+// matched trimmed — several appear with trailing spaces in real SIMAH data.
+const COMPETITOR_CATEGORY = {
+  'Tamara Finance Company': 'BNPL',
+  'United Company for Financial Services': 'NBFI',
+  'AL RAJHI BANK': 'Bank',
+  'Tabby Finance Company': 'BNPL',
+  'Emkan Company for Financing': 'NBFI',
+  'Saudi National Bank': 'Bank',
+  'STC Bank': 'Bank',
+  'TAMAM Finance': 'NBFI',
+  'QUARA FINANCE': 'NBFI',
+  'ARAB NATIONAL BANK': 'Bank',
+  'ABDUL LATIF JAMEEL': 'NBFI',
+  'Saudi Awwal Bank': 'Bank',
+  'IJARAH FINANCE': 'NBFI',
+  'SAUDI FRANSI FINANCING AND LEASING COMPANY': 'NBFI',
+  'AMLAK': 'NBFI',
+  'RIYADH BANK': 'Bank',
+  'SOCIAL DEVELOPMENT BANK': 'Bank',
+  'EMIRATES BANK': 'Bank',
+  'REAL ESTATE DEVELOPMENT FUND': 'Bank',
+  'ALINMA BANK': 'Bank'
+};
+function competitorCategory(name) { return COMPETITOR_CATEGORY[(name || '').trim()] || null; }
+
 if (!CSV_FILE || !fs.existsSync(CSV_FILE)) {
   console.error('Usage: node scripts/update_simah_from_qarar_csv.js <SIMAH_Qarar_JSON_*.csv> [--replace]');
   process.exit(1);
@@ -175,6 +201,8 @@ function extractFeatures(rep) {
   const creditors = {};
   const activePLNStats = {}; // per-creditor {sum, n} of ciLimit for active Personal Loans
   let hasMortgage = false;
+  const competitorLoans = []; // active NBFI/BNPL loans: {institution, category, amount, installment, tenureMonths, annualRatePct}
+  let competitorInstallmentSum = 0;
   cis.forEach(ci => {
     // 'A' = Active per creditInstrumentStatusDescEn ("Active"/"Closed"/"Written-off"/
     // "Suspended" -> codes A/C/W/S observed in real SIMAH payloads). The literal 'O'
@@ -197,6 +225,28 @@ function extractFeatures(rep) {
         const s = activePLNStats[cred] || (activePLNStats[cred] = { sum: 0, n: 0 });
         s.sum += Number(ci.ciLimit) || 0; s.n++; // ciLimit is inconsistently typed (string in ~44% of real records)
       }
+      // Per-loan detail for NBFI/BNPL exposure. Rate formula (user-specified):
+      // totalPayment = installment * tenure(months); profit = totalPayment - amount;
+      // totalProfitRate% = profit / amount * 100; annualRate% = totalProfitRate% / (tenure/12).
+      const cat = competitorCategory(cred);
+      if (cat === 'NBFI' || cat === 'BNPL') {
+        const amount = Number(ci.ciLimit) || 0;
+        const installment = Number(ci.ciInstallmentAmount) || 0;
+        const tenureMonths = Number(ci.ciTenure) || 0;
+        competitorInstallmentSum += installment;
+        let annualRatePct = null;
+        if (amount > 0 && tenureMonths > 0) {
+          const totalPayment = installment * tenureMonths;
+          const profit = totalPayment - amount;
+          const totalRatePct = (profit / amount) * 100;
+          annualRatePct = Math.round((totalRatePct / (tenureMonths / 12)) * 10) / 10;
+        }
+        competitorLoans.push({
+          institution: cred, category: cat,
+          amount: Math.round(amount), installment: Math.round(installment),
+          tenureMonths, annualRatePct
+        });
+      }
     }
     if (prod === 'Buy Now Pay Later') {
       if (isActive) { bnplCount++; bnplBal += ci.ciOutstandingBalance || 0; }
@@ -217,6 +267,9 @@ function extractFeatures(rep) {
   f.activeCreditors = creditors;
   f.activePLNStats = activePLNStats;
   f.hasMortgage = hasMortgage;
+  f.competitorLoans = competitorLoans;
+  f.competitorDBR = f.simahIncome > 0
+    ? Math.round((competitorInstallmentSum / f.simahIncome) * 100) : null;
 
   f.estimatedDBR = f.simahIncome > 0
     ? Math.round((f.totalInstallments / f.simahIncome) * 100) : null;
@@ -472,7 +525,9 @@ function buildAggregates(features, acqMap) {
         mofCalled: acq?.Is_MOF_Called || '',
         employerType: acq?.FinalEmployerType || '',
         hasMortgage: f.hasMortgage ? 'Y' : 'N',
-        altitudeIncome: parseFloat(acq?.AltitudeIncome) || 0
+        altitudeIncome: parseFloat(acq?.AltitudeIncome) || 0,
+        competitorLoans: f.competitorLoans || [],
+        competitorDBR: f.competitorDBR
       });
     }
   });

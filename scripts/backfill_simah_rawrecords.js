@@ -26,6 +26,32 @@ const ROOT = path.resolve(__dirname, '..');
 const HTML_OUT = path.join(ROOT, 'SIMAH_Intelligence.html');
 const RAW_CAP = 10000;
 
+// User-specified competitor classification (BNPL / NBFI / Bank). Names are
+// matched trimmed — several appear with trailing spaces in real SIMAH data.
+const COMPETITOR_CATEGORY = {
+  'Tamara Finance Company': 'BNPL',
+  'United Company for Financial Services': 'NBFI',
+  'AL RAJHI BANK': 'Bank',
+  'Tabby Finance Company': 'BNPL',
+  'Emkan Company for Financing': 'NBFI',
+  'Saudi National Bank': 'Bank',
+  'STC Bank': 'Bank',
+  'TAMAM Finance': 'NBFI',
+  'QUARA FINANCE': 'NBFI',
+  'ARAB NATIONAL BANK': 'Bank',
+  'ABDUL LATIF JAMEEL': 'NBFI',
+  'Saudi Awwal Bank': 'Bank',
+  'IJARAH FINANCE': 'NBFI',
+  'SAUDI FRANSI FINANCING AND LEASING COMPANY': 'NBFI',
+  'AMLAK': 'NBFI',
+  'RIYADH BANK': 'Bank',
+  'SOCIAL DEVELOPMENT BANK': 'Bank',
+  'EMIRATES BANK': 'Bank',
+  'REAL ESTATE DEVELOPMENT FUND': 'Bank',
+  'ALINMA BANK': 'Bank'
+};
+function competitorCategory(name) { return COMPETITOR_CATEGORY[(name || '').trim()] || null; }
+
 const files = process.argv.slice(2);
 if (!files.length) {
   console.error('Usage: node scripts/backfill_simah_rawrecords.js <SIMAH_Qarar_JSON_*.csv> [...]');
@@ -133,6 +159,8 @@ function extractFeatures(rep) {
   const activePLNStats = {};
   const activeCreditors = {};
   let hasMortgage = false;
+  const competitorLoans = []; // active NBFI/BNPL loans: {institution, category, amount, installment, tenureMonths, annualRatePct}
+  let competitorInstallmentSum = 0;
   cis.forEach(ci => {
     // 'A' = Active (confirmed against real payloads; 'O' never appears).
     const isActive = ci.ciStatus?.creditInstrumentStatusCode === 'A';
@@ -146,6 +174,28 @@ function extractFeatures(rep) {
       // SMTG, TMTG, MMTG, AMTG, EMTG (all contain 'MTG'), plus AQAR
       // (Government Mortgage Real Estate Fund).
       if (prodCode.includes('MTG') || prodCode === 'AQAR') hasMortgage = true;
+      // Per-loan detail for NBFI/BNPL exposure. Rate formula (user-specified):
+      // totalPayment = installment * tenure(months); profit = totalPayment - amount;
+      // totalProfitRate% = profit / amount * 100; annualRate% = totalProfitRate% / (tenure/12).
+      const cat = competitorCategory(cred);
+      if (cat === 'NBFI' || cat === 'BNPL') {
+        const amount = Number(ci.ciLimit) || 0;
+        const installment = Number(ci.ciInstallmentAmount) || 0;
+        const tenureMonths = Number(ci.ciTenure) || 0;
+        competitorInstallmentSum += installment;
+        let annualRatePct = null;
+        if (amount > 0 && tenureMonths > 0) {
+          const totalPayment = installment * tenureMonths;
+          const profit = totalPayment - amount;
+          const totalRatePct = (profit / amount) * 100;
+          annualRatePct = Math.round((totalRatePct / (tenureMonths / 12)) * 10) / 10;
+        }
+        competitorLoans.push({
+          institution: cred, category: cat,
+          amount: Math.round(amount), installment: Math.round(installment),
+          tenureMonths, annualRatePct
+        });
+      }
     }
     if (prod === 'Buy Now Pay Later' && isActive) { bnplCount++; bnplBal += ci.ciOutstandingBalance || 0; }
     if (isActive) {
@@ -165,6 +215,8 @@ function extractFeatures(rep) {
   f.activePLNStats = activePLNStats;
   f.activeCreditors = activeCreditors;
   f.hasMortgage = hasMortgage;
+  f.competitorLoans = competitorLoans;
+  f.competitorDBR = f.simahIncome > 0 ? Math.round((competitorInstallmentSum / f.simahIncome) * 100) : null;
   f.estimatedDBR = f.simahIncome > 0 ? Math.round((f.totalInstallments / f.simahIncome) * 100) : null;
   const pDefs = asArray(rep.personalDefaults || rep.primaryDefaults);
   f.defaultCount = pDefs.length;
@@ -249,7 +301,9 @@ files.forEach(fp => {
         gosiCalled: acq?.Is_GOSI_Called || '', mofCalled: acq?.Is_MOF_Called || '',
         employerType: acq?.FinalEmployerType || '',
         hasMortgage: f.hasMortgage ? 'Y' : 'N',
-        altitudeIncome: parseFloat(acq?.AltitudeIncome) || 0
+        altitudeIncome: parseFloat(acq?.AltitudeIncome) || 0,
+        competitorLoans: f.competitorLoans || [],
+        competitorDBR: f.competitorDBR
       });
       for (const [inst, cnt] of Object.entries(f.activeCreditors || {})) {
         if (!institutionLoanStats[inst]) institutionLoanStats[inst] = { loans: 0, customers: 0, plnSum: 0, plnN: 0 };
