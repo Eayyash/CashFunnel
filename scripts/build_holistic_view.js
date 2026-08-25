@@ -28,7 +28,8 @@ const NEEDED = new Set([
   'OUTSTANDING_PROF','REALIZED_PROFIT','COLLECTED_PROFIT','TOTAL_OUTSTANDING',
   'DPD','WRITE_OFF_DATE','TOTAL_PAYMENT','Product_type','SMHBand','AppScoreBand',
   'RiskRating','Nationality_Flag','AgeBand','IncomeBand','DBRBand','AppSource',
-  'SubmitSource','SmartFinance','PilotRating','calculatedApr','SNAP_DATE'
+  'SubmitSource','SmartFinance','PilotRating','calculatedApr','SNAP_DATE',
+  'DPD_450_Date','OVD_PRINCIPAL','OVD_PROFIT'
 ]);
 
 function colIndexFromLetter(letter) {
@@ -50,6 +51,8 @@ function excelSerialToDate(serial) {
 function ymd(d) { return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0'); }
 function ym(d) { return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0'); }
 function num(v) { if (v == null || v === '' || v === 'NULL') return 0; const n = parseFloat(v); return isNaN(n) ? 0 : n; }
+function isNull(v) { return v == null || v === '' || v === 'NULL'; }
+function notNull(v) { return !isNull(v); }
 
 function storeParts(storeName) {
   if (!storeName || storeName === 'NULL') return { retailer: 'Unknown', city: 'Unknown' };
@@ -147,9 +150,19 @@ async function main() {
 
     if (snapDateExcel == null && currentRow.SNAP_DATE) snapDateExcel = currentRow.SNAP_DATE;
 
+    // Total Outstanding only counts rows that are: not written off, Tawarruq
+    // or Combo product, not past DPD 450, and have both an OVD principal and
+    // OVD profit figure. Every other metric (fin, paid, profit, etc.) is
+    // unaffected by this filter — it applies to `outstanding` only.
+    const outstandingQualifies =
+      isNull(currentRow.WRITE_OFF_DATE) &&
+      (currentRow.Product_type === 'Tawarruq' || currentRow.Product_type === 'Combo') &&
+      isNull(currentRow.DPD_450_Date) &&
+      notNull(currentRow.OVD_PRINCIPAL) && notNull(currentRow.OVD_PROFIT);
+
     const row = {
       fin: num(currentRow.FIN_AMOUNT),
-      outstanding: num(currentRow.TOTAL_OUTSTANDING),
+      outstanding: outstandingQualifies ? num(currentRow.TOTAL_OUTSTANDING) : 0,
       paid: num(currentRow.TOTAL_PAID),
       realizedProfit: num(currentRow.REALIZED_PROFIT),
       collectedProfit: num(currentRow.COLLECTED_PROFIT),
