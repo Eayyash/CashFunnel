@@ -1,0 +1,416 @@
+/**
+ * Build the full-history SIMAH detail archive as per-date JSON chunks, so
+ * the dashboard's date-range picker can fetch any date on demand instead of
+ * being limited to whatever fits in the single embedded rawRecords cache
+ * (previously capped at 10,000 entries / ~7 days).
+ *
+ * Re-extracts every record from the archived SIMAH_Qarar_JSON_*.csv files
+ * (same extraction logic as backfill_simah_rawrecords.js — kept in sync
+ * deliberately, do not let these drift apart), joins against the latest
+ * Acquisition_for_Loans CSV, and buckets each record by date:
+ *   - matched records (have acq.submitted) -> bucketed by that date
+ *   - unmatched records (no Acquisition match, no submitted date) ->
+ *     bucketed by the SOURCE FILE's date (from its filename), since that's
+ *     the only date available for them. The dashboard's date filter treats
+ *     unmatched records as always-included *when their chunk is loaded* —
+ *     this is a deliberate simplification, see SIMAH_Intelligence.html.
+ *
+ * Output: simah_data/<date>.json (one compact array of records per date)
+ * plus a manifest embedded back into SIMAH_Intelligence.html's meta as
+ * meta.dateChunks = [{date,count,file}], sorted ascending.
+ *
+ * Usage: node scripts/build_simah_datechunks.js <file1.csv> [file2.csv ...]
+ */
+const fs = require('fs');
+const path = require('path');
+const readline = require('readline');
+
+const ROOT = path.resolve(__dirname, '..');
+const HTML_OUT = path.join(ROOT, 'SIMAH_Intelligence.html');
+const CHUNK_DIR = path.join(ROOT, 'simah_data');
+
+// Identical to backfill_simah_rawrecords.js — see that file's header comment.
+const COMPETITOR_CATEGORY = {
+  'Tamara Finance Company': 'BNPL',
+  'AL RAJHI BANK': 'Bank',
+  'Tabby Finance Company': 'BNPL',
+  'Emkan Company for Financing': 'NBFI',
+  'Saudi National Bank': 'Bank',
+  'STC Bank': 'Bank',
+  'TAMAM Finance': 'NBFI',
+  'QUARA FINANCE': 'NBFI',
+  'ARAB NATIONAL BANK': 'Bank',
+  'ABDUL LATIF JAMEEL': 'NBFI',
+  'Saudi Awwal Bank': 'Bank',
+  'IJARAH FINANCE': 'NBFI',
+  'SAUDI FRANSI FINANCING AND LEASING COMPANY': 'NBFI',
+  'AMLAK': 'NBFI',
+  'RIYADH BANK': 'Bank',
+  'SOCIAL DEVELOPMENT BANK': 'Bank',
+  'EMIRATES BANK': 'Bank',
+  'REAL ESTATE DEVELOPMENT FUND': 'Bank',
+  'ALINMA BANK': 'Bank'
+};
+function competitorCategory(name) { return COMPETITOR_CATEGORY[(name || '').trim()] || null; }
+
+function excelRate(nper, pmt, pv, fv, type, guess) {
+  fv = fv || 0; type = type || 0;
+  guess = (guess == null) ? 0.1 : guess;
+  const MAX_ITER = 128, PRECISION = 1e-8;
+  function calcY(r) {
+    if (Math.abs(r) < PRECISION) return pv * (1 + nper * r) + pmt * (1 + r * type) * nper + fv;
+    const term = Math.pow(1 + r, nper);
+    return pv * term + pmt * (1 / r + type) * (term - 1) + fv;
+  }
+  let x0 = 0, y0 = calcY(0), x1 = guess, y1 = calcY(guess), i = 0, rate = x1;
+  while (Math.abs(y1 - y0) > PRECISION && i < MAX_ITER) {
+    rate = (y1 * x0 - y0 * x1) / (y1 - y0);
+    if (Math.abs(rate) < PRECISION) rate += 1e-5;
+    x0 = x1; y0 = y1;
+    x1 = rate; y1 = calcY(rate);
+    i++;
+  }
+  return isFinite(rate) ? rate : null;
+}
+
+let files = process.argv.slice(2);
+// A single directory argument is expanded to every *.csv file inside it —
+// avoids shell glob/quoting headaches with the archive folder's spaces.
+if (files.length === 1 && fs.statSync(files[0]).isDirectory()) {
+  const dir = files[0];
+  files = fs.readdirSync(dir).filter(f => /\.csv$/i.test(f)).sort().map(f => path.join(dir, f));
+}
+if (!files.length) {
+  console.error('Usage: node scripts/build_simah_datechunks.js <SIMAH_Qarar_JSON_*.csv | dir> [...]');
+  process.exit(1);
+}
+
+function parseCsvLine(line) {
+  const result = [];
+  let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (inQ) {
+      if (c === '"' && line[i + 1] === '"') { cur += '"'; i++; }
+      else if (c === '"') inQ = false;
+      else cur += c;
+    } else {
+      if (c === '"') inQ = true;
+      else if (c === ',') { result.push(cur); cur = ''; }
+      else cur += c;
+    }
+  }
+  result.push(cur);
+  return result;
+}
+function readCsv(filePath) {
+  const text = fs.readFileSync(filePath, 'utf-8');
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  const headers = parseCsvLine(lines[0]);
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const vals = parseCsvLine(lines[i]);
+    const obj = {};
+    for (let j = 0; j < headers.length; j++) obj[headers[j]] = vals[j] ?? '';
+    rows.push(obj);
+  }
+  return rows;
+}
+// The SIMAH_Qarar_JSON archive files are 100-250MB each — reading one fully
+// into memory (readCsv above) as a string + line array + row-object array
+// is what OOM'd the first attempt at this script even with a 6GB heap.
+// Stream line-by-line instead so peak memory is bounded by the (small)
+// extracted records we keep, not the raw CSV text.
+async function streamCsvRows(filePath, onRow) {
+  const rl = readline.createInterface({ input: fs.createReadStream(filePath, { encoding: 'utf-8' }), crlfDelay: Infinity });
+  let headers = null, jsonIdx = -1;
+  for await (const line of rl) {
+    if (!line.trim()) continue;
+    if (!headers) {
+      headers = parseCsvLine(line);
+      jsonIdx = headers.indexOf('JSON_Response');
+      continue;
+    }
+    const vals = parseCsvLine(line);
+    onRow(jsonIdx >= 0 ? vals[jsonIdx] : null);
+  }
+}
+function findReport(obj, depth) {
+  depth = depth || 0;
+  if (!obj || typeof obj !== 'object' || depth > 10) return null;
+  if (Array.isArray(obj)) {
+    for (const item of obj) { const r = findReport(item, depth + 1); if (r) return r; }
+    return null;
+  }
+  if (obj.providedDemographicsInfo || obj.availableDemographicsInfo) return obj;
+  for (const k of Object.keys(obj)) {
+    const v = obj[k];
+    if (v && typeof v === 'object') { const r = findReport(v, depth + 1); if (r) return r; }
+  }
+  return null;
+}
+function asArray(x) { if (x == null) return []; return Array.isArray(x) ? x : [x]; }
+function parseDate(s) {
+  if (!s) return null;
+  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (m) return new Date(+m[3], +m[2] - 1, +m[1]);
+  return null;
+}
+function extractFeatures(rep) {
+  const f = {};
+  const demId = rep.providedDemographicsInfo?.demIDNumber || rep.availableDemographicsInfo?.demIDNumber || null;
+  f.civilId = demId;
+  const avail = rep.availableDemographicsInfo || {};
+  f.gender = rep.providedDemographicsInfo?.demGender || avail.demGender || 'Unknown';
+  f.nationality = avail.demNationality?.couNameEN || rep.providedDemographicsInfo?.demNationality?.couNameEN || 'Unknown';
+  f.city = avail.demCustomerCity || '';
+  f.simahIncome = parseFloat(avail.demTotalMonthlyIncome) || 0;
+  f.maritalStatus = avail.demMaritalStatus?.statusNameEN || 'Unknown';
+  f.name = rep.providedDemographicsInfo?.demCustomerName || avail.demCustomerName || '';
+  const sc = asArray(rep.score)[0];
+  f.score = sc ? sc.score : null;
+  f.scoreCard = sc?.scoreCard?.scoreCardDescEn || '';
+  f.scoreReasons = (sc?.reasonCodes || []).map(r => r.scoreReasonCodeName);
+  f.scoreReasonTexts = (sc?.reasonCodes || []).map(r => r.scoreReasonCodeDescEn);
+  const si = rep.summaryInfo || {};
+  f.activeCreditInstruments = si.summActiveCreditInstruments || 0;
+  f.totalLimits = si.summTotalLimits || 0;
+  f.totalLiabilities = si.summTotalLiablilites || 0;
+  f.utilization = f.totalLimits > 0 ? Math.round((f.totalLiabilities / f.totalLimits) * 100) : 0;
+  f.totalDefaults = si.summTotalDefaults || 0;
+  f.activeDefaults = si.summDefaults || 0;
+  f.currentDelinquent = si.summCurrentDelinquentBalance || 0;
+  f.totalEnquiries = si.summPreviousEnquires || 0;
+  f.enquiriesThisMonth = si.summPreviousEnquiresThisMonth || 0;
+  const reportDate = parseDate(rep.reportDate);
+  const enqs = asArray(rep.prevEnquiries);
+  let enq30 = 0, enq90 = 0, enq180 = 0;
+  const competitors = {};
+  enqs.forEach(e => {
+    const ed = parseDate(e.prevEnqDate);
+    if (reportDate && ed) {
+      const diffDays = (reportDate - ed) / 864e5;
+      if (diffDays <= 30) enq30++;
+      if (diffDays <= 90) enq90++;
+      if (diffDays <= 180) enq180++;
+    }
+    const member = e.prevEnqEnquirer?.memberNameEN || 'Unknown';
+    competitors[member] = (competitors[member] || 0) + 1;
+  });
+  f.enq30 = enq30; f.enq90 = enq90; f.enq180 = enq180;
+  f.competitors = competitors;
+  const cis = asArray(rep.creditInstrumentDetails);
+  let bnplCount = 0, bnplBal = 0, totalInstallments = 0, activeLoans = 0, totalOutstanding = 0, totalPastDue = 0;
+  const activePLNStats = {};
+  const activeCreditors = {};
+  let hasMortgage = false;
+  const competitorLoans = [];
+  let competitorInstallmentSum = 0;
+  cis.forEach(ci => {
+    const isActive = ci.ciStatus?.creditInstrumentStatusCode === 'A';
+    const prod = ci.ciProductTypeDesc?.textEn || 'Unknown';
+    const prodCode = ci.ciProductTypeDesc?.code || '';
+    if (isActive) {
+      activeLoans++;
+      const cred = ci.ciCreditor?.memberNameEN || 'Unknown';
+      activeCreditors[cred] = (activeCreditors[cred] || 0) + 1;
+      if (prodCode.includes('MTG') || prodCode === 'AQAR') hasMortgage = true;
+      const cat = competitorCategory(cred);
+      if (cat === 'NBFI' || cat === 'BNPL') {
+        const amount = Number(ci.ciLimit) || 0;
+        const installment = Number(ci.ciInstallmentAmount) || 0;
+        const tenureMonths = Number(ci.ciTenure) || 0;
+        competitorInstallmentSum += installment;
+        let annualRatePct = null;
+        if (amount > 0 && tenureMonths > 0 && installment > 0) {
+          const monthlyRate = excelRate(tenureMonths, -installment, amount);
+          if (monthlyRate != null && isFinite(monthlyRate)) annualRatePct = Math.round(monthlyRate * 12 * 1000) / 10;
+        }
+        let buyoutRatePct = null;
+        if (amount > 0 && tenureMonths > 0) {
+          buyoutRatePct = Math.round(((installment * tenureMonths / amount) - 1) * (12 / tenureMonths) * 1000) / 10;
+        }
+        competitorLoans.push({
+          institution: cred, category: cat, prodCode,
+          amount: Math.round(amount), installment: Math.round(installment),
+          tenureMonths, annualRatePct, buyoutRatePct,
+          issuedDate: ci.ciIssuedDate || ''
+        });
+      }
+    }
+    if (prod === 'Buy Now Pay Later' && isActive) { bnplCount++; bnplBal += ci.ciOutstandingBalance || 0; }
+    if (isActive) {
+      totalOutstanding += ci.ciOutstandingBalance || 0;
+      totalPastDue += ci.ciPastDue || 0;
+      totalInstallments += ci.ciInstallmentAmount || 0;
+      if (prodCode === 'PLN') {
+        const cred = ci.ciCreditor?.memberNameEN || 'Unknown';
+        const s = activePLNStats[cred] || (activePLNStats[cred] = { sum: 0, n: 0 });
+        s.sum += Number(ci.ciLimit) || 0; s.n++;
+      }
+    }
+  });
+  f.bnplCount = bnplCount; f.bnplBalance = Math.round(bnplBal); f.activeLoans = activeLoans;
+  f.totalOutstanding = Math.round(totalOutstanding); f.totalPastDue = Math.round(totalPastDue);
+  f.totalInstallments = Math.round(totalInstallments);
+  f.activePLNStats = activePLNStats;
+  f.activeCreditors = activeCreditors;
+  f.hasMortgage = hasMortgage;
+  f.competitorLoans = competitorLoans;
+  f.competitorDBR = f.simahIncome > 0 ? Math.round((competitorInstallmentSum / f.simahIncome) * 100) : null;
+  f.estimatedDBR = f.simahIncome > 0 ? Math.round((f.totalInstallments / f.simahIncome) * 100) : null;
+  const pDefs = asArray(rep.personalDefaults || rep.primaryDefaults);
+  f.defaultCount = pDefs.length;
+  f.defaultsSettled = pDefs.filter(d => d.pDefaultStatuses?.defaultStatusCode === 'FS').length;
+  f.defaultsActive = pDefs.filter(d => d.pDefaultStatuses?.defaultStatusCode !== 'FS').length;
+  const emps = asArray(rep.employers);
+  const currentEmp = emps.find(e => e.empStatusType?.employerStatusTypeCode?.trim() === 'C');
+  f.employerName = currentEmp?.empEmployerNameDescEn || '';
+  f.enquiryDetails = enqs.slice(0, 50).map(e => [
+    e.prevEnqEnquirer?.memberShortNameEN || e.prevEnqEnquirer?.memberNameEN || '',
+    e.prevEnqProductTypeDesc?.textEn || '',
+    e.prevEnqType?.textEn || '',
+    e.prevEnqDate ? e.prevEnqDate.slice(-4) : '',
+    e.prevEnqDate || ''
+  ]);
+  return f;
+}
+function findLatestAcqFile() {
+  return fs.readdirSync(ROOT).filter(f => /^Acquisition_for_Loans_\d{4}-\d{2}-\d{2}\.csv$/i.test(f)).sort().pop();
+}
+function fileDateFromName(fp) {
+  const m = path.basename(fp).match(/(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : 'unknown';
+}
+
+async function main() {
+console.log('=== SIMAH per-date chunk builder (full history) ===');
+
+const acqFile = findLatestAcqFile();
+console.log(`Reading ${acqFile}…`);
+const acqRows = readCsv(path.join(ROOT, acqFile));
+const acqMap = {};
+acqRows.forEach(r => { if (r.CivilID) acqMap[r.CivilID] = r; });
+console.log(`  ${acqRows.length.toLocaleString()} acquisition rows, ${Object.keys(acqMap).length.toLocaleString()} unique CivilIDs`);
+
+const BOOKED = new Set(['Completed [C]', 'Pending Final Approval']);
+const buckets = new Map(); // date -> records[]
+const institutionLoanStats = {};
+let totalExtracted = 0, totalErrs = 0;
+
+for (const fp of files) {
+  const fileDate = fileDateFromName(fp);
+  console.log(`Reading ${path.basename(fp)}… (fallback bucket date: ${fileDate})`);
+  let n = 0, errs = 0;
+  await streamCsvRows(fp, (jsonStr) => {
+    try {
+      if (!jsonStr) { errs++; return; }
+      const wrapper = JSON.parse(jsonStr);
+      const rep = findReport(wrapper);
+      if (!rep) { errs++; return; }
+      const f = extractFeatures(rep);
+      if (!f.civilId) { errs++; return; }
+      const acq = acqMap[f.civilId];
+      const matched = !!acq;
+      const isApproved = acq?.Approvalflag === 'Y';
+      const isBooked = matched && BOOKED.has(acq?.Altitudestatus);
+      const isStp = matched && acq?.STP === 'Y';
+      const topComp = Object.entries(f.competitors).sort((a, b) => b[1] - a[1]).slice(0, 7).map(([name, cnt]) => ({ name, cnt }));
+      const submitted = acq?.submitted || '';
+      const bucketKey = submitted ? submitted.slice(0, 10) : fileDate;
+      const rec = {
+        civilId: f.civilId ? f.civilId.slice(0, 4) + '****' + f.civilId.slice(-2) : 'N/A',
+        name: f.name, score: f.score, scoreCard: f.scoreCard,
+        scoreReasons: f.scoreReasons, scoreReasonTexts: f.scoreReasonTexts,
+        enq90: f.enq90, enq30: f.enq30, enq180: f.enq180,
+        totalEnquiries: f.totalEnquiries, enquiriesThisMonth: f.enquiriesThisMonth,
+        activeLoans: f.activeLoans, activeCreditInstruments: f.activeCreditInstruments,
+        bnpl: f.bnplCount, bnplBalance: f.bnplBalance,
+        totalLimits: f.totalLimits, totalLiabilities: f.totalLiabilities, utilization: f.utilization,
+        totalOutstanding: f.totalOutstanding, totalPastDue: f.totalPastDue, totalInstallments: f.totalInstallments,
+        estDBR: f.estimatedDBR,
+        defaults: f.defaultCount, defaultsSettled: f.defaultsSettled, defaultsActive: f.defaultsActive,
+        totalDefaultAmt: f.totalDefaults, currentDelinquent: f.currentDelinquent,
+        simahIncome: f.simahIncome, employerName: f.employerName, nationality: f.nationality,
+        gender: f.gender, maritalStatus: f.maritalStatus, city: f.city,
+        topCompetitors: topComp, eq: f.enquiryDetails || [],
+        outcome: matched ? (acq.Altitudestatus || 'Matched') : 'No match',
+        stp: isStp ? 'Y' : 'N', approved: isApproved ? 'Y' : 'N', booked: isBooked ? 'Y' : 'N',
+        stagingId: acq?.StagingID || '',
+        declineReason: acq?.SimplifiedDeclinedReason || '', deDecision: acq?.DE_Decision || '',
+        lightDE: acq?.Light_DE_Decision || '',
+        store: acq?.StoreNameOnline || acq?.StoreName || '', region: acq?.Region || '',
+        product: acq?.Product_type || '', source: acq?.SubmitSource || '',
+        submitted,
+        riskRating: acq?.RiskRating || '', scRiskGrade: acq?.SC_RiskGrade || '',
+        declaredIncome: parseFloat(acq?.Income) || 0, incomeBand: acq?.DeclaredIncomeBand || '',
+        ageBand: acq?.AgeBand || '', revisedDBR: acq?.Revised_DBR || '',
+        smhDBR: acq?.SIMAH_DBR || '', smhInstallments: acq?.SIMAH_Installments || '',
+        smhScore: acq?.SIMAH_Score || '', smhBand: acq?.SIMAH_Band || '',
+        gosiCalled: acq?.Is_GOSI_Called || '', mofCalled: acq?.Is_MOF_Called || '',
+        employerType: acq?.FinalEmployerType || '',
+        hasMortgage: f.hasMortgage ? 'Y' : 'N',
+        altitudeIncome: parseFloat(acq?.AltitudeIncome) || 0,
+        competitorLoans: f.competitorLoans || [],
+        competitorDBR: f.competitorDBR
+      };
+      if (!buckets.has(bucketKey)) buckets.set(bucketKey, []);
+      buckets.get(bucketKey).push(rec);
+
+      for (const [inst, cnt] of Object.entries(f.activeCreditors || {})) {
+        if (!institutionLoanStats[inst]) institutionLoanStats[inst] = { loans: 0, customers: 0, plnSum: 0, plnN: 0 };
+        institutionLoanStats[inst].loans += cnt;
+        institutionLoanStats[inst].customers++;
+      }
+      for (const [inst, s] of Object.entries(f.activePLNStats || {})) {
+        if (!institutionLoanStats[inst]) institutionLoanStats[inst] = { loans: 0, customers: 0, plnSum: 0, plnN: 0 };
+        institutionLoanStats[inst].plnSum += s.sum;
+        institutionLoanStats[inst].plnN += s.n;
+      }
+      n++;
+    } catch (e) { errs++; }
+  });
+  totalExtracted += n; totalErrs += errs;
+  console.log(`  ${n} extracted, ${errs} errors`);
+}
+
+console.log(`Total extracted: ${totalExtracted}, total errors: ${totalErrs}`);
+console.log(`Date buckets: ${buckets.size}`);
+
+if (!fs.existsSync(CHUNK_DIR)) fs.mkdirSync(CHUNK_DIR, { recursive: true });
+const manifest = [];
+[...buckets.keys()].sort().forEach(date => {
+  const recs = buckets.get(date);
+  const fname = `${date}.json`;
+  fs.writeFileSync(path.join(CHUNK_DIR, fname), JSON.stringify(recs));
+  manifest.push({ date, count: recs.length, file: `simah_data/${fname}` });
+  console.log(`  wrote ${fname}: ${recs.length} records`);
+});
+
+const totalRecords = manifest.reduce((s, m) => s + m.count, 0);
+console.log(`Manifest: ${manifest.length} dates, ${totalRecords} total records`);
+
+// --- Splice manifest + institutionLoanStats into SIMAH_Intelligence.html ---
+console.log('Reading SIMAH_Intelligence.html…');
+const html = fs.readFileSync(HTML_OUT, 'utf-8');
+const startTag = 'const SIMAH_DATA = ';
+const startIdx = html.indexOf(startTag) + startTag.length;
+const endTag = ';\nlet D = SIMAH_DATA;';
+const endIdx = html.indexOf(endTag, startIdx);
+if (startIdx < 0 || endIdx < 0) { console.error('Could not locate SIMAH_DATA blob'); process.exit(1); }
+const data = JSON.parse(html.slice(startIdx, endIdx));
+
+data.meta.dateChunks = manifest;
+data.meta.dateChunksMin = manifest[0]?.date || null;
+data.meta.dateChunksMax = manifest[manifest.length - 1]?.date || null;
+data.meta.dateChunksTotal = totalRecords;
+data.institutionLoanStats = institutionLoanStats;
+
+const newBlob = JSON.stringify(data);
+const newHtml = html.slice(0, startIdx) + newBlob + html.slice(endIdx);
+fs.writeFileSync(HTML_OUT, newHtml, 'utf-8');
+console.log('✅ Done — manifest + institutionLoanStats written into SIMAH_Intelligence.html.');
+console.log('   rawRecords (the default embedded window) left untouched — wire up fetch-based loading next.');
+}
+
+main().catch(e => { console.error('FATAL:', e); process.exit(1); });
