@@ -131,8 +131,8 @@ const RS_RAW = extractJSON(acqHtml, 'RAWSTORE');
 
 const bin = Buffer.from(RS_RAW.b64, 'base64');
 const buf = pako.inflate(bin);
-const TMAP = { b: Int8Array, h: Int16Array, d: Float64Array };
-const BSZ  = { b: 1, h: 2, d: 8 };
+const TMAP = { b: Int8Array, h: Int16Array, d: Float64Array, i: Uint32Array };
+const BSZ  = { b: 1, h: 2, d: 8, i: 4 };
 const RS = {};
 for (const name in RS_RAW.header) {
   const H = RS_RAW.header[name];
