@@ -267,9 +267,10 @@ function extractFeatures(rep) {
           if (monthlyRate != null && isFinite(monthlyRate)) annualRatePct = Math.round(monthlyRate * 12 * 1000) / 10;
         }
         competitorLoans.push({
-          institution: cred, category: cat,
+          institution: cred, category: cat, prodCode,
           amount: Math.round(amount), installment: Math.round(installment),
-          tenureMonths, annualRatePct
+          tenureMonths, annualRatePct,
+          issuedDate: ci.ciIssuedDate || ''
         });
       }
     }
