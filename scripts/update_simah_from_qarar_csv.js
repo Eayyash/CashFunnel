@@ -270,10 +270,16 @@ function extractFeatures(rep) {
           const monthlyRate = excelRate(tenureMonths, -installment, amount);
           if (monthlyRate != null && isFinite(monthlyRate)) annualRatePct = Math.round(monthlyRate * 12 * 1000) / 10;
         }
+        // Buy-Out Opportunities uses a separate, simpler formula (user-specified):
+        // ((Instalment × Tenure ÷ Finance Amount) − 1) × (12 ÷ Tenure).
+        let buyoutRatePct = null;
+        if (amount > 0 && tenureMonths > 0) {
+          buyoutRatePct = Math.round(((installment * tenureMonths / amount) - 1) * (12 / tenureMonths) * 1000) / 10;
+        }
         competitorLoans.push({
           institution: cred, category: cat, prodCode,
           amount: Math.round(amount), installment: Math.round(installment),
-          tenureMonths, annualRatePct,
+          tenureMonths, annualRatePct, buyoutRatePct,
           issuedDate: ci.ciIssuedDate || ''
         });
       }
