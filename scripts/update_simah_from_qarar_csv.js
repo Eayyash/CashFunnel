@@ -21,7 +21,11 @@ const SIMAH_ARCHIVE_FOLDER = 'C:\\Users\\Emad.Ayyash\\OneDrive - tasheelfinance\
 // matched trimmed — several appear with trailing spaces in real SIMAH data.
 const COMPETITOR_CATEGORY = {
   'Tamara Finance Company': 'BNPL',
-  'United Company for Financial Services': 'NBFI',
+  // 'United Company for Financial Services' (UCFS) is Tasheel itself, not a
+  // competitor — deliberately left out of this map so competitorCategory()
+  // returns null for it and it's excluded from every competitor-exposure
+  // table/chart (Competitor Loan Exposure, Buy-Out Opportunities, Avg Active
+  // Loan Amount, Active Loans by Institution).
   'AL RAJHI BANK': 'Bank',
   'Tabby Finance Company': 'BNPL',
   'Emkan Company for Financing': 'NBFI',
