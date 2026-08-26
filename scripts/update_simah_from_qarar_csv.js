@@ -11,6 +11,11 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 const HTML_OUT = path.join(ROOT, 'SIMAH_Intelligence.html');
 const CSV_FILE = process.argv[2];
+// This pipeline is ADDITIVE (mergeAggregates sums, not overwrites/dedupes) —
+// re-running the same file would silently double-count reports. Once a merge
+// succeeds, the source file is MOVED (not copied) out of Downloads into this
+// archive folder so it can never be picked up and reprocessed by accident.
+const SIMAH_ARCHIVE_FOLDER = 'C:\\Users\\Emad.Ayyash\\OneDrive - tasheelfinance\\Documents\\EIA Work\\AI-Work\\SIMAH Qarar JSON';
 
 // User-specified competitor classification (BNPL / NBFI / Bank). Names are
 // matched trimmed — several appear with trailing spaces in real SIMAH data.
@@ -740,3 +745,16 @@ fs.writeFileSync(HTML_OUT, updated, 'utf-8');
 
 console.log(`\nDone — ${features.length} new SIMAH reports processed, ${finalAgg.meta.total} total in dataset (${finalAgg.meta.matched} matched to acquisitions).`);
 console.log(`Score distribution: ${JSON.stringify(finalAgg.scoreDistribution)}`);
+
+// Archive the source file now that it's safely merged in, so it can never
+// be picked up and merged again by accident (see comment on SIMAH_ARCHIVE_FOLDER).
+try {
+  if (!fs.existsSync(SIMAH_ARCHIVE_FOLDER)) fs.mkdirSync(SIMAH_ARCHIVE_FOLDER, { recursive: true });
+  const destPath = path.join(SIMAH_ARCHIVE_FOLDER, path.basename(CSV_FILE));
+  if (path.resolve(CSV_FILE) !== path.resolve(destPath)) {
+    fs.renameSync(CSV_FILE, destPath);
+    console.log(`Archived: ${path.basename(CSV_FILE)} → SIMAH Qarar JSON/`);
+  }
+} catch (e) {
+  console.warn(`WARN: could not archive source file (merge already succeeded, data is safe): ${e.message}`);
+}
