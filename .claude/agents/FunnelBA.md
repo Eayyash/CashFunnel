@@ -45,7 +45,7 @@ This script:
 
 ### 3. Update Acquisition Command Dashboard + Application Cost
 ```bash
-node --max-old-space-size=8192 scripts/update_acquisition_dashboard.js Acquisition_for_Loans_all_merged.csv
+node --max-old-space-size=16384 scripts/update_acquisition_dashboard.js Acquisition_for_Loans_all_merged.csv
 ```
 This updates both `Acquisition_Command_Dashboard.html` and `Application_Cost.html` with the full merged dataset.
 
@@ -103,6 +103,6 @@ Tell the user:
 ## Error handling
 
 - If `merge_csv.js` fails with OOM: increase `--max-old-space-size` to 8192
-- If `update_acquisition_dashboard.js` fails with OOM: increase to 8192 or 16384
+- If `update_acquisition_dashboard.js` fails with OOM even at the 16384 default: increase further (24576, 32768) — the dataset only grows each run, so this ceiling will need to keep rising over time
 - If `update_bpv.js` can't find Funnel_Analysis.html or SIMAH_Intelligence.html: those dashboards are optional, BPV still updates without them (funnel/simah sections will be empty)
 - If the new CSV has different columns than historical files: `merge_csv.js` uses the newest file's header as master and pads older rows — this handles column additions automatically
