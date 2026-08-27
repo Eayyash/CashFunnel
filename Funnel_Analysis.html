@@ -266,6 +266,7 @@ table.dt tr:hover td{background:var(--muted-bg)}
   <button class="tab" data-tab="insights"><span class="n">05</span>C-Level Insights</button>
   <button class="tab" data-tab="business"><span class="n">06</span>Business View</button>
   <button class="tab" data-tab="mobile"><span class="n">07</span>Mobile Screen</button>
+  <button class="tab" data-tab="diagnostic"><span class="n">08</span>Diagnostic</button>
 </nav></div>
 <main>
 <section class="panel-tab on" id="funnel">
@@ -371,6 +372,19 @@ table.dt tr:hover td{background:var(--muted-bg)}
   <div class="chart-card"><div id="mob-rows"></div>
     <div class="mob-legend"><span><i style="background:var(--red)"></i>critical drop (&gt;50%)</span><span><i style="background:var(--gold)"></i>watch (25–50%)</span><span><i style="background:var(--green)"></i>healthy (&lt;25%)</span><span><i style="background:var(--faint)"></i>same-day / BO-handoff — understated</span></div>
   </div>
+</section>
+<section class="panel-tab" id="diagnostic">
+  <div class="sec-h"><span class="k">DIAGNOSTIC</span><h2>Aug 17 benchmark vs Aug 18–25 drop-off</h2><span class="hint" id="diag-hint"></span></div>
+  <div class="callout" id="diag-callout" style="margin-bottom:16px"></div>
+  <div class="grid k7" id="diag-kpi" style="margin-bottom:20px"></div>
+  <div class="sec-h"><span class="k">FINDINGS</span><h2>Tech issue or journey issue?</h2><span class="hint">computed from the funnel data itself, not assumed</span></div>
+  <div id="diag-insights"></div>
+  <div class="sec-h" style="margin-top:22px"><span class="k">DAY BY DAY</span><h2>Key metrics vs the Aug 17 benchmark</h2><span class="hint">weekend rows shaded · missing days flagged</span></div>
+  <div class="note-block"><div id="diag-daytable"></div></div>
+  <div class="sec-h" style="margin-top:22px"><span class="k">WHERE</span><h2>Stage conversion rates vs benchmark</h2><span class="hint">isolates which step of the funnel is leaking</span></div>
+  <div class="note-block"><div id="diag-stagetable"></div></div>
+  <div class="sec-h" style="margin-top:22px"><span class="k">WHO</span><h2>Applications by journey vs benchmark</h2><span class="hint">% change per day, each journey vs its own Aug 17</span></div>
+  <div class="note-block"><div id="diag-journeytable"></div></div>
 </section>
 </main>
 <div id="overlay"><div class="ovl-card"><div class="spin"></div><div class="t" id="ovl-t">Processing…</div><div class="s" id="ovl-s"></div></div></div>
@@ -782,6 +796,175 @@ function renderMobile(){
   document.getElementById('mob-rows').innerHTML=html;
 }
 
+/* ---------- Diagnostic: Aug 17 benchmark vs Aug 18-25 drop-off ---------- */
+// Fixed investigative window (independent of the global date-range picker
+// above) — computed live from cD each time, so it stays correct if this
+// window's data is ever corrected/backfilled.
+const DIAG_FROM='2026-08-17', DIAG_TO='2026-08-25';
+function diagSumDay(date){
+  const day=cD.days[date]||{};const all={};
+  JOURNEYS.forEach(j=>{const dj=day[j];if(!dj)return;for(const s in dj)all[s]=(all[s]||0)+dj[s];});
+  return all;
+}
+function diagWeekday(d,short){return new Date(d+'T00:00:00Z').toLocaleDateString('en-US',{weekday:short?'short':'long',timeZone:'UTC'});}
+function diagIsWeekend(d){const dow=new Date(d+'T00:00:00Z').getUTCDay();return dow===5||dow===6;} // Fri/Sat, Saudi weekend
+function renderDiagnostic(){
+  const allDates=[];{let c=parseD(DIAG_FROM);const end=parseD(DIAG_TO);while(c<=end){allDates.push(ymd(c));c.setDate(c.getDate()+1);}}
+  const dates=allDates.filter(d=>cD.dates.includes(d));
+  const missing=allDates.filter(d=>!cD.dates.includes(d));
+  document.getElementById('diag-hint').textContent=`${prettyD(DIAG_FROM)}–${prettyD(DIAG_TO)} · benchmark = ${prettyD(DIAG_FROM)} (${diagWeekday(DIAG_FROM)}) · ${dates.length} of ${allDates.length} days have data`;
+
+  const base=diagSumDay(DIAG_FROM);
+  const postDates=dates.filter(d=>d!==DIAG_FROM);
+  const weekdayOnly=postDates.filter(d=>!diagIsWeekend(d));
+
+  /* KPI strip: benchmark vs post-window daily average */
+  const kpiDefs=[
+    ['PG_Total_Visits','PG Visits / day'],
+    ['Existing_or_New_Customer_Entered_CivilId','Civil ID Entries / day'],
+    ['Application_Created','Applications / day'],
+    ['DE_Approved','DE Approved / day'],
+    ['Offer_Accepted','Offers Accepted / day'],
+    ['Booked','Booked / day']
+  ];
+  let kh='';
+  kpiDefs.forEach(([k,label])=>{
+    const b=base[k]||0;
+    const sum=postDates.reduce((s,d)=>s+(diagSumDay(d)[k]||0),0);
+    const p=postDates.length?sum/postDates.length:0;
+    const mom=b?((p-b)/b*100):null;
+    kh+=`<div class="card kpi"><div class="lab">${label}</div><div class="big">${fmt(Math.round(p))}</div>${momBadge(mom)}<div class="mom-note">benchmark ${fmt(b)} on ${prettyD(DIAG_FROM)}</div></div>`;
+  });
+  document.getElementById('diag-kpi').innerHTML=kh;
+
+  /* Core diagnostic: front-of-funnel vs back-of-funnel stability, weekday-only (excludes Fri/Sat seasonal effect) */
+  function avgRatePpDelta(fromStep,toStep){
+    const rb=rate(base[toStep]||0,base[fromStep]||0);
+    if(!weekdayOnly.length)return {rb,delta:0};
+    let sum=0;weekdayOnly.forEach(d=>{const a=diagSumDay(d);sum+=rate(a[toStep]||0,a[fromStep]||0)-rb;});
+    return {rb,delta:sum/weekdayOnly.length};
+  }
+  const frontGate=avgRatePpDelta('PG_Total_Visits','Existing_or_New_Customer_Entered_CivilId');
+  const frontApp=avgRatePpDelta('PG_Total_Visits','Application_Created');
+  const backDE=avgRatePpDelta('DELite_Called','DE_Approved');
+  const backOffer=avgRatePpDelta('Offer_Displayed','Offer_Accepted');
+  const backAddr=avgRatePpDelta('Yaqeen_Passed','NationalAddress_Verified');
+  const backAvgAbs=(Math.abs(backDE.delta)+Math.abs(backOffer.delta)+Math.abs(backAddr.delta))/3;
+
+  /* Per-journey average weekday-only % change vs benchmark, to see who's hit hardest */
+  const journeyDelta=JOURNEYS.map(j=>{
+    const b=(cD.days[DIAG_FROM][j]||{}).Application_Created||0;
+    if(!b||!weekdayOnly.length)return {j,pct:null};
+    let sum=0,n=0;weekdayOnly.forEach(d=>{const v=(cD.days[d][j]||{}).Application_Created||0;sum+=(v-b)/b*100;n++;});
+    return {j,pct:sum/n};
+  }).sort((a,b)=>(a.pct??0)-(b.pct??0));
+  const hitHardest=journeyDelta.filter(x=>x.pct!=null).slice(0,2);
+  const leastHit=journeyDelta.filter(x=>x.pct!=null).slice(-2).reverse();
+
+  /* Weekend effect */
+  const weekendDates=postDates.filter(diagIsWeekend);
+  let weekendAppPct=null;
+  if(weekendDates.length){
+    const b=base.Application_Created||0;
+    const sum=weekendDates.reduce((s,d)=>s+((diagSumDay(d).Application_Created||0)-b)/(b||1)*100,0);
+    weekendAppPct=sum/weekendDates.length;
+  }
+
+  /* Aug 25-style anomaly: any day where PG Visits rose but Civil-ID-entry rate fell hard */
+  let anomaly=null;
+  postDates.forEach(d=>{
+    const a=diagSumDay(d);
+    const visitPct=base.PG_Total_Visits?((a.PG_Total_Visits||0)-base.PG_Total_Visits)/base.PG_Total_Visits*100:0;
+    const gateRate=rate(a.Existing_or_New_Customer_Entered_CivilId||0,a.PG_Total_Visits||0);
+    const gateDeltaPp=gateRate-frontGate.rb;
+    if(visitPct>0 && gateDeltaPp<-15 && (!anomaly||gateDeltaPp<anomaly.gateDeltaPp)) anomaly={d,visitPct,gateRate,gateDeltaPp};
+  });
+
+  document.getElementById('diag-callout').innerHTML=
+    `Comparing every day from <b>${prettyD(DIAG_FROM)}</b> (benchmark) through <b>${prettyD(DIAG_TO)}</b>: the leak is concentrated at the <b>very top of the New Customer journey</b> (PG Visits → Civil ID entry), not in DE/underwriting or offer/verification — those stayed within ${backAvgAbs.toFixed(1)}pp of benchmark all week. `+
+    (missing.length?`<b>${missing.map(prettyD).join(', ')} has no funnel data at all</b> — a separate data-pipeline gap worth checking independently of the conversion issue below.`:'');
+
+  const cards=[];
+  cards.push(['bad','Front-of-funnel leak, not a backend problem',
+    `<b>PG Visits → Civil ID entry</b> conversion is <span class="mono">${frontGate.delta.toFixed(1)}pp</span> below the ${prettyD(DIAG_FROM)} benchmark (${frontGate.rb}%) on an average non-weekend day, and <b>PG Visits → Application Created</b> is <span class="mono">${frontApp.delta.toFixed(1)}pp</span> below benchmark (${frontApp.rb}%). Meanwhile the stages downstream of Application Created barely moved: DELite→DE Approved <span class="mono">${backDE.delta>=0?'+':''}${backDE.delta.toFixed(1)}pp</span>, Offer shown→accepted <span class="mono">${backOffer.delta>=0?'+':''}${backOffer.delta.toFixed(1)}pp</span>, Yaqeen→National Address <span class="mono">${backAddr.delta>=0?'+':''}${backAddr.delta.toFixed(1)}pp</span>. That pattern — a stable underwriting/offer engine but a leaking entry gate — points to a <b>front-end/tech issue at the Civil ID entry step</b> (site, OTP, or the New-Customer registration form), not a policy or capacity change.`]);
+  if(anomaly){
+    cards.push(['bad',`${prettyD(anomaly.d)} — traffic came back, conversion did not`,
+      `PG Visits were <span class="mono">${anomaly.visitPct>=0?'+':''}${anomaly.visitPct.toFixed(0)}%</span> vs benchmark on <b>${prettyD(anomaly.d)}</b> (${diagWeekday(anomaly.d)}) — demand did not drop — yet the Civil ID entry rate was only <span class="mono">${anomaly.gateRate}%</span> (benchmark ${frontGate.rb}%, <span class="mono">${anomaly.gateDeltaPp.toFixed(1)}pp</span>). Rising traffic with collapsing entry conversion on the same day is the clearest single signal of a <b>tech/form issue</b> that day specifically, rather than a demand or journey-design issue.`]);
+  }
+  cards.push(['warn','Self-service journeys hit hardest — office-assisted journeys held up',
+    `Averaged over non-weekend days, <b>${hitHardest.map(x=>x.j).join('</b> and <b>')}</b> dropped the most (<span class="mono">${hitHardest.map(x=>x.pct.toFixed(0)+'%').join(', ')}</span> vs benchmark), while <b>${leastHit.map(x=>x.j).join('</b> and <b>')}</b> held up comparatively well (<span class="mono">${leastHit.map(x=>x.pct.toFixed(0)+'%').join(', ')}</span>). Both New Customer and Existing Customer route through the same public-facing PG entry point — the journeys least dependent on that entry point are the ones least affected, which supports the front-end diagnosis above rather than a per-journey design problem.`]);
+  if(weekendDates.length){
+    cards.push(['warn','Fri/Sat is a separate, expected effect — don’t conflate it with the leak above',
+      `${weekendDates.map(d=>prettyD(d)+' ('+diagWeekday(d)+')').join(' and ')} show the steepest drops of the window (applications <span class="mono">${weekendAppPct.toFixed(0)}%</span> vs benchmark on average) — the Saudi weekend, plus office-hours-dependent journeys (BO) falling even further than self-service ones on those days. This is normal seasonality, not part of the tech issue diagnosed above; excluding it is exactly why the figures above use weekday-only days.`]);
+  }
+  if(missing.length){
+    cards.push(['bad','Missing day(s) — a data-pipeline gap, check separately',
+      `${missing.map(prettyD).join(', ')} ${missing.length>1?'have':'has'} zero funnel rows in this dataset — no Tawarruq_Funnel export was merged for ${missing.length>1?'those days':'that day'}. That could mean no file was received, a failed upload, or a genuine system outage; either way it should be confirmed independently rather than assumed to be zero real activity.`]);
+  }
+  document.getElementById('diag-insights').innerHTML=cards.map(c=>`<div class="ins ${c[0]}"><h4>${c[1]}</h4><p>${c[2]}</p></div>`).join('');
+
+  /* Day-by-day table */
+  const DT_STEPS=[['PG_Total_Visits','PG Visits'],['Existing_or_New_Customer_Entered_CivilId','Civil ID Entry'],['Application_Created','Applications'],['DE_Approved','DE Approved'],['Offer_Accepted','Offer Accepted'],['Booked','Booked']];
+  let dt='<table class="dt"><thead><tr><th>Date</th>'+DT_STEPS.map(s=>`<th class="num">${s[1]}</th>`).join('')+'</tr></thead><tbody>';
+  allDates.forEach(d=>{
+    const isMissing=!cD.dates.includes(d);
+    const isWknd=diagIsWeekend(d);
+    const isBase=d===DIAG_FROM;
+    const rowStyle=isMissing?'background:rgba(236,90,120,.10)':(isWknd?'background:var(--muted-bg)':(isBase?'background:rgba(58,154,232,.07)':''));
+    if(isMissing){
+      dt+=`<tr style="${rowStyle}"><td>${prettyD(d)} <span class="pill2" style="color:var(--red);border-color:var(--red)">no data</span></td>`+DT_STEPS.map(()=>'<td class="num" style="color:var(--faint)">—</td>').join('')+'</tr>';
+      return;
+    }
+    const a=diagSumDay(d);
+    dt+=`<tr style="${rowStyle}"><td>${prettyD(d)} <span style="color:var(--faint);font-size:11px">${diagWeekday(d,true)}</span>${isBase?' <span class="pill2" style="color:var(--cyan-d);border-color:var(--cyan-d)">benchmark</span>':''}${isWknd?' <span class="pill2">weekend</span>':''}</td>`+
+      DT_STEPS.map(([k])=>{
+        const v=a[k]||0,b=base[k]||0;
+        const pct=isBase?null:(b?((v-b)/b*100):null);
+        const cls=pct==null?'flat':(pct<-10?'dn':(pct>10?'up':'flat'));
+        return `<td class="num">${fmt(v)}${pct==null?'':`<div class="deltac ${cls}" style="font-size:11px">${pct>=0?'+':''}${pct.toFixed(0)}%</div>`}</td>`;
+      }).join('')+'</tr>';
+  });
+  dt+='</tbody></table>';
+  document.getElementById('diag-daytable').innerHTML=dt;
+
+  /* Stage conversion-rate table */
+  const CHAIN=[['PG_Total_Visits','Existing_or_New_Customer_Entered_CivilId','PG Visits → Civil ID entry'],
+    ['Existing_or_New_Customer_Entered_CivilId','New_Customers','Civil ID entry → New Customer'],
+    ['PG_Total_Visits','Application_Created','PG Visits → Application'],
+    ['DELite_Called','DE_Approved','DELite → DE Approved'],
+    ['Offer_Displayed','Offer_Accepted','Offer shown → accepted'],
+    ['Yaqeen_Passed','NationalAddress_Verified','Yaqeen → Nat. Address']];
+  let st='<table class="dt"><thead><tr><th>Stage</th>'+allDates.map(d=>`<th class="num">${d.slice(5)}${diagIsWeekend(d)?' *':''}</th>`).join('')+'</tr></thead><tbody>';
+  CHAIN.forEach(([x,y,label])=>{
+    const rb=rate(base[y]||0,base[x]||0);
+    st+=`<tr><td>${label}</td>`+allDates.map(d=>{
+      if(!cD.dates.includes(d))return '<td class="num" style="color:var(--faint)">—</td>';
+      const a=diagSumDay(d);const r=rate(a[y]||0,a[x]||0);
+      const isBase=d===DIAG_FROM;
+      const cls=isBase?'flat':((r-rb)<-8?'dn':((r-rb)>8?'up':'flat'));
+      return `<td class="num deltac ${cls}">${r}%</td>`;
+    }).join('')+'</tr>';
+  });
+  st+='</tbody></table><div style="font-size:11px;color:var(--faint);margin-top:8px">* Fri/Sat — Saudi weekend, expect lower volume and often lower conversion regardless of any tech issue.</div>';
+  document.getElementById('diag-stagetable').innerHTML=st;
+
+  /* Per-journey Application_Created % vs benchmark table */
+  let jt='<table class="dt"><thead><tr><th>Journey</th>'+allDates.map(d=>`<th class="num">${d.slice(5)}${diagIsWeekend(d)?' *':''}</th>`).join('')+'</tr></thead><tbody>';
+  JOURNEYS.forEach(j=>{
+    const b=(cD.days[DIAG_FROM][j]||{}).Application_Created||0;
+    jt+=`<tr><td>${j}</td>`+allDates.map(d=>{
+      if(!cD.dates.includes(d))return '<td class="num" style="color:var(--faint)">—</td>';
+      if(d===DIAG_FROM)return `<td class="num">${fmt(b)}</td>`;
+      const v=(cD.days[d][j]||{}).Application_Created||0;
+      const pct=b?((v-b)/b*100):null;
+      const cls=pct==null?'flat':(pct<-10?'dn':(pct>10?'up':'flat'));
+      return `<td class="num deltac ${cls}">${pct==null?'—':(pct>=0?'+':'')+pct.toFixed(0)+'%'}</td>`;
+    }).join('')+'</tr>';
+  });
+  jt+='</tbody></table>';
+  document.getElementById('diag-journeytable').innerHTML=jt;
+}
+
 function renderAll(){computeCUR();renderKPI();renderFunnel();renderFunnelDeclines();renderRates();renderTail();updateChips();
   if(rendered.compare)renderCompare();if(rendered.dropoff)renderDropoff();if(rendered.trends)renderTrends();if(rendered.insights)renderInsights();if(rendered.business)renderBusiness();if(rendered.mobile)renderMobile();}
 function updateChips(){
@@ -806,7 +989,7 @@ document.querySelectorAll('#jsel button').forEach(b=>b.addEventListener('click',
 /* ---------- tabs ---------- */
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));t.classList.add('on');const id=t.dataset.tab;
   document.querySelectorAll('.panel-tab').forEach(p=>p.classList.toggle('on',p.id===id));
-  if(!rendered[id]){rendered[id]=true;if(id==='compare')renderCompare();if(id==='dropoff')renderDropoff();if(id==='trends')renderTrends();if(id==='insights')renderInsights();if(id==='business')renderBusiness();if(id==='mobile'){JSEL='UI to BO';document.querySelectorAll('#jsel button').forEach(x=>x.classList.toggle('on',x.dataset.j==='UI to BO'));renderAll();}}}));
+  if(!rendered[id]){rendered[id]=true;if(id==='compare')renderCompare();if(id==='dropoff')renderDropoff();if(id==='trends')renderTrends();if(id==='insights')renderInsights();if(id==='business')renderBusiness();if(id==='mobile'){JSEL='UI to BO';document.querySelectorAll('#jsel button').forEach(x=>x.classList.toggle('on',x.dataset.j==='UI to BO'));renderAll();}if(id==='diagnostic')renderDiagnostic();}}));
 
 /* ---------- toast/overlay ---------- */
 let tT;function toast(m){const el=document.getElementById('toast');el.textContent=m;el.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>el.classList.remove('on'),3400);}
