@@ -390,6 +390,9 @@ table.dt tr:hover td{background:var(--muted-bg)}
   <div class="chart-card"><div class="cwrap tall"><canvas id="c-diag-verify"></canvas></div></div>
   <div class="note-block"><div id="diag-verify-table"></div></div>
 
+  <div class="sec-h" style="margin-top:22px"><span class="k">FULL FUNNEL</span><h2>Every step, in journey order</h2><span class="hint" id="diag-full-hint"></span></div>
+  <div class="note-block"><div id="diag-full-table"></div></div>
+
   <div class="callout" style="margin-top:22px;margin-bottom:0" id="diag-acq-callout"></div>
   <div class="sec-h" style="margin-top:18px"><span class="k">ACQUISITION OVERLAY</span><h2>Daily trend by income</h2><span class="hint" id="diag-inc-hint"></span></div>
   <div class="chart-card">
@@ -995,6 +998,7 @@ function renderDiagnostic(){
   document.getElementById('diag-journeytable').innerHTML=jt;
 
   renderDiagVerifySteps(allDates,base);
+  renderDiagFullFunnel(allDates,base);
   renderDiagAcqOverlay();
 }
 
@@ -1026,6 +1030,46 @@ function renderDiagVerifySteps(allDates,base){
   });
   vt+='</tbody></table>';
   document.getElementById('diag-verify-table').innerHTML=vt;
+}
+
+// Every funnel step, in actual journey order (as specified) rather than the
+// spreadsheet's alphabetical-ish default order. Two labels differ from their
+// raw xlsx StepName because canonStep() (see the upload handler below)
+// folds them into one canonical key before they ever reach cD:
+//   'IVR/ Approval Call Completed' -> IVR_Completed
+//   'Sayen/Emdha_Count'            -> Sayen_Emdha
+const FULL_STEP_ORDER=[
+  'Clicks_Daily','Clicked_Apply_Now','Lets_start_page','PG_Total_Visits',
+  'PG_Decline_Reasons - Disposable Income Rule','PG_Decline_Reasons - Loan Size Rule',
+  'PG_Decline_Reasons - Minimum Income Rule','PG_Decline_Reasons - Other Reason',
+  'Customer_Passed_PG_Dropped_Before_Registration','Existing_or_New_Customer_Entered_CivilId',
+  'New_Customers','DOB_Entered','Password_Entered','CITC_Passed','CITC_Failed',
+  'Name_Missing','Email_Missing','Application_Created','DELite_Called',
+  'SIMAH_CHECK','QARAR_CHECK','DE_Approved','Mof_GOSI_Data_Available',
+  'Offer_Displayed','Offer_Accepted','Yaqeen_Passed',
+  'Sales Vetting due to Geo check','Geo passed atleast one device',
+  'STP_Application','NonSTP_Application','NationalAddress_Verified',
+  'Cancelled by BO','Cancelled by Customer Service Team','Rejected by UW/ Checker',
+  'Rejected by Fraud','Lapsed while waiting customer','Eligible for IVR Call',
+  'Approval Call initiated but not accepted','IVR_Completed','Auto_Debit',
+  'Sayen_Emdha','Nafith_Count','Booked'
+];
+function renderDiagFullFunnel(allDates,base){
+  document.getElementById('diag-full-hint').textContent=`${FULL_STEP_ORDER.length} steps · all journeys summed · % vs the ${prettyD(DIAG_FROM)} benchmark`;
+  let ft='<table class="dt"><thead><tr><th>Step</th>'+allDates.map(d=>`<th class="num">${d.slice(5)}${diagIsWeekend(d)?' *':''}</th>`).join('')+'</tr></thead><tbody>';
+  FULL_STEP_ORDER.forEach(step=>{
+    const b=base[step]||0;
+    ft+=`<tr><td>${lab(step)}</td>`+allDates.map(d=>{
+      if(!cD.dates.includes(d))return '<td class="num" style="color:var(--faint)">—</td>';
+      const v=diagSumDay(d)[step]||0;
+      if(d===DIAG_FROM)return `<td class="num">${fmt(v)}</td>`;
+      const pct=b?((v-b)/b*100):null;
+      const cls=pct==null?'flat':(pct<-10?'dn':(pct>10?'up':'flat'));
+      return `<td class="num">${fmt(v)}${pct==null?'':`<div class="deltac ${cls}" style="font-size:11px">${pct>=0?'+':''}${pct.toFixed(0)}%</div>`}</td>`;
+    }).join('')+'</tr>';
+  });
+  ft+='</tbody></table><div style="font-size:11px;color:var(--faint);margin-top:8px">* Fri/Sat — Saudi weekend.</div>';
+  document.getElementById('diag-full-table').innerHTML=ft;
 }
 
 /* ---------- Diagnostic: Acquisition-system overlay (income/nationality/employer, Smart/Normal, Online/Back Office) ---------- */
