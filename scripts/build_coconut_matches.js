@@ -191,7 +191,7 @@ async function main() {
   const files = fs.readdirSync(ARCHIVE_DIR).filter(f => /\.csv$/i.test(f)).sort();
   console.log(`${files.length} archived SIMAH files to scan for matches`);
 
-  const rows = []; // {civilId(masked), stagingId, product, tasheelAmount, institution, category, amount, rate, issuedDate}
+  const rows = []; // {civilId(masked), stagingId, product, tasheelAmount, institution, category, amount, installment, rate, issuedDate}
   let totalScanned = 0, matchedCustomers = 0;
   for (const fn of files) {
     const fp = path.join(ARCHIVE_DIR, fn);
@@ -240,7 +240,7 @@ async function main() {
           const d = parseDMY(issuedDate);
           const existing = perInst[cred];
           if (!existing || (d && (!existing.date || d > existing.date))) {
-            perInst[cred] = { category: cat, amount: Math.round(amount), rate: annualRatePct, issuedDate, date: d };
+            perInst[cred] = { category: cat, amount: Math.round(amount), installment: Math.round(installment) || null, rate: annualRatePct, issuedDate, date: d };
           }
         });
         const instKeys = Object.keys(perInst);
@@ -253,7 +253,7 @@ async function main() {
             stagingId: [...port.stagingIds][0] || '',
             product: [...port.products].join('/') || '',
             tasheelAmount: Math.round(port.tasheelAmount) || null,
-            institution: inst, category: l.category, amount: l.amount, rate: l.rate, issuedDate: l.issuedDate
+            institution: inst, category: l.category, amount: l.amount, installment: l.installment, rate: l.rate, issuedDate: l.issuedDate
           });
         });
         n++;
