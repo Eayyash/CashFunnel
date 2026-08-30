@@ -33,7 +33,11 @@ const acqHtml = fs.readFileSync(ACQ_FILE, 'utf-8');
 const marker = 'const RAWSTORE = ';
 const mi = acqHtml.indexOf(marker);
 if (mi === -1) { console.error('RAWSTORE not found'); process.exit(1); }
-const me = acqHtml.indexOf(';\n', mi);
+// CRLF-safe: the file's line endings can flip between LF and CRLF depending
+// on which tool last touched it, so match either instead of a literal ';\n'.
+const endMatch = /\};\r?\n/.exec(acqHtml.slice(mi));
+if (!endMatch) { console.error('Could not find end of RAWSTORE statement'); process.exit(1); }
+const me = mi + endMatch.index + 1; // +1 to include the closing brace
 const rs = JSON.parse(acqHtml.slice(mi + marker.length, me));
 console.log(`  ${rs.n.toLocaleString()} rows, ${rs.dates.length} dates (${rs.dates[0]} → ${rs.dates[rs.dates.length - 1]})`);
 
