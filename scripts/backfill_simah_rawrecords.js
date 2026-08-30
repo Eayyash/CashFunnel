@@ -201,14 +201,21 @@ function extractFeatures(rep) {
       // SMTG, TMTG, MMTG, AMTG, EMTG (all contain 'MTG'), plus AQAR
       // (Government Mortgage Real Estate Fund).
       if (prodCode.includes('MTG') || prodCode === 'AQAR') hasMortgage = true;
-      // Per-loan detail for NBFI/BNPL exposure. Annual rate (user-specified):
-      // Excel =RATE(tenure, -installment, loan amount) * 12.
+    }
+    // Per-loan detail for NBFI/BNPL/Bank exposure — captured for ANY status
+    // (not just active) so views wanting the full lending relationship
+    // (e.g. Competitors List) can see closed loans too; views scoped to
+    // "active" competitor exposure filter on l.status==='Active'
+    // themselves. Annual rate (user-specified):
+    // Excel =RATE(tenure, -installment, loan amount) * 12.
+    {
+      const cred = ci.ciCreditor?.memberNameEN || 'Unknown';
       const cat = competitorCategory(cred);
-      if (cat === 'NBFI' || cat === 'BNPL') {
+      if (cat === 'NBFI' || cat === 'BNPL' || cat === 'Bank') {
         const amount = Number(ci.ciLimit) || 0;
         const installment = Number(ci.ciInstallmentAmount) || 0;
         const tenureMonths = Number(ci.ciTenure) || 0;
-        competitorInstallmentSum += installment;
+        if (isActive) competitorInstallmentSum += installment;
         let annualRatePct = null;
         if (amount > 0 && tenureMonths > 0 && installment > 0) {
           const monthlyRate = excelRate(tenureMonths, -installment, amount);
@@ -220,11 +227,14 @@ function extractFeatures(rep) {
         if (amount > 0 && tenureMonths > 0) {
           buyoutRatePct = Math.round(((installment * tenureMonths / amount) - 1) * (12 / tenureMonths) * 1000) / 10;
         }
+        const STATUS_LABEL = { A: 'Active', C: 'Closed', W: 'Written-off', S: 'Suspended' };
+        const statusCode = ci.ciStatus?.creditInstrumentStatusCode || '';
         competitorLoans.push({
           institution: cred, category: cat, prodCode,
           amount: Math.round(amount), installment: Math.round(installment),
           tenureMonths, annualRatePct, buyoutRatePct,
-          issuedDate: ci.ciIssuedDate || ''
+          issuedDate: ci.ciIssuedDate || '',
+          status: STATUS_LABEL[statusCode] || (statusCode || 'Unknown')
         });
       }
     }
