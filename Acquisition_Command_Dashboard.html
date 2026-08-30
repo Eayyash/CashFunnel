@@ -1208,8 +1208,16 @@ const RAWSTORE = {"n":805319,"dates":["2025-10-06","2025-10-07","2025-10-08","20
     const initRate=dates.map(d=>{const b=byDate[d]; return (b&&b.sub)?+(100*b.init/b.sub).toFixed(1):0;});
     return {dates,onlinePct,empPct,bookRate,initRate};
   }
+  // "This month, not affected by date filter" (per the section's own hint)
+  // means exactly that — independent of whatever RANGE the user has
+  // selected elsewhere. Mirrors the 'mtd' preset's month bounds.
+  function currentMonthRange(){
+    const mn=cD.meta.min,mx=cD.meta.max,mxD=parseD(mx),mxCap=capToYesterday(mx);
+    const first=ymd(new Date(mxD.getFullYear(),mxD.getMonth(),1));
+    return {from:first<mn?mn:first, to:mxCap<first?first:mxCap};
+  }
   function summaryDailyExtremes(){
-    const monthFrom=RANGE.from, monthTo=RANGE.to;
+    const {from:monthFrom,to:monthTo}=currentMonthRange();
     const monthDates=cD.dates.filter(d=>d>=monthFrom&&d<=monthTo);
     const rows=monthDates.map(d=>{const k=cD.days[d]?cD.days[d].k:{sub:0,init:0,final:0,book:0,val:0};
       return {date:d,sub:k.sub,init:k.init,final:k.final,book:k.book,val:k.val,
@@ -1223,7 +1231,7 @@ const RAWSTORE = {"n":805319,"dates":["2025-10-06","2025-10-07","2025-10-08","20
     return {max,min};
   }
   function topSegments(){
-    const monthFrom=RANGE.from, monthTo=RANGE.to;
+    const {from:monthFrom,to:monthTo}=currentMonthRange();
     const monthDates=cD.dates.filter(d=>d>=monthFrom&&d<=monthTo);
     const dims=['employer','nationality'];
     const out={};
