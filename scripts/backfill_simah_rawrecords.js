@@ -21,6 +21,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+const readline = require('readline');
 
 const ROOT = path.resolve(__dirname, '..');
 const HTML_OUT = path.join(ROOT, 'SIMAH_Intelligence.html');
@@ -52,8 +53,37 @@ const COMPETITOR_CATEGORY = {
   'SOCIAL DEVELOPMENT BANK': 'Bank',
   'EMIRATES BANK': 'Bank',
   'REAL ESTATE DEVELOPMENT FUND': 'Bank',
-  'ALINMA BANK': 'Bank'
+  'ALINMA BANK': 'Bank',
+  // Added after user question "why can't I see Madfu and other" — these
+  // real banks/finance companies were present in raw SIMAH data but missing
+  // from this hand-curated allowlist, so their loans were silently dropped
+  // from every competitor view. Telecoms, car-rental, retail, HR, and
+  // government-commission entities that also appear in SIMAH data are
+  // deliberately still excluded here — they report credit facilities too,
+  // but aren't personal-loan competitors.
+  'MADFU Ltd': 'BNPL',
+  'BANK ALJAZIRA': 'Bank', 'BANK AL BILAD': 'Bank', 'BANQUE SAUDI FRANSI': 'Bank',
+  'GULF INTERNATIONAL BANK': 'Bank', 'THE SAUDI INVESTMENT BANK': 'Bank',
+  'D360 Bank': 'Bank', 'FIRST ABU DHABI BANK': 'Bank',
+  'AGRICULTURAL DEVELOPMENT FUND': 'Bank', 'ANB INVEST': 'Bank', 'NCB CAPITAL': 'Bank',
+  'ALBilad investment Company': 'Bank',
+  'NAYIFAT FINANCE COMPANY': 'NBFI', 'AL YUSR INSTALLMENT CO': 'NBFI', 'Tamweel Aloula': 'NBFI',
+  'NATIONAL FINANCE COMPANY': 'NBFI', 'TAAJEER FINANCE': 'NBFI', 'RAYA FINANCING': 'NBFI',
+  'SAUDI FINANCE COMPANY': 'NBFI', 'Sanad Finance Company': 'NBFI', 'NATIONAL FINANCE HOUSE': 'NBFI',
+  'AL JABR FINANCING CORPORATION': 'NBFI', 'OSOUL MODERN FINANCE CO LTD': 'NBFI',
+  'DERAYAH FINANCIAL COMPANY': 'NBFI', 'SHL Finance Company': 'NBFI',
+  'MASAR ALNUMOU FINANCE COMPANY': 'NBFI', 'BIDAYA FINANCE COMPANY': 'NBFI',
+  'Modern Integrated Solutions Financing Company': 'NBFI', 'Tokilat Finance Company': 'NBFI',
+  'LOAN FOR FINANCE': 'NBFI', 'Eitmed Finance Company': 'NBFI', 'Tamwily International Company': 'NBFI',
+  'TAAJEER COMPANY': 'NBFI', 'TAAJEER GULF CO': 'NBFI', 'DAR AL TAMLEEK': 'NBFI',
+  'DAR ALETIMAN ALSAUDI INSTALLMENT': 'NBFI', 'MORABAHA MARENA': 'NBFI',
+  'MATAJR INSTALLMENT COMPANY': 'NBFI', 'NAMA United Financing': 'NBFI', 'TAMKEEN INSTALLMENT CO': 'NBFI',
+  'Alan Khaleejia Microfinancing Company': 'NBFI', 'SEWLAH FOR TRADING AND INSTALLMENT': 'NBFI',
+  'SULFAH': 'NBFI', 'Seulah al awla': 'NBFI', 'MONEYMOON': 'NBFI', 'GO Money': 'NBFI',
+  'MOHOUR EL TEMKIN': 'NBFI', 'EL ALOW FINNACIAL CO RIZE': 'NBFI', 'Fuel Finance': 'NBFI',
+  'Alpha Arabia Finance': 'NBFI'
 };
+
 function competitorCategory(name) { return COMPETITOR_CATEGORY[(name || '').trim()] || null; }
 
 // Excel RATE(nper, pmt, pv, [fv], [type], [guess]) — solves for the periodic
@@ -293,17 +323,27 @@ const BOOKED = new Set(['Completed [C]', 'Pending Final Approval']);
 const freshRecords = [];
 const institutionLoanStats = {}; // inst -> {loans, customers, plnSum, plnN}
 
-files.forEach(fp => {
+// Archive files (~100-270MB each) are streamed line-by-line via readline
+// instead of fs.readFileSync — reading a whole file (plus its split lines
+// array, plus every parsed row object) into memory at once was blowing past
+// an 8GB heap and crashing on the very first file once the archive grew to
+// its current size.
+async function processFile(fp) {
   console.log(`Reading ${path.basename(fp)}…`);
-  const csvRows = readCsv(fp);
-  let n = 0, errs = 0;
-  csvRows.forEach(row => {
+  const rl = readline.createInterface({ input: fs.createReadStream(fp, { encoding: 'utf-8' }), crlfDelay: Infinity });
+  let headers = null, idxJson = -1, n = 0, errs = 0;
+  for await (const line of rl) {
+    if (!line.trim()) continue;
+    if (!headers) { headers = parseCsvLine(line); idxJson = headers.indexOf('JSON_Response'); continue; }
     try {
-      const wrapper = JSON.parse(row.JSON_Response);
+      const vals = parseCsvLine(line);
+      const jsonStr = vals[idxJson];
+      if (!jsonStr) { errs++; continue; }
+      const wrapper = JSON.parse(jsonStr);
       const rep = findReport(wrapper);
-      if (!rep) { errs++; return; }
+      if (!rep) { errs++; continue; }
       const f = extractFeatures(rep);
-      if (!f.civilId) { errs++; return; }
+      if (!f.civilId) { errs++; continue; }
       const acq = acqMap[f.civilId];
       const matched = !!acq;
       const isApproved = acq?.Approvalflag === 'Y';
@@ -358,42 +398,49 @@ files.forEach(fp => {
       }
       n++;
     } catch (e) { errs++; }
-  });
+  }
   console.log(`  ${n} extracted, ${errs} errors`);
-});
+}
 
-console.log(`Total fresh records built: ${freshRecords.length}`);
-console.log(`Institutions with active PLN data: ${Object.keys(institutionLoanStats).length}`);
+async function main() {
+  for (const fp of files) {
+    await processFile(fp);
+  }
 
-// Prioritize records with a real submitted date (most recent first); unmatched
-// (no submitted date) fill any remaining capacity at the end.
-const dated = freshRecords.filter(r => r.submitted).sort((a, b) => b.submitted.localeCompare(a.submitted));
-const undated = freshRecords.filter(r => !r.submitted);
-const finalRecords = [...dated, ...undated].slice(0, RAW_CAP);
+  console.log(`Total fresh records built: ${freshRecords.length}`);
+  console.log(`Institutions with active PLN data: ${Object.keys(institutionLoanStats).length}`);
 
-const dates = finalRecords.map(r => r.submitted).filter(Boolean).sort();
-const submittedMin = dates[0] || null;
-const submittedMax = dates[dates.length - 1] || null;
-console.log(`Final rawRecords: ${finalRecords.length} (capped at ${RAW_CAP})`);
-console.log(`submittedMin: ${submittedMin}, submittedMax: ${submittedMax}`);
+  // Prioritize records with a real submitted date (most recent first); unmatched
+  // (no submitted date) fill any remaining capacity at the end.
+  const dated = freshRecords.filter(r => r.submitted).sort((a, b) => b.submitted.localeCompare(a.submitted));
+  const undated = freshRecords.filter(r => !r.submitted);
+  const finalRecords = [...dated, ...undated].slice(0, RAW_CAP);
 
-// --- Splice into SIMAH_Intelligence.html (rawRecords + meta.submittedMin/Max + institutionLoanStats) ---
-console.log('Reading SIMAH_Intelligence.html…');
-const html = fs.readFileSync(HTML_OUT, 'utf-8');
-const startTag = 'const SIMAH_DATA = ';
-const startIdx = html.indexOf(startTag) + startTag.length;
-const endTag = ';\nlet D = SIMAH_DATA;';
-const endIdx = html.indexOf(endTag, startIdx);
-if (startIdx < 0 || endIdx < 0) { console.error('Could not locate SIMAH_DATA blob'); process.exit(1); }
-const data = JSON.parse(html.slice(startIdx, endIdx));
+  const dates = finalRecords.map(r => r.submitted).filter(Boolean).sort();
+  const submittedMin = dates[0] || null;
+  const submittedMax = dates[dates.length - 1] || null;
+  console.log(`Final rawRecords: ${finalRecords.length} (capped at ${RAW_CAP})`);
+  console.log(`submittedMin: ${submittedMin}, submittedMax: ${submittedMax}`);
 
-console.log(`Old rawRecords: ${data.rawRecords.length}, old institutionLoanStats keys: ${Object.keys(data.institutionLoanStats || {}).length}`);
-data.rawRecords = finalRecords;
-data.meta.submittedMin = submittedMin;
-data.meta.submittedMax = submittedMax;
-data.institutionLoanStats = institutionLoanStats;
+  // --- Splice into SIMAH_Intelligence.html (rawRecords + meta.submittedMin/Max + institutionLoanStats) ---
+  console.log('Reading SIMAH_Intelligence.html…');
+  const html = fs.readFileSync(HTML_OUT, 'utf-8');
+  const startTag = 'const SIMAH_DATA = ';
+  const startIdx = html.indexOf(startTag) + startTag.length;
+  const endTag = ';\nlet D = SIMAH_DATA;';
+  const endIdx = html.indexOf(endTag, startIdx);
+  if (startIdx < 0 || endIdx < 0) { console.error('Could not locate SIMAH_DATA blob'); process.exit(1); }
+  const data = JSON.parse(html.slice(startIdx, endIdx));
 
-const newBlob = JSON.stringify(data);
-const newHtml = html.slice(0, startIdx) + newBlob + html.slice(endIdx);
-fs.writeFileSync(HTML_OUT, newHtml, 'utf-8');
-console.log('✅ Done — rawRecords, submittedMin/Max, and institutionLoanStats backfilled. All other aggregates untouched.');
+  console.log(`Old rawRecords: ${data.rawRecords.length}, old institutionLoanStats keys: ${Object.keys(data.institutionLoanStats || {}).length}`);
+  data.rawRecords = finalRecords;
+  data.meta.submittedMin = submittedMin;
+  data.meta.submittedMax = submittedMax;
+  data.institutionLoanStats = institutionLoanStats;
+
+  const newBlob = JSON.stringify(data);
+  const newHtml = html.slice(0, startIdx) + newBlob + html.slice(endIdx);
+  fs.writeFileSync(HTML_OUT, newHtml, 'utf-8');
+  console.log('✅ Done — rawRecords, submittedMin/Max, and institutionLoanStats backfilled. All other aggregates untouched.');
+}
+main();
