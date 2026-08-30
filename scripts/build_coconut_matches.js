@@ -67,7 +67,7 @@ async function readOverviewPortfolio() {
   console.log('  sharedStrings:', strings.length.toLocaleString());
 
   console.log('Streaming sheet1.xml…');
-  // stagingId -> { products:Set, statuses:Set, count }
+  // stagingId -> { products:Set, statuses:Set, count, finAmount }
   // (OverView's CIVIL_ID is an anonymized hash — not usable as a join key; StagingID is the real one.)
   const portfolio = new Map();
   let currentRow = {}, currentCellRef = null, currentCellType = null, currentVal = '', inCell = false, rowNum = 0, totalRows = 0;
@@ -78,9 +78,11 @@ async function readOverviewPortfolio() {
     const sid = currentRow.StagingID;
     if (!sid || sid === 'NULL') return;
     let p = portfolio.get(sid);
-    if (!p) { p = { products: new Set(), statuses: new Set(), count: 0 }; portfolio.set(sid, p); }
+    if (!p) { p = { products: new Set(), statuses: new Set(), count: 0, finAmount: 0 }; portfolio.set(sid, p); }
     if (currentRow.Product_type) p.products.add(currentRow.Product_type);
     if (currentRow.STATUS) p.statuses.add(currentRow.STATUS);
+    const fa = Number(currentRow.FIN_AMOUNT);
+    if (isFinite(fa) && fa > 0) p.finAmount = Math.max(p.finAmount, fa); // one row per StagingID in practice; max guards against dupes
     p.count++;
   }
   const parser = sax.createStream(true, {});
@@ -189,7 +191,7 @@ async function main() {
   const files = fs.readdirSync(ARCHIVE_DIR).filter(f => /\.csv$/i.test(f)).sort();
   console.log(`${files.length} archived SIMAH files to scan for matches`);
 
-  const rows = []; // {civilId(masked), stagingId, product, institution, category, amount, rate, issuedDate}
+  const rows = []; // {civilId(masked), stagingId, product, tasheelAmount, institution, category, amount, rate, issuedDate}
   let totalScanned = 0, matchedCustomers = 0;
   for (const fn of files) {
     const fp = path.join(ARCHIVE_DIR, fn);
@@ -209,13 +211,14 @@ async function main() {
         totalScanned++;
         const stagingIds = civilToStaging.get(civilId);
         if (!stagingIds || !stagingIds.size) continue; // not in the booked Holistic View portfolio
-        // Merge products/statuses across every portfolio row for this customer's StagingID(s).
-        const port = { stagingIds, products: new Set(), statuses: new Set() };
+        // Merge products/statuses/loan amount across every portfolio row for this customer's StagingID(s).
+        const port = { stagingIds, products: new Set(), statuses: new Set(), tasheelAmount: 0 };
         stagingIds.forEach(sid => {
           const p = portfolio.get(sid);
           if (!p) return;
           p.products.forEach(x => port.products.add(x));
           p.statuses.forEach(x => port.statuses.add(x));
+          port.tasheelAmount += p.finAmount || 0;
         });
 
         const cis = asArray(rep.creditInstrumentDetails);
@@ -249,6 +252,7 @@ async function main() {
             civilId: civilId.slice(0, 4) + '****' + civilId.slice(-2),
             stagingId: [...port.stagingIds][0] || '',
             product: [...port.products].join('/') || '',
+            tasheelAmount: Math.round(port.tasheelAmount) || null,
             institution: inst, category: l.category, amount: l.amount, rate: l.rate, issuedDate: l.issuedDate
           });
         });
