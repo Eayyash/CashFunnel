@@ -191,7 +191,7 @@ async function main() {
   const files = fs.readdirSync(ARCHIVE_DIR).filter(f => /\.csv$/i.test(f)).sort();
   console.log(`${files.length} archived SIMAH files to scan for matches`);
 
-  const rows = []; // {civilId(masked), stagingId, product, tasheelAmount, institution, category, amount, installment, rate, issuedDate}
+  const rows = []; // {civilId(masked), stagingId, product, tasheelAmount, institution, category, amount, installment, tenure, rate, issuedDate}
   let totalScanned = 0, matchedCustomers = 0;
   for (const fn of files) {
     const fp = path.join(ARCHIVE_DIR, fn);
@@ -231,16 +231,17 @@ async function main() {
           const amount = Number(ci.ciLimit) || 0;
           const installment = Number(ci.ciInstallmentAmount) || 0;
           const tenureMonths = Number(ci.ciTenure) || 0;
+          // Flat-rate approximation: ((Installment x Tenure / Finance Amount) - 1) x (12 / Tenure), as a %.
           let annualRatePct = null;
           if (amount > 0 && tenureMonths > 0 && installment > 0) {
-            const monthlyRate = excelRate(tenureMonths, -installment, amount);
-            if (monthlyRate != null && isFinite(monthlyRate)) annualRatePct = Math.round(monthlyRate * 12 * 1000) / 10;
+            const flatRate = ((installment * tenureMonths / amount) - 1) * (12 / tenureMonths);
+            if (isFinite(flatRate)) annualRatePct = Math.round(flatRate * 100 * 10) / 10;
           }
           const issuedDate = ci.ciIssuedDate || '';
           const d = parseDMY(issuedDate);
           const existing = perInst[cred];
           if (!existing || (d && (!existing.date || d > existing.date))) {
-            perInst[cred] = { category: cat, amount: Math.round(amount), installment: Math.round(installment) || null, rate: annualRatePct, issuedDate, date: d };
+            perInst[cred] = { category: cat, amount: Math.round(amount), installment: Math.round(installment) || null, tenure: tenureMonths || null, rate: annualRatePct, issuedDate, date: d };
           }
         });
         const instKeys = Object.keys(perInst);
@@ -253,7 +254,7 @@ async function main() {
             stagingId: [...port.stagingIds][0] || '',
             product: [...port.products].join('/') || '',
             tasheelAmount: Math.round(port.tasheelAmount) || null,
-            institution: inst, category: l.category, amount: l.amount, installment: l.installment, rate: l.rate, issuedDate: l.issuedDate
+            institution: inst, category: l.category, amount: l.amount, installment: l.installment, tenure: l.tenure, rate: l.rate, issuedDate: l.issuedDate
           });
         });
         n++;
