@@ -1176,12 +1176,26 @@ const FULL_STEP_ORDER=[
   'Approval Call initiated but not accepted','IVR_Completed','Auto_Debit',
   'Sayen_Emdha','Nafith_Count','Booked'
 ];
+// Of all 43 steps, GA4 (client-side web/app analytics) can only speak to
+// the two that correspond to an actual page/event a browser or app fires:
+// PG_Total_Visits (≈ a session landing on the property) and
+// Application_Created (≈ the application_submitted_personalFinance key
+// event). Every other step -- CITC/SIMAH/QARAR checks, DE approval, offer,
+// verification, booking, etc. -- is a backend business-process state with
+// no client-side GA4 equivalent, so it's left unmarked rather than
+// fabricating a number GA4 was never instrumented to report.
+const GA4_STEP_MAP={
+  'PG_Total_Visits':()=>({label:'GA4 sessions (property-wide, Jul 1–Aug 29)',value:GA4_OVERLAY.meta.totals.sessions}),
+  'Application_Created':()=>({label:'GA4 key events (Jul 1–Aug 29)',value:GA4_OVERLAY.meta.totals.keyEvents})
+};
 function renderDiagFullFunnel(allDates,base){
-  document.getElementById('diag-full-hint').textContent=`${FULL_STEP_ORDER.length} steps · all journeys summed · % vs the ${prettyD(DIAG_FROM)} benchmark`;
+  document.getElementById('diag-full-hint').textContent=`${FULL_STEP_ORDER.length} steps · all journeys summed · % vs the ${prettyD(DIAG_FROM)} benchmark · 📊 = has a GA4 reference point (see badge)`;
   let ft='<table class="dt"><thead><tr><th>Step</th>'+allDates.map(d=>`<th class="num">${d.slice(5)}${diagIsWeekend(d)?' *':''}</th>`).join('')+'</tr></thead><tbody>';
   FULL_STEP_ORDER.forEach(step=>{
     const b=base[step]||0;
-    ft+=`<tr><td>${lab(step)}</td>`+allDates.map(d=>{
+    const ga4=(typeof GA4_OVERLAY!=='undefined'&&GA4_STEP_MAP[step])?GA4_STEP_MAP[step]():null;
+    const ga4Badge=ga4?`<div style="font-size:10px;color:var(--muted-foreground);font-weight:400;margin-top:1px" title="${ga4.label}, all-time property total — not scoped to ${prettyD(DIAG_FROM)}–${prettyD(DIAG_TO)}">📊 GA4: ${fmt(ga4.value)}</div>`:'';
+    ft+=`<tr><td>${lab(step)}${ga4Badge}</td>`+allDates.map(d=>{
       if(!cD.dates.includes(d))return '<td class="num" style="color:var(--faint)">—</td>';
       const v=diagSumDay(d)[step]||0;
       if(d===DIAG_FROM)return `<td class="num">${fmt(v)}</td>`;
@@ -1190,7 +1204,7 @@ function renderDiagFullFunnel(allDates,base){
       return `<td class="num">${fmt(v)}${pct==null?'':`<div class="deltac ${cls}" style="font-size:11px">${pct>=0?'+':''}${pct.toFixed(0)}%</div>`}</td>`;
     }).join('')+'</tr>';
   });
-  ft+='</tbody></table><div style="font-size:11px;color:var(--faint);margin-top:8px">* Fri/Sat — Saudi weekend.</div>';
+  ft+='</tbody></table><div style="font-size:11px;color:var(--faint);margin-top:8px">* Fri/Sat — Saudi weekend. 📊 GA4 badges are the property-wide Jul 1–Aug 29 total (see GA4 Overlay below) — the only 2 of these 43 steps GA4 was ever positioned to observe; the rest are backend states with no client-side GA4 event.</div>';
   document.getElementById('diag-full-table').innerHTML=ft;
 }
 
@@ -1265,9 +1279,13 @@ function renderDiagGa4Overlay(){
     cards.push(['bad','"(not set)" traffic — an attribution gap, not a real channel',
       `<span class="mono">${fmt(notSet.users)}</span> users (${(notSet.usersPct*100).toFixed(1)}% of the total) show as <b>(not set)</b> — GA4 couldn't attribute their source/medium at all. Its engagement rate is <span class="mono">${(notSet.engRate*100).toFixed(2)}%</span> and session key-event rate is only <span class="mono">${(notSet.sessionKeyRate*100).toFixed(1)}%</span>, both far below every real channel above — almost certainly a tracking/tagging gap (missing UTM parameters, a broken deep link, or an app-install path that doesn't pass attribution through) rather than genuinely low-quality traffic. Worth a marketing/analytics-team fix on its own, since ${fmt(notSet.users)} untracked users is a meaningful blind spot in channel ROI reporting.`]);
   }
-  cards.push(['warn','GA4 vs. internal funnel: the two application counts don\'t reconcile',
+  cards.push(['warn','vs. internal funnel: the two application counts don\'t reconcile',
     `Over the same ${prettyD(g.from)}–${prettyD(g.to)} window, GA4 logged <b>${fmt(g.totals.keyEvents)}</b> "application_submitted_personalFinance" key events, while the internal funnel logged <b>${fmt(appCreated)}</b> Application_Created rows across all 5 journeys (<span class="mono">${gapPct>=0?'+':''}${gapPct.toFixed(1)}%</span> gap) — and just <b>${fmt(appCreatedNewCust)}</b> if scoped to the New Customer journey alone, which is smaller than the New Customer wing of PG_Total_Visits (<b>${fmt(pgVisits)}</b>, New Customer only) but still doesn't land near the GA4 figure either way. The two systems are measuring related but not identical things (GA4: a client-side event fired once per session; funnel: a backend record that may include retries/multiple products per person) — this isn't necessarily a bug, but the gap is large enough that neither number should be quoted as "the" submitted-application count without reconciling event-firing logic with the web/analytics team first.`]);
   document.getElementById('diag-ga4-insights').innerHTML=cards.map(c=>`<div class="ins ${c[0]}"><h4>${c[1]}</h4><p>${c[2]}</p></div>`).join('');
+  // Also surface these in the top FINDINGS summary (same pattern as the
+  // Acquisition-overlay corroboration card below) so the GA4 read is
+  // visible without scrolling to the dedicated section.
+  document.getElementById('diag-insights').innerHTML+=cards.map(c=>`<div class="ins ${c[0]}"><h4>GA4 — ${c[1]}</h4><p>${c[2]}</p></div>`).join('');
 
   let t='<table><thead><tr><th>Channel</th><th class="num">Active users</th><th class="num">Sessions</th><th class="num">Avg. engagement</th><th class="num">Engagement rate</th><th class="num">Event count</th><th class="num">Key events</th><th class="num">Session key-event rate</th></tr></thead><tbody>';
   ch.forEach(c=>{
