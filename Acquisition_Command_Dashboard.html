@@ -1227,7 +1227,12 @@ const RAWSTORE = {"n":808667,"dates":["2025-10-06","2025-10-07","2025-10-08","20
     const withSub=rows.filter(r=>r.sub>0);
     if(!withSub.length)return {max:null,min:null};
     const max=withSub.reduce((a,b)=>b.sub>a.sub?b:a);
-    const min=withSub.reduce((a,b)=>b.sub<a.sub?b:a);
+    // Lowest volume day excludes the Saudi weekend (Friday/Saturday) — those
+    // days are always naturally low-volume for reasons unrelated to funnel
+    // health, so including them would make this KPI meaningless.
+    const isWeekend=d=>{const dow=parseD(d).getDay();return dow===5||dow===6;}; // 5=Fri, 6=Sat
+    const weekdayRows=withSub.filter(r=>!isWeekend(r.date));
+    const min=(weekdayRows.length?weekdayRows:withSub).reduce((a,b)=>b.sub<a.sub?b:a);
     return {max,min};
   }
   function topSegments(){
@@ -1561,9 +1566,10 @@ function renderDuplicateCustomers(){
 function renderSummaryTab(){
   const eng=E(); if(!eng||!eng.summaryDailyExtremes)return;
   const ext=eng.summaryDailyExtremes();
-  const dayCard=(r,label)=>{
+  const dayCard=(r,label,note)=>{
     if(!r)return '<h3>'+label+'</h3><p class="cap">No data in range.</p>';
     return '<h3>'+label+' — '+prettyD(r.date)+'</h3>'+
+      (note?'<p class="cap" style="margin:2px 0 8px;">'+note+'</p>':'')+
       '<div class="summary-cards"><div class="card money kpi"><div class="lab">Submitted</div><div class="big" style="font-size:22px">'+fmt(r.sub)+'</div></div>'+
       '<div class="card money kpi"><div class="lab">Initial approval</div><div class="big" style="font-size:22px">'+r.initRate+'%</div></div>'+
       '<div class="card money kpi"><div class="lab">Final approval</div><div class="big" style="font-size:22px">'+r.finalRate+'%</div></div>'+
@@ -1571,7 +1577,7 @@ function renderSummaryTab(){
       '<div class="card money kpi"><div class="lab">Booked amount</div><div class="big" style="font-size:22px">'+money(r.val)+'</div></div></div>';
   };
   document.getElementById('sum-best-day').innerHTML=dayCard(ext.max,'Highest volume day');
-  document.getElementById('sum-worst-day').innerHTML=dayCard(ext.min,'Lowest volume day');
+  document.getElementById('sum-worst-day').innerHTML=dayCard(ext.min,'Lowest volume day','ℹ️ Weekends (Fri/Sat) are excluded — this lowest day is not a weekend.');
 
   const top=eng.topSegments();
   const segCard=(r,label)=>{
