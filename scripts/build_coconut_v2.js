@@ -21,86 +21,31 @@
  * loans with 2+ different lenders they ALL appear as separate rows, never
  * combined into one column/cell.
  *
- * Join path (same bridge as build_coconut_matches.js, since OverView.xlsx's
- * own CIVIL_ID column is an anonymized hash, not a real join key):
- *   SIMAH.civilId -> Acquisition.CivilID -> Acquisition.StagingID -> OverView.StagingID
+ * IMPORTANT -- this version no longer cross-references OverView.xlsx (the
+ * source behind Holistic_View.html / the original CocoNut tab). The first
+ * build did (bridging via StagingID, same as build_coconut_matches.js),
+ * but OverView.xlsx turned out to be a STALE snapshot (snapDate 2026-07-31,
+ * file last modified Aug 9) while Acquisition_for_Loans_all_merged.csv and
+ * the SIMAH archive are both current through the latest daily merge -- so
+ * requiring StagingID membership in that stale portfolio was silently
+ * dropping every customer who completed a loan in August. Altitudestatus
+ * === 'Completed [C]' in the (always-current) Acquisition CSV is already
+ * the authoritative "genuinely booked" signal used elsewhere in this same
+ * codebase (see the BOOKED set in backfill_simah_rawrecords.js), so it's
+ * used alone here now -- no OverView.xlsx dependency, no staleness risk,
+ * and it also makes this script much faster (no more streaming the 273MB/
+ * 422K-row xlsx).
  *
  * Usage: node --max-old-space-size=8192 scripts/build_coconut_v2.js
  */
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
-const sax = require('sax');
-const { spawn } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
-const XLSX_PATH = path.join('C:', 'Users', 'Emad.Ayyash', 'OneDrive - tasheelfinance', 'Documents', 'EIA Work', 'AI-Work', 'OverView.xlsx');
 const HTML = path.join(ROOT, 'SIMAH_Intelligence.html');
 const ARCHIVE_DIR = path.join('C:', 'Users', 'Emad.Ayyash', 'OneDrive - tasheelfinance', 'Documents', 'EIA Work', 'AI-Work', 'SIMAH Qarar JSON');
 const ACQ_CSV = path.join(ROOT, 'Acquisition_for_Loans_all_merged.csv');
-
-function unzipEntry(entryName) {
-  return spawn('unzip', ['-p', XLSX_PATH, entryName], { stdio: ['ignore', 'pipe', 'ignore'] }).stdout;
-}
-const HEADERS = "StoreNameOnline,Retailer,Gender,Empolyer_Type,EmployerType,MaritalStatus,TypeOfResidence,DE_Decision,SMH_MonthlyInstalments,SMH_CurrentDBR,Company,LOS,SMH_Score,SC_Score,SC_RiskGrade,AppSource,SubmitSource,referreasons,Revised_DBR,StagingID,MasterID,PRODUCT,STORE,CIVIL_ID,FIN_AMOUNT,TENURE,PROFIT_RATE,PROFIT_AMOUNT,INS_FLAG,INSURANCE_AMOUNT,FIN_START_DATE,FIRST_INSTALLMENT_DATE,MATURITY_DATE,CURR_INSTALLMENT_DATE,LAST_PAYMENT_DATE,LAST_PAYMENT_AMOUNT,TOTAL_PAID,OVD_FLAG,OVD_STATUS,OVD_AMOUNT,LPF,TOTAL_DUE,OUTSTANDING_PRIN,OUTSTANDING_PROF,REALIZED_PROFIT,COLLECTED_PROFIT,FUTURE_3_MONTHS_PROFIT,OUTSTANDING_PROFIT_12MON,OUTSTANDING_PROFIT_OVER_12MON,TOTAL_OUTSTANDING,TOTAL_OUTSTANDING_12MON,TOTAL_OUTSTANDING_OVER_12MON,REMAINING_TENURE,OUTSTANDING_INSTALLMENTS,NEXT_INST_AMOUNT,NEXT_INST_DATE,STATUS,DPD,NON_STARTER_FLAG,NS,LPF_CHARGED,CHARGED_DATE,CURRENT_LPF_BAL,Early_Discount,TOTAL_PAYMENT,PROMO_PAYMENTS,WRITE_OFF_DATE,ACCOUNT_CLOSE_DATE,FUTURE_PAID_INST_FLAG,ACTION_CODE,SNAP_DATE,Product_type,Region,SMHBand,AppScoreBand,RiskRating,EmployerType2,Nationality_Flag,AgeBand,IncomeBand,IncomeBand2,FinalIncomeBand,FinBand,DBRBand,DBRBand2,OVD_STATUS_BAND,FinBand2,EmployerType3,LOSBand2,Alt_LOS,Alt_EmployerType,PilotRating,Reverse_Date,VAT,PROC_FEE,PRINC_TO_BE,DPD_450_Date,SmartFinance,PartnerBankID,SETTLED_TOPUP_PRIN,SETTLED_TOPUP_PROF,PREV_TOPUP_CONTRACT,PARTNER_BANK,OVD_PRINCIPAL,OVD_PROFIT,RevisedDBR2,CASH_AMOUNT,WALLET_AMOUNT,calculatedApr,Principal_Discount".split(',');
-const NEEDED = new Set(['StagingID']);
-function colIndexFromLetter(letter) { let idx = 0; for (let i = 0; i < letter.length; i++) idx = idx * 26 + (letter.charCodeAt(i) - 64); return idx - 1; }
-const IDX_TO_HEADER = {};
-HEADERS.forEach((h, i) => { if (NEEDED.has(h)) IDX_TO_HEADER[i] = h; });
-
-// Only OverView.StagingID values are needed from the xlsx (everything else
-// -- product, amount, status, dates -- comes from Acquisition CSV instead,
-// which is far richer and cheaper to read).
-async function readOverviewStagingIds() {
-  console.log('Reading', XLSX_PATH);
-  console.log('Parsing sharedStrings.xml…');
-  const strings = [];
-  { let current = '', inT = false;
-    const s = sax.createStream(true, {});
-    s.on('opentag', n => { if (n.name === 'si') current = ''; if (n.name === 't') inT = true; });
-    s.on('text', t => { if (inT) current += t; });
-    s.on('closetag', name => { if (name === 't') inT = false; if (name === 'si') strings.push(current); });
-    await new Promise((resolve, reject) => { const stream = unzipEntry('xl/sharedStrings.xml'); stream.pipe(s); s.on('end', resolve); s.on('error', reject); });
-  }
-  console.log('  sharedStrings:', strings.length.toLocaleString());
-
-  console.log('Streaming sheet1.xml…');
-  const stagingIds = new Set();
-  let currentRow = {}, currentCellRef = null, currentCellType = null, currentVal = '', inCell = false, rowNum = 0, totalRows = 0;
-  function colLetterFromRef(ref) { let i = 0; while (i < ref.length && (ref.charCodeAt(i) < 48 || ref.charCodeAt(i) > 57)) i++; return ref.slice(0, i); }
-  function finalizeRow() {
-    totalRows++;
-    if (totalRows % 50000 === 0) console.log('  ...', totalRows.toLocaleString(), 'rows');
-    if (currentRow.StagingID && currentRow.StagingID !== 'NULL') stagingIds.add(currentRow.StagingID);
-  }
-  const parser = sax.createStream(true, {});
-  parser.on('opentag', node => {
-    if (node.name === 'row') { currentRow = {}; rowNum = parseInt(node.attributes.r, 10); }
-    if (node.name === 'c') { currentCellRef = node.attributes.r; currentCellType = node.attributes.t || null; currentVal = ''; inCell = true; }
-  });
-  parser.on('text', t => { if (inCell) currentVal += t; });
-  parser.on('closetag', name => {
-    if (name === 'c') {
-      const letter = colLetterFromRef(currentCellRef);
-      const idx = colIndexFromLetter(letter);
-      const headerName = IDX_TO_HEADER[idx];
-      if (headerName) {
-        let val = currentVal;
-        if (currentCellType === 's') val = strings[parseInt(currentVal, 10)];
-        currentRow[headerName] = val;
-      }
-      inCell = false;
-    }
-    if (name === 'row') { if (rowNum > 1) finalizeRow(); }
-  });
-  await new Promise((resolve, reject) => {
-    const stream = unzipEntry('xl/worksheets/sheet1.xml');
-    stream.pipe(parser);
-    parser.on('end', resolve); parser.on('error', reject);
-  });
-  console.log(`Done. ${totalRows.toLocaleString()} portfolio rows, ${stagingIds.size.toLocaleString()} unique StagingIDs`);
-  return stagingIds;
-}
 
 function parseCsvLine(line) {
   const r = []; let cur = '', inQ = false;
@@ -114,9 +59,11 @@ function parseCsvLine(line) {
 }
 
 // civilId -> [{stagingId, itemValue, tenure, profitAmount, salesCompletedDate, product}]
-// Restricted to StagingIDs present in the OverView portfolio AND
-// Altitudestatus === 'Completed [C]' ("app status completed").
-function buildCompletedAcqByCivil(portfolioStagingIds) {
+// Altitudestatus === 'Completed [C]' ("app status completed") is the ONLY
+// gate now -- no OverView.xlsx portfolio membership required (see header
+// comment: that file is a stale snapshot and was silently dropping recent
+// completions).
+function buildCompletedAcqByCivil() {
   console.log('Reading', ACQ_CSV, 'for completed UCFS loan details (ItemValue/Tenure/ProfitAmount/SalesCompletedDate)…');
   const lines = fs.readFileSync(ACQ_CSV, 'utf-8').split(/\r?\n/);
   const headers = parseCsvLine(lines[0]);
@@ -130,7 +77,7 @@ function buildCompletedAcqByCivil(portfolioStagingIds) {
     if (!lines[i]) continue;
     const vals = parseCsvLine(lines[i]);
     const sid = vals[iStaging], civ = (vals[iCivil] || '').trim(), alt = vals[iAlt];
-    if (!sid || !civ || !portfolioStagingIds.has(sid)) continue;
+    if (!sid || !civ) continue;
     if (alt !== 'Completed [C]') continue;
     completedCount++;
     let arr = map.get(civ);
@@ -145,7 +92,7 @@ function buildCompletedAcqByCivil(portfolioStagingIds) {
       submitted: vals[iSubmitted] || ''
     });
   }
-  console.log(`  ${map.size.toLocaleString()} unique civilIds have >=1 completed portfolio StagingID (${completedCount.toLocaleString()} completed rows total)`);
+  console.log(`  ${map.size.toLocaleString()} unique civilIds have >=1 completed loan (${completedCount.toLocaleString()} completed rows total)`);
   return map;
 }
 
@@ -199,8 +146,7 @@ function parseDMY(s) { const p = (s || '').split('/'); return p.length === 3 ? n
 
 async function main() {
   console.log('=== CocoNut v2: Completed UCFS loans x SIMAH active personal-finance competitor loans ===');
-  const stagingIds = await readOverviewStagingIds();
-  const acqByCivil = buildCompletedAcqByCivil(stagingIds);
+  const acqByCivil = buildCompletedAcqByCivil();
 
   const files = fs.readdirSync(ARCHIVE_DIR).filter(f => /\.csv$/i.test(f)).sort();
   console.log(`${files.length} archived SIMAH files to scan for matches`);
@@ -311,7 +257,6 @@ async function main() {
   const blob = `const COCONUT_V2_DATA = ${JSON.stringify({
     meta: {
       generatedAt: new Date().toISOString().slice(0, 10),
-      overviewStagingIds: stagingIds.size,
       completedCustomers: acqByCivil.size,
       matchedCustomers, archiveFiles: files.length,
       allowedProductTypes: [...ALLOWED_PRODUCT_TYPES]
