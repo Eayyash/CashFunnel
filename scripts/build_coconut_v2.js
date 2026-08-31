@@ -123,7 +123,7 @@ function buildCompletedAcqByCivil(portfolioStagingIds) {
   const idx = name => headers.indexOf(name);
   const iStaging = idx('StagingID'), iCivil = idx('CivilID'), iAlt = idx('Altitudestatus'),
     iItem = idx('ItemValue'), iTenure = idx('TENURE'), iProfit = idx('PROFIT_AMOUNT'),
-    iSales = idx('SalesCompletedDate'), iProd = idx('Product_type');
+    iSales = idx('SalesCompletedDate'), iProd = idx('Product_type'), iSubmitted = idx('submitted');
   const map = new Map(); // civilId -> array of completed-loan records
   let completedCount = 0;
   for (let i = 1; i < lines.length; i++) {
@@ -141,7 +141,8 @@ function buildCompletedAcqByCivil(portfolioStagingIds) {
       tenure: Number(vals[iTenure]) || null,
       profitAmount: Math.round(Number(vals[iProfit])) || null,
       salesCompletedDate: vals[iSales] || '',
-      product: vals[iProd] || ''
+      product: vals[iProd] || '',
+      submitted: vals[iSubmitted] || ''
     });
   }
   console.log(`  ${map.size.toLocaleString()} unique civilIds have >=1 completed portfolio StagingID (${completedCount.toLocaleString()} completed rows total)`);
@@ -270,6 +271,7 @@ async function main() {
             approvedTenure: latestAcq.tenure,
             profitAmount: latestAcq.profitAmount,
             salesCompletedDate: latestAcq.salesCompletedDate,
+            submitted: latestAcq.submitted,
             institution: l.institution, category: l.category, competitorProductType: l.competitorProductType,
             amount: l.amount, installment: l.installment, tenure: l.tenure, rate: l.rate, issuedDate: l.issuedDate
           });
