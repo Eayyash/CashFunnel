@@ -667,7 +667,20 @@ function mergeAggregates(oldAgg, newAgg) {
       acqFile: newAgg.meta.acqFile || oldAgg.meta.acqFile,
       mergedBatches: (oldAgg.meta.mergedBatches || 1) + 1,
       submittedMin: [oldAgg.meta.submittedMin, newAgg.meta.submittedMin].filter(Boolean).sort()[0] || null,
-      submittedMax: [oldAgg.meta.submittedMax, newAgg.meta.submittedMax].filter(Boolean).sort().pop() || null
+      submittedMax: [oldAgg.meta.submittedMax, newAgg.meta.submittedMax].filter(Boolean).sort().pop() || null,
+      // Carry the dateChunks manifest forward untouched -- this script never
+      // rebuilds it (only scripts/build_simah_datechunks.js does), and
+      // previously rebuilding `meta` from scratch here silently DROPPED these
+      // fields on every merge, collapsing the top date-picker's range down to
+      // just submittedMin/Max and breaking Competitors List's full-history
+      // load (which requires meta.dateChunks to be present). Re-run
+      // build_simah_datechunks.js after this whenever a new archive file
+      // lands so the manifest itself stays current -- this carry-forward is
+      // just the safety net so a merge alone can never destroy it.
+      dateChunks: oldAgg.meta.dateChunks,
+      dateChunksMin: oldAgg.meta.dateChunksMin,
+      dateChunksMax: oldAgg.meta.dateChunksMax,
+      dateChunksTotal: oldAgg.meta.dateChunksTotal
     },
     scoreDistribution: mergeBandMap(oldAgg.scoreDistribution, newAgg.scoreDistribution),
     enqIntensity: mergeBandMap(oldAgg.enqIntensity, newAgg.enqIntensity),
