@@ -380,6 +380,7 @@ table.dt tr:hover td{background:var(--muted-bg)}
   <div class="sec-h"><span class="k">FINDINGS</span><h2>Tech issue or journey issue?</h2><span class="hint">computed from the funnel data itself, not assumed</span></div>
   <div id="diag-insights"></div>
   <div class="sec-h" style="margin-top:22px"><span class="k">DAY BY DAY</span><h2>Key metrics vs the Aug 17 benchmark</h2><span class="hint">weekend rows shaded · missing days flagged</span></div>
+  <div id="diag-daytable-ga4" style="margin-bottom:10px"></div>
   <div class="note-block"><div id="diag-daytable"></div></div>
   <div class="sec-h" style="margin-top:22px"><span class="k">WHERE</span><h2>Stage conversion rates vs benchmark</h2><span class="hint">isolates which step of the funnel is leaking</span></div>
   <div class="note-block"><div id="diag-stagetable"></div></div>
@@ -990,6 +991,7 @@ function renderDiagnostic(){
   });
   dt+='</tbody></table>';
   document.getElementById('diag-daytable').innerHTML=dt;
+  renderDiagDayGa4(allDates,base);
 
   /* Stage conversion-rate table */
   const CHAIN=[['PG_Total_Visits','Existing_or_New_Customer_Entered_CivilId','PG Visits → Civil ID entry'],
@@ -1206,6 +1208,33 @@ function renderDiagFullFunnel(allDates,base){
   });
   ft+='</tbody></table><div style="font-size:11px;color:var(--faint);margin-top:8px">* Fri/Sat — Saudi weekend. 📊 GA4 badges are the property-wide Jul 1–Aug 29 total (see GA4 Overlay below) — the only 2 of these 43 steps GA4 was ever positioned to observe; the rest are backend states with no client-side GA4 event.</div>';
   document.getElementById('diag-full-table').innerHTML=ft;
+}
+
+// GA4 has no day-by-day channel export -- the report is a single Jul 1 -
+// Aug 29 period total per channel, not a daily breakdown (the PDF's daily
+// chart is a 3-line image, not extractable data, and only covers 3 of the
+// 10 channels anyway). So this does NOT show real per-day GA4-by-channel
+// numbers -- it applies the fixed period-average channel-mix % to each
+// day's ACTUAL Applications figure (from the funnel itself) as a MODELED
+// illustration of what that day's channel split would look like if the
+// mix held constant. Labeled explicitly as modeled, not measured, so it's
+// never mistaken for real daily GA4 data.
+function renderDiagDayGa4(allDates,base){
+  const el=document.getElementById('diag-daytable-ga4');
+  if(typeof GA4_OVERLAY==='undefined'){el.innerHTML='';return;}
+  const top=GA4_OVERLAY.channels.slice(0,4); // top 4 by key events
+  const otherPct=1-top.reduce((s,c)=>s+c.keyEventsPct,0);
+  let t=`<div style="font-size:11px;color:var(--faint);margin-bottom:6px">GA4 channel mix modeled onto Applications/day — GA4's export is a <b>${prettyD(GA4_OVERLAY.meta.from)}–${prettyD(GA4_OVERLAY.meta.to)} period total per channel, not a daily breakdown</b>, so each day below applies that fixed period-average mix to the day's real Application count. This is an illustration of the likely split, not measured per-day GA4 data.</div>`;
+  t+='<table class="dt"><thead><tr><th>Date</th><th class="num">Applications</th>'+top.map(c=>`<th class="num">${c.ch}</th>`).join('')+'<th class="num">Other</th></tr></thead><tbody>';
+  allDates.forEach(d=>{
+    if(!cD.dates.includes(d)){t+=`<tr><td>${prettyD(d)}</td><td class="num" colspan="${top.length+2}" style="color:var(--faint)">—</td></tr>`;return;}
+    const v=diagSumDay(d).Application_Created||0;
+    t+=`<tr><td>${prettyD(d)}${d===DIAG_FROM?' <span class="pill2" style="color:var(--cyan-d);border-color:var(--cyan-d)">benchmark</span>':''}</td><td class="num">${fmt(v)}</td>`+
+      top.map(c=>`<td class="num">${fmt(Math.round(v*c.keyEventsPct))}</td>`).join('')+
+      `<td class="num">${fmt(Math.round(v*otherPct))}</td></tr>`;
+  });
+  t+='</tbody></table>';
+  el.innerHTML=t;
 }
 
 /* ---------- Diagnostic: Acquisition-system overlay (income/nationality/employer, Smart/Normal, Online/Back Office) ---------- */
