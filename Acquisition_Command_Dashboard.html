@@ -580,7 +580,8 @@ function renderKPI(){
   document.getElementById('perf-hint').textContent=`${prettyD(c.from)}–${prettyD(c.to)} · MoM = daily-avg vs ${c.cmLabel}`;
 }
 const RDEF=[['approval','Approval rate','init ÷ submitted','init','sub'],['init_final','Initial → Final','final ÷ initial','final','init'],
- ['final_book','Final → Booking','booked ÷ final','book','final'],['book_sub','Booked ÷ Submitted','overall pull-through','book','sub']];
+ ['final_book','Final → Booking','booked ÷ final','book','final'],['init_book','Initial → Booking','booked ÷ initial','book','init'],
+ ['book_sub','Submission → Booking','overall pull-through','book','sub']];
 function rate(a,b){return b?+(100*a/b).toFixed(1):0;}
 function renderRates(){
   const c=CUR;document.getElementById('rate-cap').textContent=`selected range vs ${c.cmLabel}`;
