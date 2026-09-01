@@ -1,13 +1,14 @@
 /**
  * "CocoNut v2" tab data builder: for every Tasheel customer with a
- * COMPLETED contract (AppStatusID === 'Completed [C]' in the MASTER
- * export), lists every ACTIVE competitor loan reported to SIMAH whose
- * product type is Personal Loan / Microfinance / Consumer Durables Loan /
- * Social Loan -- deliberately excluding Buy Now Pay Later, Top-Up Loan,
- * mobile-phone plans, credit cards, mortgages, car leases, etc. even
- * though those also appear as SIMAH-reported credit instruments. Layout
- * matches the user-supplied reference workbook UCFS_vs_Competitors_2.xlsx
- * ("Customer comparison" sheet) column-for-column.
+ * COMPLETED contract (Altitudestatus === 'Completed [C]' in
+ * Acquisition_for_Loans_all_merged.csv), lists every ACTIVE competitor
+ * loan reported to SIMAH whose product type is Personal Loan /
+ * Microfinance / Consumer Durables Loan / Social Loan -- deliberately
+ * excluding Buy Now Pay Later, Top-Up Loan, mobile-phone plans, credit
+ * cards, mortgages, car leases, etc. even though those also appear as
+ * SIMAH-reported credit instruments. Layout matches the user-supplied
+ * reference workbook UCFS_vs_Competitors_2.xlsx ("Customer comparison"
+ * sheet) column-for-column.
  *
  * Row grain: one row per (customer, competitor loan) -- if a customer has
  * loans with 2+ different lenders they ALL appear as separate rows, never
@@ -18,14 +19,17 @@
  * never found in SIMAH at all, who we genuinely have no read on and so
  * don't include.
  *
- * Source of UCFS customer/loan details: the MASTER CSV export (e.g.
- * "MASTER 30-08-2026 16-16.csv"), NOT Acquisition_for_Loans_all_merged.csv.
- * MASTER is pre-filtered to AppStatusID === 'Completed [C]' already and
- * carries CivilId unmasked/raw (same format SIMAH reports use), plus
- * Nationality, ItemValue, ApprovedTenure, ProfitAmount, SalesCompletedDate
- * directly -- no join through Acquisition/OverView needed at all.
+ * Source of UCFS customer/loan details: Acquisition_for_Loans_all_merged.csv
+ * -- the same underlying dataset Acquisition_Command_Dashboard.html itself
+ * reads. A previous version of this script used a one-off MASTER CSV
+ * export instead, but that file only covers whatever narrow window it
+ * happened to be exported for (18,430 completed customers); Acquisition's
+ * merged dataset goes back to 2025-10-06 and is kept current by every
+ * daily merge (44,846 completed customers all-time, 98.1% civilId overlap
+ * with MASTER's set when cross-checked) -- so it's used instead, per user
+ * request not to be capped to MASTER's narrower population.
  *
- * Usage: node --max-old-space-size=8192 scripts/build_coconut_v2.js "<path to MASTER csv>"
+ * Usage: node --max-old-space-size=8192 scripts/build_coconut_v2.js
  */
 const fs = require('fs');
 const path = require('path');
@@ -34,16 +38,15 @@ const readline = require('readline');
 const ROOT = path.resolve(__dirname, '..');
 const HTML = path.join(ROOT, 'SIMAH_Intelligence.html');
 const ARCHIVE_DIR = path.join('C:', 'Users', 'Emad.Ayyash', 'OneDrive - tasheelfinance', 'Documents', 'EIA Work', 'AI-Work', 'SIMAH Qarar JSON');
-const DOWNLOADS_DIR = path.join('C:', 'Users', 'Emad.Ayyash', 'Downloads');
-function findLatestMasterCsv() {
-  const candidates = fs.readdirSync(DOWNLOADS_DIR)
-    .filter(f => /^MASTER .*\.csv$/i.test(f))
-    .map(f => ({ f, mtime: fs.statSync(path.join(DOWNLOADS_DIR, f)).mtimeMs }))
-    .sort((a, b) => b.mtime - a.mtime);
-  if (!candidates.length) throw new Error(`No "MASTER *.csv" file found in ${DOWNLOADS_DIR} -- pass the path explicitly: node scripts/build_coconut_v2.js "<path>"`);
-  return path.join(DOWNLOADS_DIR, candidates[0].f);
-}
-const MASTER_CSV = process.argv[2] || findLatestMasterCsv();
+// Switched from the MASTER export (18,430 completed customers, scoped to
+// whatever window that one-off file happened to cover, Apr30-Aug30) to
+// Acquisition_for_Loans_all_merged.csv -- the same underlying dataset
+// Acquisition_Command_Dashboard.html itself reads, going back to
+// 2025-10-06 and covering every daily merge since (44,846 completed
+// customers all-time, verified 98.1% civilId overlap with MASTER's set
+// when cross-checked earlier). User asked not to be capped to MASTER's
+// narrower population.
+const ACQ_CSV = path.join(ROOT, 'Acquisition_for_Loans_all_merged.csv');
 
 function parseCsvLine(line) {
   const r = []; let cur = '', inQ = false;
@@ -55,24 +58,17 @@ function parseCsvLine(line) {
   r.push(cur);
   return r;
 }
-// MASTER date format: "8/30/2026 3:47:38 PM" -> "2026-08-30"
-function toYMD(s) {
-  if (!s) return '';
-  const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(s.trim());
-  if (!m) return '';
-  return `${m[3]}-${String(m[1]).padStart(2, '0')}-${String(m[2]).padStart(2, '0')}`;
-}
 
 // civilId -> [{stagingId, nationality, itemValue, tenure, profitAmount, ucfsRate, salesCompletedDate, submitted}]
 function buildCompletedMasterByCivil() {
-  console.log('Reading', MASTER_CSV, 'for completed UCFS loan details…');
-  const raw = fs.readFileSync(MASTER_CSV, 'utf-8').replace(/^﻿/, '');
+  console.log('Reading', ACQ_CSV, 'for completed UCFS loan details…');
+  const raw = fs.readFileSync(ACQ_CSV, 'utf-8').replace(/^﻿/, '');
   const lines = raw.split(/\r?\n/);
   const headers = parseCsvLine(lines[0]);
   const idx = name => headers.indexOf(name);
-  const iStatus = idx('AppStatusID'), iStaging = idx('StagingID'), iCivil = idx('CivilId'),
-    iNat = idx('Nationality'), iItem = idx('ItemValue'), iTenure = idx('ApprovedTenure'),
-    iProfit = idx('ProfitAmount'), iSales = idx('SalesCompletedDate'), iReceived = idx('ApplicationReceivedDate');
+  const iStatus = idx('Altitudestatus'), iStaging = idx('StagingID'), iCivil = idx('CivilID'),
+    iNat = idx('NATIONALITY'), iItem = idx('ItemValue'), iTenure = idx('TENURE'),
+    iProfit = idx('PROFIT_AMOUNT'), iSales = idx('SalesCompletedDate'), iSubmitted = idx('submitted');
   const map = new Map();
   let completedCount = 0;
   for (let i = 1; i < lines.length; i++) {
@@ -98,7 +94,7 @@ function buildCompletedMasterByCivil() {
       nationality: vals[iNat] || '',
       itemValue, tenure, profitAmount, ucfsRate,
       salesCompletedDate: vals[iSales] || '',
-      submitted: toYMD(vals[iReceived] || vals[iSales])
+      submitted: vals[iSubmitted] || (vals[iSales] || '').slice(0, 10)
     });
   }
   console.log(`  ${map.size.toLocaleString()} unique civilIds have >=1 completed loan (${completedCount.toLocaleString()} completed rows total)`);
@@ -154,7 +150,7 @@ function asArray(x) { if (x == null) return []; return Array.isArray(x) ? x : [x
 function parseDMY(s) { const p = (s || '').split('/'); return p.length === 3 ? new Date(+p[2], +p[1] - 1, +p[0]) : null; }
 
 async function main() {
-  console.log('=== CocoNut v2: Completed UCFS loans (MASTER export) x SIMAH active personal-finance competitor loans ===');
+  console.log('=== CocoNut v2: Completed UCFS loans (Acquisition CSV) x SIMAH active personal-finance competitor loans ===');
   const masterByCivil = buildCompletedMasterByCivil();
 
   // Newest-first so the seenCivil dedup below (a customer can appear in
@@ -286,7 +282,7 @@ async function main() {
   const blob = `const COCONUT_V2_DATA = ${JSON.stringify({
     meta: {
       generatedAt: new Date().toISOString().slice(0, 10),
-      source: path.basename(MASTER_CSV),
+      source: path.basename(ACQ_CSV),
       completedCustomers: masterByCivil.size,
       checkedCustomers, matchedCustomers, archiveFiles: files.length,
       allowedProductTypes: [...ALLOWED_PRODUCT_TYPES]
