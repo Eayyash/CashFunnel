@@ -320,8 +320,46 @@ acqRows.forEach(r => { if (r.CivilID) acqMap[r.CivilID] = r; });
 console.log(`  ${acqRows.length.toLocaleString()} acquisition rows, ${Object.keys(acqMap).length.toLocaleString()} unique CivilIDs`);
 
 const BOOKED = new Set(['Completed [C]', 'Pending Final Approval']);
-const freshRecords = [];
 const institutionLoanStats = {}; // inst -> {loans, customers, plnSum, plnN}
+
+// Bounded top-RAW_CAP min-heap keyed by `submitted` date (undated = '',
+// always lowest priority so it's evicted first, matching the original
+// "dated records take priority" rule). Replaces accumulating ALL ~453K
+// full-detail records (each carrying eq[]/competitorLoans[]/etc, ~7KB
+// average) into one giant array before sorting+slicing at the end -- that
+// approach grew unbounded (observed 4.2GB and climbing after only ~1/3 of
+// the archive, with V8 GC overhead making each subsequent file slower than
+// the last: 30 days in 4 minutes, then 5 days in the next 6h48m). This
+// keeps at most RAW_CAP full objects in memory at any time, independent of
+// how many total records get scanned.
+class MinHeap {
+  constructor() { this.a = []; }
+  size() { return this.a.length; }
+  peekKey() { return this.a[0].key; }
+  push(item) { this.a.push(item); this._up(this.a.length - 1); }
+  popMin() {
+    const top = this.a[0], last = this.a.pop();
+    if (this.a.length) { this.a[0] = last; this._down(0); }
+    return top;
+  }
+  _up(i) { while (i > 0) { const p = (i - 1) >> 1; if (this.a[p].key <= this.a[i].key) break; [this.a[p], this.a[i]] = [this.a[i], this.a[p]]; i = p; } }
+  _down(i) {
+    const n = this.a.length;
+    while (true) {
+      let s = i, l = 2 * i + 1, r = 2 * i + 2;
+      if (l < n && this.a[l].key < this.a[s].key) s = l;
+      if (r < n && this.a[r].key < this.a[s].key) s = r;
+      if (s === i) break;
+      [this.a[s], this.a[i]] = [this.a[i], this.a[s]]; i = s;
+    }
+  }
+}
+const topHeap = new MinHeap();
+function offerRecord(record) {
+  const key = record.submitted || '';
+  if (topHeap.size() < RAW_CAP) { topHeap.push({ key, record }); return; }
+  if (key > topHeap.peekKey()) { topHeap.popMin(); topHeap.push({ key, record }); }
+}
 
 // Archive files (~100-270MB each) are streamed line-by-line via readline
 // instead of fs.readFileSync — reading a whole file (plus its split lines
@@ -350,7 +388,7 @@ async function processFile(fp) {
       const isBooked = matched && BOOKED.has(acq?.Altitudestatus);
       const isStp = matched && acq?.STP === 'Y';
       const topComp = Object.entries(f.competitors).sort((a, b) => b[1] - a[1]).slice(0, 7).map(([name, cnt]) => ({ name, cnt }));
-      freshRecords.push({
+      offerRecord({
         civilId: f.civilId ? f.civilId.slice(0, 4) + '****' + f.civilId.slice(-2) : 'N/A',
         name: f.name, score: f.score, scoreCard: f.scoreCard,
         scoreReasons: f.scoreReasons, scoreReasonTexts: f.scoreReasonTexts,
@@ -407,7 +445,8 @@ async function main() {
     await processFile(fp);
   }
 
-  console.log(`Total fresh records built: ${freshRecords.length}`);
+  const freshRecords = topHeap.a.map(x => x.record);
+  console.log(`Total fresh records kept (bounded top-${RAW_CAP.toLocaleString()}): ${freshRecords.length}`);
   console.log(`Institutions with active PLN data: ${Object.keys(institutionLoanStats).length}`);
 
   // Prioritize records with a real submitted date (most recent first); unmatched
