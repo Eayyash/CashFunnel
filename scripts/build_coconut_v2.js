@@ -68,7 +68,8 @@ function buildCompletedMasterByCivil() {
   const idx = name => headers.indexOf(name);
   const iStatus = idx('Altitudestatus'), iStaging = idx('StagingID'), iCivil = idx('CivilID'),
     iNat = idx('NATIONALITY'), iItem = idx('ItemValue'), iTenure = idx('TENURE'),
-    iProfit = idx('PROFIT_AMOUNT'), iSales = idx('SalesCompletedDate'), iSubmitted = idx('submitted');
+    iProfit = idx('PROFIT_AMOUNT'), iSales = idx('SalesCompletedDate'), iSubmitted = idx('submitted'),
+    iAltIncome = idx('AltitudeIncome'), iSmartFinance = idx('SmartFinance');
   const map = new Map();
   let completedCount = 0;
   for (let i = 1; i < lines.length; i++) {
@@ -94,7 +95,14 @@ function buildCompletedMasterByCivil() {
       nationality: vals[iNat] || '',
       itemValue, tenure, profitAmount, ucfsRate,
       salesCompletedDate: vals[iSales] || '',
-      submitted: vals[iSubmitted] || (vals[iSales] || '').slice(0, 10)
+      submitted: vals[iSubmitted] || (vals[iSales] || '').slice(0, 10),
+      // altitudeIncome: raw AltitudeIncome column (SAR). smartFinance: the
+      // SmartFinance column is blank for a normal underwriting path, or a
+      // comma-joined list of exception reasons (e.g. "Cat C companies",
+      // "Age 21 - 23") when the loan went through Smart Finance criteria --
+      // classified per user spec as blank -> Normal, anything else -> Smart Finance.
+      altitudeIncome: iAltIncome >= 0 ? (Math.round(Number(vals[iAltIncome])) || null) : null,
+      smartFinance: (iSmartFinance >= 0 && (vals[iSmartFinance] || '').trim()) ? 'Smart Finance' : 'Normal'
     });
   }
   console.log(`  ${map.size.toLocaleString()} unique civilIds have >=1 completed loan (${completedCount.toLocaleString()} completed rows total)`);
@@ -232,7 +240,9 @@ async function main() {
           profitAmount: latestMaster.profitAmount,
           ucfsRate: latestMaster.ucfsRate,
           salesCompletedDate: latestMaster.salesCompletedDate,
-          submitted: latestMaster.submitted
+          submitted: latestMaster.submitted,
+          altitudeIncome: latestMaster.altitudeIncome,
+          smartFinance: latestMaster.smartFinance
         };
         if (!instKeys.length) {
           // Completed customer, checked against SIMAH, no active matching-
