@@ -78,6 +78,9 @@ function findReport(obj, depth) {
 function asArray(x) { if (x == null) return []; return Array.isArray(x) ? x : [x]; }
 
 function findLatestAcqFile() {
+  // Prefer the merged dataset over any single dated snapshot -- see the
+  // matching comment in update_simah_from_qarar_csv.js for why.
+  if (fs.existsSync(path.join(ROOT, 'Acquisition_for_Loans_all_merged.csv'))) return 'Acquisition_for_Loans_all_merged.csv';
   return fs.readdirSync(ROOT).filter(f => /^Acquisition_for_Loans_\d{4}-\d{2}-\d{2}\.csv$/i.test(f)).sort().pop();
 }
 

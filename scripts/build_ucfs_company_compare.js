@@ -105,6 +105,9 @@ function findReport(obj, depth) {
 function asArray(x) { if (x == null) return []; return Array.isArray(x) ? x : [x]; }
 function parseDMY(s) { const p = (s || '').split('/'); return p.length === 3 ? new Date(+p[2], +p[1] - 1, +p[0]) : null; }
 function findLatestAcqFile() {
+  // Prefer the merged dataset over any single dated snapshot -- see the
+  // matching comment in update_simah_from_qarar_csv.js for why.
+  if (fs.existsSync(MERGED_CSV)) return path.basename(MERGED_CSV);
   return fs.readdirSync(ROOT).filter(f => /^Acquisition_for_Loans_\d{4}-\d{2}-\d{2}\.csv$/i.test(f)).sort().pop();
 }
 const BOOKED = new Set(['Completed [C]', 'Pending Final Approval']);

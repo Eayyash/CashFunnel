@@ -625,6 +625,16 @@ function buildAggregates(features, acqMap) {
 }
 
 function findLatestAcqFile() {
+  // Prefer the merged dataset (same columns, deduped by StagingID, always
+  // the most complete/current view) over any single dated snapshot. This
+  // matters now that merge_csv.js archives every dated snapshot out of the
+  // project root after merging it (see scripts/merge_csv.js) -- before that
+  // archiving existed, this function's old dated-file-only fallback would
+  // silently pick up a stale historical snapshot (e.g. May 2026) instead of
+  // current data once the daily files were gone from the root, joining
+  // every SIMAH report against months-old Acquisition rows without warning.
+  const mergedPath = path.join(ROOT, 'Acquisition_for_Loans_all_merged.csv');
+  if (fs.existsSync(mergedPath)) return 'Acquisition_for_Loans_all_merged.csv';
   return fs.readdirSync(ROOT)
     .filter(f => /^Acquisition_for_Loans_\d{4}-\d{2}-\d{2}\.csv$/i.test(f))
     .sort().pop();

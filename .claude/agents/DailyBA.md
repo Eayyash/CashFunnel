@@ -15,32 +15,33 @@ You are the DailyBA agent. Your job is to update the Funnel Analysis dashboard w
 
 ## Steps
 
-### 1. Find the new file
-Look for the newest `Tawarruq_Funnel_*.xlsx` file. Check these locations in order:
+### 1. Find every new file
+This agent handles one file or a whole batch the same way — look for **every** `Tawarruq_Funnel_*.xlsx` file, not just the newest. Check these locations:
 1. `C:\Users\Emad.Ayyash\Downloads\` — where newly downloaded files land
-2. `C:\Users\Emad.Ayyash\OneDrive - tasheelfinance\Documents\EIA Work\AI-Work\Tawarruq Funnel\` — the archive folder
+2. `C:\Users\Emad.Ayyash\OneDrive - tasheelfinance\Documents\EIA Work\AI-Work\Tawarruq Funnel\` — the archive folder (already-processed files re-appearing here is harmless — a repeat date just overwrites itself with identical data)
 
-If duplicate-download suffixes exist (e.g. `Tawarruq_Funnel_2026-08-05 (1).xlsx`), use the one with the highest number (latest download).
+If duplicate-download suffixes exist for the same date (e.g. `Tawarruq_Funnel_2026-08-05.xlsx` and `Tawarruq_Funnel_2026-08-05 (1).xlsx`), use only the one with the highest number (latest download) for that date; drop the other.
 
 If no xlsx is found, report that no new file was detected and stop.
 
 ### 2. Update Funnel Analysis
-Run the update script, passing the file path explicitly:
+`update_funnel.js` accepts multiple files in one invocation — pass every file found in step 1 at once (each file is a different date; the script merges them all into the same dataset in one pass, one date per file):
 ```bash
-node scripts/update_funnel.js "PATH_TO_FILE"
+node scripts/update_funnel.js "PATH_TO_FILE_1" "PATH_TO_FILE_2" "PATH_TO_FILE_3"
 ```
+(For a single file, just pass the one path — same command, same script.)
 
 This script:
 - Reads the existing `FUNNEL_DEFAULT` from `Funnel_Analysis.html` (the embedded JSON dataset)
-- Parses the xlsx (5 sheets: `New Customer`, `Existing Customer`, `BO (Tawarruq)`, `BO (Combo)`, `UI to BO`)
+- Parses each xlsx (5 sheets: `New Customer`, `Existing Customer`, `BO (Tawarruq)`, `BO (Combo)`, `UI to BO`)
 - Each sheet has rows of `StepNumber` / `StepName` / `Result` / `UpdatedOn` (~44 funnel steps)
 - Canonicalizes step names (`IVR` → `IVR_Completed`, `Sayeen_Count` → `Sayen_Emdha`, etc.)
-- Extracts the date from the filename (`YYYY-MM-DD` regex)
-- Merges the new day into the existing dataset (last file wins for a given date)
-- Writes the updated `FUNNEL_DEFAULT` back into `Funnel_Analysis.html`
-- Archives the xlsx to the Tawarruq Funnel folder
+- Extracts each file's date from its filename (`YYYY-MM-DD` regex)
+- Merges every file's day into the existing dataset in one pass (last file wins for a given date — only matters if two files in the same batch somehow target the same date)
+- Writes the updated `FUNNEL_DEFAULT` back into `Funnel_Analysis.html` once, after all files are processed
+- Archives every xlsx it processed to the Tawarruq Funnel folder
 
-**Expected result:** The script should report `+` for a new date or `↻` for an updated one, and show the new total date count.
+**Expected result:** The script logs one `+` (new date) or `↻` (updated date) line per file processed, then a single summary showing the new total date count covering every date just added.
 
 ### 3. Update Business Performance View
 The BPV reads funnel data from Funnel_Analysis.html, so update it too:
