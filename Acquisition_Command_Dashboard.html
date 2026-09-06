@@ -288,10 +288,10 @@ body.gate-locked>*:not(#login-gate){display:none!important}
 <section class="panel-tab" id="perf">
   <div class="sec-h"><span class="k">KPI</span><h2>Core acquisition metrics</h2><span class="hint" id="perf-hint"></span></div>
   <div class="grid k7" id="kpi-grid"></div>
-  <div class="sec-h"><span class="k">FUNNEL</span><h2>Acquisition funnel</h2><span class="hint">Submitted → Initial → Final → Booked · step conversion</span></div>
+  <div class="sec-h"><span class="k">BOOKINGS</span><h2>Daily booking count</h2><span class="hint">bookings by day · selected range</span></div>
   <div class="two">
-    <div class="chart-card"><div class="funnel-wrap" id="funnel"></div></div>
-    <div class="chart-card"><h3>Conversion rates</h3><p class="cap" id="rate-cap"></p><div class="grid" style="grid-template-columns:1fr 1fr;gap:12px" id="rate-grid"></div></div>
+    <div class="chart-card"><h3>Daily booking count</h3><div class="cwrap tall"><canvas id="c-daily-book"></canvas></div></div>
+    <div class="chart-card"><h3>Daily booking count table</h3><p class="cap" id="daily-book-cap"></p><div style="max-height:320px;overflow-y:auto" id="daily-book-table"></div></div>
   </div>
   <div class="sec-h"><span class="k">TREND</span><h2>Daily volume</h2><span class="hint">selected range · weekends visibly lower</span></div>
   <div class="chart-card"><div class="cwrap tall"><canvas id="trend"></canvas></div></div>
@@ -579,26 +579,19 @@ function renderKPI(){
   document.getElementById('kpi-grid').innerHTML=h;
   document.getElementById('perf-hint').textContent=`${prettyD(c.from)}–${prettyD(c.to)} · MoM = daily-avg vs ${c.cmLabel}`;
 }
-const RDEF=[['approval','Approval rate','init ÷ submitted','init','sub'],['init_final','Initial → Final','final ÷ initial','final','init'],
- ['final_book','Final → Booking','booked ÷ final','book','final'],['init_book','Initial → Booking','booked ÷ initial','book','init'],
- ['book_sub','Submission → Booking','overall pull-through','book','sub']];
-function rate(a,b){return b?+(100*a/b).toFixed(1):0;}
-function renderRates(){
-  const c=CUR;document.getElementById('rate-cap').textContent=`selected range vs ${c.cmLabel}`;
-  let h='';RDEF.forEach(([k,lab,sub,num,den])=>{
-    const cur=rate(c.cur.k[num],c.cur.k[den]);const lm=rate(c.comp.k[num],c.comp.k[den]);const d=+(cur-lm).toFixed(1);
-    const cl=d>0.2?'up':(d<-0.2?'dn':'flat');const ar=d>0.2?'▲':(d<-0.2?'▼':'▬');
-    h+=`<div class="card kpi rate"><div class="lab">${lab}</div><div class="big">${cur}%</div><span class="delta ${cl}">${ar} ${(d>0?'+':'')+d} pp</span><div class="mom-note">${sub} · ${c.cmLabel} ${lm}%</div></div>`;
-  });document.getElementById('rate-grid').innerHTML=h;
-}
-const FCOL=['#3aa0ff','#15b3a3','#3fbf86','#df9f2c'];
-function renderFunnel(){
-  const k=CUR.cur.k;const st=[['Submitted',k.sub],['Initial Approved',k.init],['Final Approved',k.final],['Booked & Funded',k.book]];
-  const max=st[0][1]||1;let h='';
-  st.forEach((s,i)=>{const w=Math.max(24,s[1]/max*100);
-    h+=`<div class="fstage" style="width:${w}%;background:linear-gradient(90deg,${FCOL[i]},${FCOL[i]}cc)"><span class="fname">${s[0]}</span><span class="fcount">${fmt(s[1])}</span></div>`;
-    if(i<st.length-1){const conv=st[i][1]?(100*st[i+1][1]/st[i][1]).toFixed(1):0;h+=`<div class="fconn"><span class="arw">↓</span> <span class="pct">${conv}%</span> convert to ${st[i+1][0].split(' ')[0].toLowerCase()}</div>`;}
-  });document.getElementById('funnel').innerHTML=h;
+const prettyDLong=s=>parseD(s).toLocaleDateString('en',{month:'long',day:'numeric',year:'numeric'});
+function renderDailyBook(){
+  const labels=[],vals=[],rows=[];
+  for(const d of cD.dates){if(d>=RANGE.from&&d<=RANGE.to){const k=cD.days[d].k;labels.push(prettyD(d));vals.push(k.book);rows.push([d,k.book]);}}
+  mk('c-daily-book',{type:'line',data:{labels,datasets:[{label:'Bookings',data:vals,borderColor:GR,backgroundColor:'rgba(34,181,113,.10)',fill:true,tension:.35,pointRadius:2,pointBackgroundColor:GR,borderWidth:2.2}]},
+   options:{maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'Bookings: '+fmt(c.raw)}}},
+    scales:{x:{...AX,ticks:{...AX.ticks,maxRotation:0,autoSkip:true,maxTicksLimit:12,font:{size:10}}},y:{...AX,title:{display:true,text:'Sum of bookings',color:MU,font:{size:10}}}}}});
+  rows.sort((a,b)=>a[0]<b[0]?1:(a[0]>b[0]?-1:0));
+  let h='<table class="dt"><thead><tr><th>Report date</th><th class="num">Sum of bookings</th></tr></thead><tbody>';
+  rows.forEach(([d,v])=>{h+=`<tr><td>${prettyDLong(d)}</td><td class="num">${fmt(v)}</td></tr>`;});
+  h+='</tbody></table>';
+  document.getElementById('daily-book-table').innerHTML=h;
+  document.getElementById('daily-book-cap').textContent=`${rows.length} rows`;
 }
 function renderTrend(){
   const labels=[],sub=[],ini=[],bk=[],_td=[];
@@ -803,7 +796,7 @@ function renderApproved(){
 
 /* ============ master render ============ */
 const rendered={perf:true};
-function renderAll(){computeCUR();renderKPI();renderRates();renderFunnel();renderTrend();
+function renderAll(){computeCUR();renderKPI();renderDailyBook();renderTrend();
   ['credit','geo','demo'].forEach(t=>{if(rendered[t])renderChartTab(t);});if(rendered.notes)renderNotes();if(rendered.appr)renderApproved();updateChips();}
 function updateChips(){
   document.getElementById('data-chip').innerHTML=`${cD.meta.name} · <b>${fmt(cD.meta.total)}</b> apps`;
