@@ -581,17 +581,23 @@ function renderKPI(){
 }
 const prettyDLong=s=>parseD(s).toLocaleDateString('en',{month:'long',day:'numeric',year:'numeric'});
 function renderDailyBook(){
-  const labels=[],vals=[],rows=[];
-  for(const d of cD.dates){if(d>=RANGE.from&&d<=RANGE.to){const k=cD.days[d].k;labels.push(prettyD(d));vals.push(k.book);rows.push([d,k.book]);}}
+  const labels=[],vals=[];
+  for(const d of cD.dates){if(d>=RANGE.from&&d<=RANGE.to){const k=cD.days[d].k;labels.push(prettyD(d));vals.push(k.book);}}
   mk('c-daily-book',{type:'line',data:{labels,datasets:[{label:'Bookings',data:vals,borderColor:GR,backgroundColor:'rgba(34,181,113,.10)',fill:true,tension:.35,pointRadius:2,pointBackgroundColor:GR,borderWidth:2.2}]},
    options:{maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'Bookings: '+fmt(c.raw)}}},
     scales:{x:{...AX,ticks:{...AX.ticks,maxRotation:0,autoSkip:true,maxTicksLimit:12,font:{size:10}}},y:{...AX,title:{display:true,text:'Sum of bookings',color:MU,font:{size:10}}}}}});
+  // Table is intentionally NOT tied to the global date filter -- always
+  // shows full year-to-date so it reads like a standing BI export, not a
+  // view that resets every time someone changes the range above.
+  const yearStart=(cD.meta.max||cD.meta.min||'').slice(0,4)+'-01-01';
+  const rows=[];
+  for(const d of cD.dates){if(d>=yearStart){rows.push([d,cD.days[d].k.book]);}}
   rows.sort((a,b)=>a[0]<b[0]?1:(a[0]>b[0]?-1:0));
   let h='<table class="dt"><thead><tr><th>Report date</th><th class="num">Sum of bookings</th></tr></thead><tbody>';
   rows.forEach(([d,v])=>{h+=`<tr><td>${prettyDLong(d)}</td><td class="num">${fmt(v)}</td></tr>`;});
   h+='</tbody></table>';
   document.getElementById('daily-book-table').innerHTML=h;
-  document.getElementById('daily-book-cap').textContent=`${rows.length} rows`;
+  document.getElementById('daily-book-cap').textContent=`since ${prettyDLong(yearStart)} · ${rows.length} rows`;
 }
 function renderTrend(){
   const labels=[],sub=[],ini=[],bk=[],_td=[];
