@@ -14,6 +14,7 @@ const ACQ_HTML  = path.join(ROOT, 'Acquisition_Command_Dashboard.html');
 const FUN_HTML  = path.join(ROOT, 'Funnel_Analysis.html');
 const SIM_HTML  = path.join(ROOT, 'SIMAH_Intelligence.html');
 const COST_HTML = path.join(ROOT, 'Application_Cost.html');
+const HV_HTML   = path.join(ROOT, 'Holistic_View.html');
 const BPV_HTML  = path.join(ROOT, 'Business_Performance_View.html');
 
 // ── helpers ──────────────────────────────────────────────────────────
@@ -280,6 +281,44 @@ console.log('Reading Application_Cost.html …');
 const costHtml = fs.readFileSync(COST_HTML, 'utf8');
 const COST_DATA = extractJSON(costHtml, 'COST_DATA');
 console.log('  Application Cost total: %d apps, %d dates', COST_DATA.meta.total, COST_DATA.dates.length);
+
+// ── 5b. Read Holistic_View.html for a month-of-year seasonality baseline ──
+// HV holds booked-loan history back to 2019-05 (6+ years) — far longer than
+// BPV.daily's ~11 months (Oct 2025 onward), which isn't enough to see
+// whether e.g. Dec is a seasonally weak booking month vs. just this year's
+// noise. Used ONLY to inform the Booking Forecast's month-of-year
+// adjustment (see fc-method in Business_Performance_View.html) — it never
+// touches BPV.daily/weekly/monthly themselves. Optional: BPV still updates
+// fine without it (forecast just skips the month overlay).
+let hvSeasonality = null;
+try {
+  console.log('Reading Holistic_View.html …');
+  const hvHtml = fs.readFileSync(HV_HTML, 'utf8');
+  const HV = extractJSON(hvHtml, 'HV');
+  const monthly = HV.monthly || [];
+  // Drop the first and last calendar month in the series -- both are very
+  // likely partial (mid-month cutoff at either end of the export), which
+  // would understate that calendar month's true seasonal average.
+  const full = monthly.slice(1, -1);
+  const sumByCal = Array(12).fill(0), nByCal = Array(12).fill(0);
+  full.forEach(m => {
+    const calIdx = +m.mon.slice(5, 7) - 1;
+    sumByCal[calIdx] += (m.k && m.k.n) || 0;
+    nByCal[calIdx]++;
+  });
+  const avgByCal = sumByCal.map((s, i) => nByCal[i] ? s / nByCal[i] : null);
+  const overallAvg = avgByCal.filter(v => v != null).reduce((a, b) => a + b, 0) / avgByCal.filter(v => v != null).length;
+  const byMonth = avgByCal.map(v => v != null ? +(v / overallAvg).toFixed(3) : 1);
+  hvSeasonality = {
+    byMonth,                                   // index 0=Jan .. 11=Dec, 1.0 = average month
+    yearsSpan: [full[0] ? full[0].mon.slice(0, 4) : null, full[full.length - 1] ? full[full.length - 1].mon.slice(0, 4) : null],
+    monthsUsed: full.length,
+    source: 'Holistic_View.html (' + (HV.meta && HV.meta.generatedFrom || 'OverView.xlsx') + ')'
+  };
+  console.log('  HV seasonality: %d months (%s–%s), byMonth=%s', full.length, hvSeasonality.yearsSpan[0], hvSeasonality.yearsSpan[1], JSON.stringify(byMonth));
+} catch (e) {
+  console.warn('  Holistic_View.html not available or unreadable (%s) — Booking Forecast will skip the month-of-year overlay.', e.message);
+}
 
 // Service cost model — mirrors Application_Cost.html's SERVICES/NAFITH exactly.
 const SERVICES = [
@@ -588,7 +627,8 @@ const BPV = {
   // AI tab data
   dims: dimTotals,
   dow: dowArr,
-  momentum: dimMomentum
+  momentum: dimMomentum,
+  hvSeasonality
 };
 
 // ── 8. Inject into Business_Performance_View.html ────────────────────
