@@ -37,13 +37,26 @@ const HISTORICAL = [
 ];
 
 async function main() {
-  // Find the newest file that isn't already in HISTORICAL
-  const allCsvs = fs.readdirSync(dir)
-    .filter(f => /^Acquisition_for_Loans_\d{4}-\d{2}-\d{2}\.csv$/i.test(f))
-    .sort();
-
   const historicalSet = new Set(HISTORICAL);
-  const extras = allCsvs.filter(f => !historicalSet.has(f));
+  const namePattern = /^Acquisition_for_Loans_\d{4}-\d{2}-\d{2}\.csv$/i;
+
+  // Non-historical files can be sitting in TWO places: freshly dropped in
+  // the project root, or already archived from a prior run. Both must be
+  // included every time -- the merged output is rebuilt from scratch on
+  // every run, not read back as a starting point, so any file this script
+  // can't see is silently absent from the result. (Incident 2026-09: once
+  // archiving started working, the very next run only saw HISTORICAL +
+  // that day's new file and dropped every previously-archived day --
+  // 826,253 -> 744,541 rows, June through Sept 5 gone. Root cause: this
+  // loop only ever read from `dir`, never from ARCHIVE_DIR.)
+  const extrasRoot = fs.readdirSync(dir)
+    .filter(f => namePattern.test(f) && !historicalSet.has(f));
+  const extrasArchive = fs.existsSync(ARCHIVE_DIR)
+    ? fs.readdirSync(ARCHIVE_DIR).filter(f => namePattern.test(f) && !historicalSet.has(f))
+    : [];
+
+  const rootSet = new Set(extrasRoot);
+  const extras = [...new Set([...extrasArchive, ...extrasRoot])].sort(); // chronological (filenames are YYYY-MM-DD)
 
   if (extras.length === 0) {
     console.error('No new Acquisition_for_Loans file found beyond the historical snapshots.');
@@ -53,18 +66,18 @@ async function main() {
   // Merge EVERY non-historical file found, not just the newest one -- if
   // multiple daily files land at once (e.g. a backlog of several days'
   // worth dropped together), each one must still get merged. `extras` is
-  // already sorted ascending (filenames are YYYY-MM-DD, so lexicographic
-  // sort is chronological), so later files still correctly win on
-  // duplicate StagingID via the existing dedup loop below.
+  // sorted ascending (filenames are YYYY-MM-DD), so later files still
+  // correctly win on duplicate StagingID via the existing dedup loop below.
   const newestFile = extras[extras.length - 1];
   const files = [...HISTORICAL, ...extras];
 
   console.log('Merging %d files …', files.length);
   console.log('  Historical: %s', HISTORICAL.join(', '));
-  console.log('  New (%d):    %s', extras.length, extras.join(', '));
+  console.log('  From archive (%d): %s', extrasArchive.length, extrasArchive.join(', ') || '(none)');
+  console.log('  New in root (%d):  %s', extrasRoot.length, extrasRoot.join(', ') || '(none)');
 
   // Determine master header from the newest file (has most columns)
-  const latestFp = path.join(dir, newestFile);
+  const latestFp = path.join(rootSet.has(newestFile) ? dir : ARCHIVE_DIR, newestFile);
   const latestHeader = fs.readFileSync(latestFp, 'utf8').split('\n')[0].trim();
   const masterCols = latestHeader.split(',');
   const masterColCount = masterCols.length;
@@ -74,7 +87,8 @@ async function main() {
   const rows = new Map();
 
   for (const fn of files) {
-    const fp = path.join(dir, fn);
+    const isHistorical = historicalSet.has(fn);
+    const fp = path.join(isHistorical ? dir : (rootSet.has(fn) ? dir : ARCHIVE_DIR), fn);
     if (!fs.existsSync(fp)) { console.log('  SKIP (not found): %s', fn); continue; }
 
     const fileHeader = fs.readFileSync(fp, 'utf8').split('\n')[0].trim();
@@ -125,11 +139,12 @@ async function main() {
   await new Promise(resolve => ws.end(resolve));
   console.log('\n✅ Wrote %d rows to %s', written, path.basename(outPath));
 
-  // Archive every processed non-historical file so it doesn't pile up in
-  // the root and get silently skipped (or, under the old logic, silently
-  // drop everyone else's applications) on the next run.
+  // Archive every newly-processed root file so it doesn't pile up in the
+  // root and get silently skipped on the next run. Files already sourced
+  // from ARCHIVE_DIR are left where they are (they're already archived,
+  // and staying there is what lets the next run find them at all).
   if (!fs.existsSync(ARCHIVE_DIR)) fs.mkdirSync(ARCHIVE_DIR, { recursive: true });
-  for (const fn of extras) {
+  for (const fn of extrasRoot) {
     const src = path.join(dir, fn);
     const dest = path.join(ARCHIVE_DIR, fn);
     try {
