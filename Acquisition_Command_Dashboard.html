@@ -114,6 +114,11 @@ table.dt th{text-align:left;color:var(--muted);font-weight:600;font-size:10.5px;
 table.dt td{padding:8px 10px;border-bottom:1px solid var(--line);color:var(--ink2)}
 table.dt td.num,table.dt th.num{text-align:right;font-family:'JetBrains Mono'}
 table.dt tr:hover td{background:rgba(20,30,50,.02)}
+table.dt tr.weekend td{background:rgba(58,154,232,.06)}table.dt tr.weekend:hover td{background:rgba(58,154,232,.11)}
+table.dt tr.holiday td{background:rgba(236,90,120,.08)}table.dt tr.holiday:hover td{background:rgba(236,90,120,.14)}
+.daytag{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:1px 6px;border-radius:20px;margin-left:6px;vertical-align:middle}
+.daytag.weekend{background:rgba(58,154,232,.16);color:#2a6bb0}
+.daytag.holiday{background:rgba(236,90,120,.18);color:#b23a56}
 .bar-cell{position:relative}.bar-cell .bfill{position:absolute;left:0;top:50%;transform:translateY(-50%);height:20px;border-radius:4px;background:linear-gradient(90deg,rgba(21,179,163,.25),rgba(21,179,163,.05));z-index:0}
 .bar-cell span{position:relative;z-index:1}
 .deltac{font-family:'JetBrains Mono';font-weight:700}.deltac.up{color:var(--green)}.deltac.dn{color:var(--red)}.deltac.flat{color:var(--muted)}
@@ -288,7 +293,7 @@ body.gate-locked>*:not(#login-gate){display:none!important}
 <section class="panel-tab" id="perf">
   <div class="sec-h"><span class="k">KPI</span><h2>Core acquisition metrics</h2><span class="hint" id="perf-hint"></span></div>
   <div class="grid k7" id="kpi-grid"></div>
-  <div class="sec-h"><span class="k">BOOKINGS</span><h2>Daily booking count</h2><span class="hint">bookings by day · year-to-date, independent of the range filter above</span></div>
+  <div class="sec-h"><span class="k">BOOKINGS</span><h2>Daily booking count</h2><span class="hint">bookings by day · current month, independent of the range filter above</span></div>
   <div class="two">
     <div class="chart-card"><h3>Daily booking count</h3><div class="cwrap tall"><canvas id="c-daily-book"></canvas></div></div>
     <div class="chart-card"><h3>Daily booking count table</h3><p class="cap" id="daily-book-cap"></p><div style="max-height:320px;overflow-y:auto" id="daily-book-table"></div></div>
@@ -580,25 +585,44 @@ function renderKPI(){
   document.getElementById('perf-hint').textContent=`${prettyD(c.from)}–${prettyD(c.to)} · MoM = daily-avg vs ${c.cmLabel}`;
 }
 const prettyDLong=s=>parseD(s).toLocaleDateString('en',{month:'long',day:'numeric',year:'numeric'});
+// KSA weekend is Friday/Saturday, not Saturday/Sunday.
+const isKsaWeekend=d=>{const dow=parseD(d).getDay();return dow===5||dow===6;};
+// Fixed-date public holidays confirmed for the dataset's window. Eid
+// al-Fitr / Eid al-Adha are lunar (moon-sighting dependent) so these are
+// the commonly-published Umm al-Qura estimates for 2026 -- treat as
+// approximate, +/-1 day, until confirmed closer to the date.
+const KSA_HOLIDAYS={
+  '2026-02-22':'Founding Day',
+  '2026-03-19':'Eid al-Fitr (approx.)','2026-03-20':'Eid al-Fitr (approx.)','2026-03-21':'Eid al-Fitr (approx.)','2026-03-22':'Eid al-Fitr (approx.)',
+  '2026-05-26':'Eid al-Adha (approx.)','2026-05-27':'Eid al-Adha (approx.)','2026-05-28':'Eid al-Adha (approx.)','2026-05-29':'Eid al-Adha (approx.)',
+  '2026-09-23':'National Day',
+};
 function renderDailyBook(){
   // Both the chart and the table are intentionally NOT tied to the global
-  // date filter -- always year-to-date, so this section reads like a
-  // standing BI export rather than a view that resets whenever the range
-  // picker above changes.
-  const yearStart=(cD.meta.max||cD.meta.min||'').slice(0,4)+'-01-01';
+  // date filter -- always current-month-to-date, so this section reads
+  // like a standing BI export rather than a view that resets whenever the
+  // range picker above changes.
+  const monthStart=(cD.meta.max||cD.meta.min||'').slice(0,7)+'-01';
   const labels=[],vals=[];
-  for(const d of cD.dates){if(d>=yearStart){const k=cD.days[d].k;labels.push(prettyD(d));vals.push(k.book);}}
-  mk('c-daily-book',{type:'line',data:{labels,datasets:[{label:'Bookings',data:vals,borderColor:GR,backgroundColor:'rgba(34,181,113,.10)',fill:true,tension:.35,pointRadius:2,pointBackgroundColor:GR,borderWidth:2.2}]},
-   options:{maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'Bookings: '+fmt(c.raw)}}},
+  for(const d of cD.dates){if(d>=monthStart){const k=cD.days[d].k;labels.push(prettyD(d));vals.push(k.book);}}
+  mk('c-daily-book',{type:'line',plugins:DLPLUG?[DLPLUG]:[],data:{labels,datasets:[{label:'Bookings',data:vals,borderColor:GR,backgroundColor:'rgba(34,181,113,.10)',fill:true,tension:.35,pointRadius:2,pointBackgroundColor:GR,borderWidth:2.2}]},
+   options:{maintainAspectRatio:false,layout:{padding:{top:16}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'Bookings: '+fmt(c.raw)}},
+     datalabels:{align:'top',anchor:'end',offset:4,color:GR,font:{weight:'700',size:9},formatter:v=>v>0?fmt(v):''}},
     scales:{x:{...AX,ticks:{...AX.ticks,maxRotation:0,autoSkip:true,maxTicksLimit:12,font:{size:10}}},y:{...AX,title:{display:true,text:'Sum of bookings',color:MU,font:{size:10}}}}}});
+  const today=ymd(new Date());
   const rows=[];
-  for(const d of cD.dates){if(d>=yearStart){rows.push([d,cD.days[d].k.book]);}}
+  for(const d of cD.dates){if(d>=monthStart&&d<today){const k=cD.days[d].k;rows.push([d,k.book,k.val||0]);}}
   rows.sort((a,b)=>a[0]<b[0]?1:(a[0]>b[0]?-1:0));
-  let h='<table class="dt"><thead><tr><th>Report date</th><th class="num">Sum of bookings</th></tr></thead><tbody>';
-  rows.forEach(([d,v])=>{h+=`<tr><td>${prettyDLong(d)}</td><td class="num">${fmt(v)}</td></tr>`;});
+  let h='<table class="dt"><thead><tr><th>Report date</th><th class="num">Sum of bookings</th><th class="num">Booking value (SAR)</th></tr></thead><tbody>';
+  rows.forEach(([d,v,val])=>{
+    const hol=KSA_HOLIDAYS[d];
+    const cls=hol?'holiday':(isKsaWeekend(d)?'weekend':'');
+    const tag=hol?` <span class="daytag holiday">${hol}</span>`:(isKsaWeekend(d)?' <span class="daytag weekend">Weekend</span>':'');
+    h+=`<tr class="${cls}"><td>${prettyDLong(d)}${tag}</td><td class="num">${fmt(v)}</td><td class="num">${fmt(val)}</td></tr>`;
+  });
   h+='</tbody></table>';
   document.getElementById('daily-book-table').innerHTML=h;
-  document.getElementById('daily-book-cap').textContent=`since ${prettyDLong(yearStart)} · ${rows.length} rows`;
+  document.getElementById('daily-book-cap').textContent=`since ${prettyDLong(monthStart)} · ${rows.length} rows · today excluded`;
 }
 function renderTrend(){
   const labels=[],sub=[],ini=[],bk=[],_td=[];
