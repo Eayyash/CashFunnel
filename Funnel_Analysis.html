@@ -1201,20 +1201,41 @@ function renderDiagAug25HourlySpike(){
 }
 
 /* ---------- Deep dive: Aug 17 hour-by-hour (New Customer journey) ----------
-   Same source as Aug 25's file (New_Customer_Hourly_2026-08-17.xlsx), same
-   shape: hour 23's PG Visits (4,884) and Civil ID entries (2,348) match
-   Aug 17's full-day totals in FUNNEL_DEFAULT exactly, so it's the day's
-   reconciled total, not one hour's traffic — hours 0-22 are the only ones
-   safe to compare against each other, same caveat as Aug 25.
+   Aug 17 is this tab's benchmark day (DIAG_FROM). Hour 23's PG Visits
+   (4,884) and Civil ID entries (2,348) match Aug 17's full-day totals in
+   FUNNEL_DEFAULT exactly, so it's the day's reconciled total, not one
+   hour's traffic — hours 0-22 are the only ones safe to compare against
+   each other.
 
-   Unlike Aug 25, this day shows NO conversion collapse anywhere: the
-   Civil-ID gate rate stays in a healthy ~43-60% band in every single hour,
-   including the busiest ones. Aug 17 is this tab's own benchmark day
-   (DIAG_FROM) — this hourly view is why: every stage of the New Customer
-   funnel is elevated together with conversion holding steady, which is
-   what a genuinely strong, well-converting day looks like, not a data
-   artifact like the Aug 25 spike. */
+   SOURCE OF THE SPIKE (traced in the raw Acquisition CSV, by submitted
+   date x StoreNameOnline/StoreName x SubmitSource, Aug 1-25): it is NOT
+   a site-wide or channel-wide event. It's an isolated, 2-day surge
+   (Aug 17-18 only, gone by Aug 19) concentrated at exactly TWO physical
+   locations -- eXtra-Jeddah-alfaiha and eXtra-Riyadh-Al Warroud -- and
+   overwhelmingly on the UI (self-service) channel, not backoffice:
+     eXtra-Jeddah-alfaiha   UI: ...13(8/16) -> 127(8/17) -> 194(8/18) -> 16(8/19)
+     eXtra-Riyadh-Al Warroud UI: ...48(8/16) -> 111(8/17) -> 154(8/18) -> 48(8/19)
+   Baseline UI volume at these two stores is normally single/low-double
+   digits; it jumped 4-10x for exactly these two days at exactly these two
+   branches, then reverted overnight. A UI-heavy, single-branch, 2-day
+   spike is the signature of an in-store event (a promo, a sale, a
+   financing kiosk/QR push) at those two eXtra locations specifically --
+   not a paid-media campaign (would show across many stores/regions) and
+   not a tech issue (conversion never degraded, see below).
+
+   BOOKING IMPACT: net positive, but diluted at the two spiking stores.
+   Booked count at eXtra-Jeddah-alfaiha + eXtra-Riyadh-Al Warroud combined:
+   Aug 16 = 12, Aug 17 = 13, Aug 18 = 19, Aug 19 = 12 -- absolute bookings
+   did rise, but nowhere near proportionally to the 4-10x submission
+   surge, so the *conversion rate* of the extra volume was well below
+   these stores' normal rate. Portfolio-wide the day was unambiguously
+   positive: BO (Combo) Booked on Aug 17 was 136, the joint-highest
+   (tied with Aug 18) of the whole Aug 15-19 window (92/129/136/136/109). */
 const AUG17_HOURLY=[[0,231,110,25,12],[1,179,90,15,10],[2,173,87,21,11],[3,102,44,7,6],[4,66,30,6,4],[5,76,35,5,4],[6,94,44,10,6],[7,70,32,6,3],[8,73,28,4,2],[9,153,92,26,15],[10,175,94,24,9],[11,222,120,30,14],[12,216,118,22,12],[13,245,125,28,13],[14,340,174,21,9],[15,349,185,23,12],[16,271,131,15,6],[17,302,161,28,10],[18,293,132,29,13],[19,298,139,24,13],[20,277,137,27,17],[21,253,117,22,8],[22,231,117,25,17],[23,4884,2348,487,266]];
+const AUG17_STORE_SPIKE=[
+  {store:'eXtra-Jeddah-alfaiha', ui:{'08-15':21,'08-16':13,'08-17':127,'08-18':194,'08-19':16}, booked:{'08-16':0,'08-17':8,'08-18':6,'08-19':1}},
+  {store:'eXtra-Riyadh-Al Warroud', ui:{'08-15':40,'08-16':48,'08-17':111,'08-18':154,'08-19':48}, booked:{'08-16':12,'08-17':5,'08-18':13,'08-19':11}}
+];
 function renderDiagAug17HourlyPeak(){
   const el=document.getElementById('c-diag-hourly17');
   if(!el)return;
@@ -1223,18 +1244,23 @@ function renderDiagAug17HourlyPeak(){
   const rates=rowsIntraday.map(r=>r[1]?100*r[2]/r[1]:0);
   const minRate=Math.min(...rates), maxRate=Math.max(...rates);
   const avgRate=rates.reduce((s,r)=>s+r,0)/rates.length;
-  // Top 3 hours by PG Visits (the afternoon peak)
+  // Top 3 hours by PG Visits — used only to shade the chart/table, the
+  // narrative below is driven by the store/channel finding, not by hour.
   const topHours=[...rowsIntraday].sort((a,b)=>b[1]-a[1]).slice(0,3).sort((a,b)=>a[0]-b[0]);
-  const topPgSum=topHours.reduce((s,r)=>s+r[1],0), topCivSum=topHours.reduce((s,r)=>s+r[2],0);
-  const topRate=(100*topCivSum/topPgSum).toFixed(1);
+
+  const s1=AUG17_STORE_SPIKE[0], s2=AUG17_STORE_SPIKE[1];
+  const uiBefore=s1.ui['08-16']+s2.ui['08-16'], ui17=s1.ui['08-17']+s2.ui['08-17'], ui18=s1.ui['08-18']+s2.ui['08-18'], uiAfter=s1.ui['08-19']+s2.ui['08-19'];
+  const bkBefore=s1.booked['08-16']+s2.booked['08-16'], bk17=s1.booked['08-17']+s2.booked['08-17'], bk18=s1.booked['08-18']+s2.booked['08-18'], bkAfter=s1.booked['08-19']+s2.booked['08-19'];
 
   const cards=[];
-  cards.push(['orange','A broad, clean peak — every stage elevated together, conversion never dips',
-    `Civil-ID gate rate (Civil ID entries ÷ PG Visits) stays between <span class="mono">${minRate.toFixed(0)}%</span> and <span class="mono">${maxRate.toFixed(0)}%</span> in <b>every</b> hour of Aug 17, averaging <span class="mono">${avgRate.toFixed(0)}%</span> — including the busiest hours. That's the opposite of Aug 25's pattern (conversion collapsing to 1-10% exactly when traffic surged). Aug 17's PG Visits (4,884), Civil ID entries (2,348), New_Customers (487), Applications (266), DE_Approved (133) and Offer_Accepted (63) are each the <b>highest of the Aug 15-19 window</b> — a genuine, well-converting peak day, not a counting artifact. This is exactly why the tab uses Aug 17 as its benchmark (DIAG_FROM) for every other finding above.`]);
-  cards.push(['orange',`Busiest window: ${hourLbl(topHours[0][0])}-${hourLbl(topHours[topHours.length-1][0]+1)}`,
-    `Hours ${topHours.map(r=>hourLbl(r[0])).join(', ')} carry the most PG Visits that day (${topHours.map(r=>fmt(r[1])).join('/')}) and Civil-ID entry kept pace at <span class="mono">${topRate}%</span> — right in line with the day's ${avgRate.toFixed(0)}% average, not a drop-off. Traffic and conversion move together all day; there's no single hour propping up the total the way Aug 25's hour 23 spike did.`]);
-  cards.push(['orange','Booking really was elevated too — the premise holds for Aug 17 (unlike Aug 25)',
-    `Booked stayed at 0 all day in this journey (booking happens in <b>BO (Combo)</b>, not New Customer). BO (Combo) Booked on Aug 17 was <b>136</b> — the joint-highest (tied with Aug 18) of the Aug 15-19 window (92 / 129 / <b>136</b> / 136 / 109). Unlike the Aug 25 deep dive above, where submissions/bookings turned out to be normal despite an inflated top-of-funnel number, Aug 17's elevated submissions <b>and</b> bookings are both real, broad-based, and organic.`]);
+  cards.push(['orange','What this hourly file shows: the spike is real, broad, and well-converting',
+    `Civil-ID gate rate (Civil ID entries ÷ PG Visits) stays between <span class="mono">${minRate.toFixed(0)}%</span> and <span class="mono">${maxRate.toFixed(0)}%</span> in <b>every</b> hour of Aug 17, averaging <span class="mono">${avgRate.toFixed(0)}%</span> — including the busiest hours, so this isn't a tracking or tech artifact. PG Visits (4,884), Civil ID entries (2,348), New_Customers (487), Applications (266), DE_Approved (133) and Offer_Accepted (63) are each the <b>highest of the Aug 15-19 window</b>. But this file alone can't say <i>why</i> — it has no store or channel data. The next card traces that in the raw Acquisition CSV.`]);
+  cards.push(['orange','Source of the spike: two specific eXtra stores, self-service channel, 2 days only',
+    `Cross-referencing submitted date × store × channel in the Acquisition data finds this is <b>not</b> a site-wide or campaign-wide event — it's isolated to exactly two physical locations: <b>eXtra-Jeddah-alfaiha</b> and <b>eXtra-Riyadh-Al Warroud</b>. Their combined UI (self-service/online) submissions went <span class="mono">${fmt(uiBefore)}</span> (Aug 16) → <span class="mono">${fmt(ui17)}</span> (Aug 17) → <span class="mono">${fmt(ui18)}</span> (Aug 18) → <span class="mono">${fmt(uiAfter)}</span> (Aug 19, back to baseline) — a 4-10&times; jump at exactly these two stores for exactly two days, then gone overnight. That pattern — one channel (UI, not backoffice), two branches, two days, clean reversion — is the signature of an <b>in-store event</b> at those two eXtra locations (a promo, a sale, a financing kiosk/QR push), not a paid-media push (which would spread across many stores) and not a system issue (conversion held steady per the card above).`]);
+  cards.push(['orange','Booking impact: net positive for the business, but diluted at the two stores themselves',
+    `Combined bookings at these two stores: <span class="mono">${fmt(bkBefore)}</span> (Aug 16) → <span class="mono">${fmt(bk17)}</span> (Aug 17) → <span class="mono">${fmt(bk18)}</span> (Aug 18) → <span class="mono">${fmt(bkAfter)}</span> (Aug 19). Bookings did rise, but nowhere near proportionally to the 4-10&times; submission surge — the extra volume converted well below these stores' normal rate, likely lower-intent foot traffic drawn in by whatever ran in-store. Portfolio-wide the day was still unambiguously <b>positive</b>: BO (Combo) Booked on Aug 17 was <b>136</b>, the joint-highest (tied with Aug 18) of the entire Aug 15-19 window (92/129/<b>136</b>/136/109) — the extra top-of-funnel volume more than paid for its own dilution.`]);
+  cards.push(['orange','How to repeat it',
+    `The data points at a specific, repeatable lever rather than an unexplained fluke: whatever ran in-store at <b>eXtra-Jeddah-alfaiha</b> and <b>eXtra-Riyadh-Al Warroud</b> on Aug 17-18 — confirm with store operations / field marketing what that was (a weekend promo, a sale event, a financing kiosk or QR push are the most likely candidates given the self-service-channel signature). If confirmed: (1) run it again periodically at these same two stores, (2) roll it out to other high-traffic eXtra branches, and (3) since conversion diluted during the surge, tighten the qualification messaging shown at the point of that push (e.g. income/eligibility hints on the landing page) so the next surge converts closer to normal — that alone would turn this from "more volume, same booking rate" into "more volume, more bookings."`]);
   document.getElementById('diag-hourly17-insights').innerHTML=cards.map(c=>`<div class="ins ${c[0]}"><h4>${c[1]}</h4><p>${c[2]}</p></div>`).join('');
 
   const labels=AUG17_HOURLY.map(r=>hourLbl(r[0])+(r[0]===23?' (day total)':''));
