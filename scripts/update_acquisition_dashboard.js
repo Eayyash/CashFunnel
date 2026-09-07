@@ -167,7 +167,16 @@ function buildDaily(rows, name) {
       for (const kk in bv) bv[kk] = Math.round(bv[kk]);
     }
   }
-  return { meta: { min: dates[0], max: dates[dates.length - 1], total: rows.length, name }, dates, days };
+
+  // Pending Final Approval KPI: straight count of Altitudestatus ===
+  // 'Pending Final Approval', straight from the dataset.
+  let pendingFinalApproval = 0;
+  rows.forEach(r => {
+    if (String(r['Altitudestatus'] || '').trim() === 'Pending Final Approval') pendingFinalApproval++;
+  });
+  console.log(`Pending Final Approval: ${pendingFinalApproval.toLocaleString()}`);
+
+  return { meta: { min: dates[0], max: dates[dates.length - 1], total: rows.length, name, pendingFinalApproval }, dates, days };
 }
 
 // --- Main ---
