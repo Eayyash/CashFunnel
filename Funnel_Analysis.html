@@ -404,6 +404,11 @@ table.dt tr:hover td{background:var(--muted-bg)}
   <div class="chart-card"><div class="cwrap"><canvas id="c-diag-drop"></canvas></div></div>
   <div class="note-block"><div id="diag-drop-table"></div></div>
 
+  <div class="sec-h" style="margin-top:22px"><span class="k">DEEP DIVE</span><h2>Aug 25 hour-by-hour — New Customer journey</h2><span class="hint">from the New_Customer_Hourly export, not the daily rollup — pinpoints when, not just that, PG Visits spiked</span></div>
+  <div id="diag-hourly25-insights"></div>
+  <div class="chart-card"><div class="cwrap"><canvas id="c-diag-hourly25"></canvas></div></div>
+  <div class="note-block"><div id="diag-hourly25-table"></div></div>
+
   <div class="callout" style="margin-top:22px;margin-bottom:0" id="diag-acq-callout"></div>
   <div class="sec-h" style="margin-top:18px"><span class="k">ACQUISITION OVERLAY</span><h2>Daily trend by income</h2><span class="hint" id="diag-inc-hint"></span></div>
   <div class="chart-card">
@@ -1033,6 +1038,7 @@ function renderDiagnostic(){
   renderDiagVerifySteps(allDates,base);
   renderDiagFullFunnel(allDates,base);
   renderDiagPgDropDeepDive(allDates);
+  renderDiagAug25HourlySpike();
   renderDiagAcqOverlay();
   renderDiagGa4Overlay();
 }
@@ -1124,6 +1130,64 @@ function renderDiagPgDropDeepDive(allDates){
   });
   dt+=`</tbody></table><div style="font-size:11px;color:var(--faint);margin-top:8px">Historical baseline (full ${fmt(cD.dates.length)}-day dataset): ${historyAvgRate}% of PG Visits. Rows shaded red are >1.5&times; that baseline.</div>`;
   document.getElementById('diag-drop-table').innerHTML=dt;
+}
+
+/* Aug 25 hour-by-hour, New Customer journey only — from a one-off
+   New_Customer_Hourly export the user supplied (not part of the merged
+   daily FUNNEL_DEFAULT dataset, so it's hardcoded here rather than
+   round-tripped through update_funnel.js).
+   Each row: [hour, PG_Total_Visits, CivilID_Entered, New_Customers, Application_Created].
+   The hour-23 row is NOT one hour's traffic — its PG Visits (6,179) and
+   CivilID entries (1,615) exactly match Aug 25's full-day totals already
+   in FUNNEL_DEFAULT, so it reads as a late-day reconciled/batch total for
+   the whole day, not an hourly delta (hours 0-22 sum to roughly double
+   the day total on their own, consistent with those being a separate,
+   partial real-time counter running in parallel). Treat hour 23 as "full
+   day, reconciled" and hours 0-22 as the only hours safe to compare
+   against each other. */
+const AUG25_HOURLY=[[0,174,81,16,7],[1,191,88,18,9],[2,149,69,13,11],[3,81,31,9,4],[4,73,26,8,6],[5,74,34,3,0],[6,61,26,2,1],[7,47,21,3,0],[8,77,30,5,3],[9,145,68,14,10],[10,153,78,17,5],[11,209,80,13,7],[12,718,71,15,10],[13,1116,16,1,0],[14,1003,74,7,2],[15,273,105,15,8],[16,241,113,16,3],[17,220,108,20,6],[18,232,91,14,6],[19,207,102,20,8],[20,225,84,19,9],[21,199,106,22,7],[22,176,84,17,8],[23,6179,1615,310,160]];
+function renderDiagAug25HourlySpike(){
+  const el=document.getElementById('c-diag-hourly25');
+  if(!el)return;
+  const hourLbl=h=>(h%12||12)+(h<12?'am':'pm');
+  const rowsIntraday=AUG25_HOURLY.slice(0,23); // hours 0-22 only, the comparable ones
+  const baseRate=rowsIntraday.reduce((s,r)=>s+r[2],0)/rowsIntraday.reduce((s,r)=>s+r[1],0)*100;
+  // Flag any hour whose PG Visits are >=3x the hour-0-22 median AND whose
+  // gate rate (CivilID/PG) is under half the hour-0-22 average.
+  const sortedPg=[...rowsIntraday.map(r=>r[1])].sort((a,b)=>a-b);
+  const medianPg=sortedPg[Math.floor(sortedPg.length/2)];
+  const spikeHours=rowsIntraday.filter(r=>{const rate=r[1]?100*r[2]/r[1]:0;return r[1]>=medianPg*3 && rate<baseRate/2;});
+
+  const cards=[];
+  if(spikeHours.length){
+    const hrsTxt=spikeHours.length>1?`${hourLbl(spikeHours[0][0])}–${hourLbl(spikeHours[spikeHours.length-1][0]+1)}`:hourLbl(spikeHours[0][0]);
+    const pgSum=spikeHours.reduce((s,r)=>s+r[1],0), civSum=spikeHours.reduce((s,r)=>s+r[2],0);
+    const spikeRate=(100*civSum/pgSum).toFixed(1);
+    cards.push(['bad',`Traffic surge + conversion collapse concentrated at ${hrsTxt}`,
+      `Hour${spikeHours.length>1?'s':''} ${spikeHours.map(r=>hourLbl(r[0])).join(', ')} show PG Visits ${spikeHours.map(r=>fmt(r[1])).join('/')} — ${(spikeHours[0][1]/medianPg).toFixed(1)}&times;+ the hour-0-22 typical level (median ${fmt(medianPg)}/hr) — while Civil-ID entry only kept pace ${spikeRate}% of the time, versus ~${baseRate.toFixed(0)}% every other hour that day. This is the same "traffic came back, conversion did not" pattern the FINDINGS section above flags for Aug 25 as a whole — this hourly file narrows it to a specific ${spikeHours.length===1?'hour':'window'}, which is the window worth pulling error/access logs for.`]);
+  } else {
+    cards.push(['good','No concentrated intraday spike found','Hours 0-22 look broadly consistent with each other — no single hour stands out as the driver.']);
+  }
+  cards.push(['warn','This file only covers the New Customer journey — it does not explain "booking"',
+    `Booked stayed at 0 all day in this journey (booking happens in <b>BO (Combo)</b>, not New Customer). BO (Combo) Booked on Aug 25 was <b>111</b> — right inside the 97–123 range seen Aug 23–27, i.e. a completely normal booking day. New_Customers (310) and Application_Created (160) for Aug 25 are also in line with — actually slightly below — Aug 24 (364/165) and Aug 26 (381/208). So neither submissions nor bookings were unusually high on Aug 25; only top-of-funnel PG Visits was, and per the finding above, that traffic mostly didn't convert.`]);
+  document.getElementById('diag-hourly25-insights').innerHTML=cards.map(c=>`<div class="ins ${c[0]}"><h4>${c[1]}</h4><p>${c[2]}</p></div>`).join('');
+
+  const labels=AUG25_HOURLY.map(r=>hourLbl(r[0])+(r[0]===23?' (day total)':''));
+  mk('c-diag-hourly25',{type:'bar',data:{labels,datasets:[
+    {type:'bar',label:'PG Visits',data:AUG25_HOURLY.map(r=>r[1]),backgroundColor:AUG25_HOURLY.map(r=>spikeHours.some(s=>s[0]===r[0])?RD:CY),borderRadius:4,yAxisID:'y'},
+    {type:'line',label:'Civil ID gate rate',data:AUG25_HOURLY.map(r=>r[1]?+(100*r[2]/r[1]).toFixed(1):0),borderColor:VI,backgroundColor:VI,yAxisID:'y1',tension:.3,pointRadius:3,borderWidth:2}
+  ]},options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top'},tooltip:{callbacks:{footer:items=>items[0].dataIndex===23?'Reconciled full-day total, not one hour':''}}},
+    scales:{x:{...AX,ticks:{...AX.ticks,font:{size:9}}},y:{...AX,position:'left',title:{display:true,text:'PG Visits',color:MU,font:{size:10}}},y1:{...AX,position:'right',grid:{display:false},title:{display:true,text:'Gate rate',color:MU,font:{size:10}},ticks:{...AX.ticks,callback:v=>v+'%'}}}}});
+
+  let ht='<table class="dt"><thead><tr><th>Hour</th><th class="num">PG Visits</th><th class="num">Civil ID Entered</th><th class="num">Gate rate</th><th class="num">New Customers</th><th class="num">Applications</th></tr></thead><tbody>';
+  AUG25_HOURLY.forEach(r=>{
+    const rate=r[1]?(100*r[2]/r[1]).toFixed(1):'0.0';
+    const isSpike=spikeHours.some(s=>s[0]===r[0]);
+    const isTotal=r[0]===23;
+    ht+=`<tr${isSpike?' style="background:rgba(236,90,120,.08)"':''}><td>${hourLbl(r[0])}${isTotal?' <span class="pill2">day total, not 1hr</span>':''}${isSpike?' <span class="pill2" style="color:var(--red);border-color:var(--red)">spike</span>':''}</td><td class="num">${fmt(r[1])}</td><td class="num">${fmt(r[2])}</td><td class="num">${rate}%</td><td class="num">${fmt(r[3])}</td><td class="num">${fmt(r[4])}</td></tr>`;
+  });
+  ht+=`</tbody></table><div style="font-size:11px;color:var(--faint);margin-top:8px">Source: New_Customer_Hourly_2026-08-25.xlsx (one-off export, New Customer journey only). Hour 23's PG Visits/Civil ID figures match Aug 25's full-day totals exactly — read as the day's reconciled total, not that hour's traffic; hours 0-22 are the only ones safe to compare against each other.</div>`;
+  document.getElementById('diag-hourly25-table').innerHTML=ht;
 }
 
 /* Verification & decision steps: CITC, salary (MOF/GOSI), DBR (QARAR/SIMAH), Final DE — straight from funnel steps */
