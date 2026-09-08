@@ -4,22 +4,42 @@
  * being limited to whatever fits in the single embedded rawRecords cache
  * (previously capped at 10,000 entries / ~7 days).
  *
- * Re-extracts every record from the archived SIMAH_Qarar_JSON_*.csv files
- * (same extraction logic as backfill_simah_rawrecords.js — kept in sync
- * deliberately, do not let these drift apart), joins against the latest
- * Acquisition_for_Loans CSV, and buckets each record by date:
+ * INCREMENTAL (2026-09 rewrite): earlier versions rebuilt from EVERY
+ * archived SIMAH_Qarar_JSON_*.csv file on every run, even to add a single
+ * new day. Against the ~250-file archive that took 2-3+ hours (once even
+ * ~14.5h — almost certainly a laptop-sleep artifact inflating wall-clock
+ * time, but the underlying full-rebuild cost was real and already too
+ * slow before that). This version tracks which source files have already
+ * been folded in (meta.dateChunksSourceFiles) and only processes files
+ * NOT in that list — a normal one-new-file daily run now touches only the
+ * handful of date buckets that file's records land in, not all ~250
+ * files/~320 dates, so it finishes in well under a minute instead of
+ * hours. institutionLoanStats is likewise loaded from the existing blob
+ * and ADDED to, not recomputed from scratch.
+ *
+ * Re-extracts every record from the new archived SIMAH_Qarar_JSON_*.csv
+ * files (same extraction logic as backfill_simah_rawrecords.js — kept in
+ * sync deliberately, do not let these drift apart), joins against the
+ * latest Acquisition_for_Loans CSV, and buckets each record by date:
  *   - matched records (have acq.submitted) -> bucketed by that date
  *   - unmatched records (no Acquisition match, no submitted date) ->
  *     bucketed by the SOURCE FILE's date (from its filename), since that's
  *     the only date available for them. The dashboard's date filter treats
  *     unmatched records as always-included *when their chunk is loaded* —
  *     this is a deliberate simplification, see SIMAH_Intelligence.html.
+ *   New records for a date that already has a simah_data/<date>.json chunk
+ *   are APPENDED to it, not overwritten.
  *
  * Output: simah_data/<date>.json (one compact array of records per date)
  * plus a manifest embedded back into SIMAH_Intelligence.html's meta as
  * meta.dateChunks = [{date,count,file}], sorted ascending.
  *
  * Usage: node scripts/build_simah_datechunks.js <file1.csv> [file2.csv ...]
+ *        node scripts/build_simah_datechunks.js <directory>
+ * Always safe (and the normal invocation) to pass the WHOLE archive
+ * folder every time — already-processed files are auto-skipped via
+ * meta.dateChunksSourceFiles, so this can't double-count and doesn't
+ * need the caller to track what's new.
  */
 const fs = require('fs');
 const path = require('path');
@@ -326,7 +346,34 @@ function fileDateFromName(fp) {
 }
 
 async function main() {
-console.log('=== SIMAH per-date chunk builder (full history) ===');
+console.log('=== SIMAH per-date chunk builder (incremental) ===');
+
+// --- Load existing state (manifest, processed-files list, institution
+// stats) from SIMAH_Intelligence.html so this run only has to ADD the
+// new files' contribution, not recompute everything. ---
+console.log('Reading existing SIMAH_Intelligence.html state…');
+const htmlBefore = fs.readFileSync(HTML_OUT, 'utf-8');
+const startTag = 'const SIMAH_DATA = ';
+const startIdxBefore = htmlBefore.indexOf(startTag) + startTag.length;
+const endTag = ';\nlet D = SIMAH_DATA;';
+const endIdxBefore = htmlBefore.indexOf(endTag, startIdxBefore);
+if (startIdxBefore < 0 || endIdxBefore < 0) { console.error('Could not locate SIMAH_DATA blob'); process.exit(1); }
+const existingData = JSON.parse(htmlBefore.slice(startIdxBefore, endIdxBefore));
+const existingManifest = existingData.meta.dateChunks || [];
+const manifestByDate = new Map(existingManifest.map(m => [m.date, m]));
+const alreadyProcessed = new Set(existingData.meta.dateChunksSourceFiles || []);
+const institutionLoanStats = existingData.institutionLoanStats || {};
+console.log(`  Existing: ${existingManifest.length} date chunks, ${alreadyProcessed.size} source files already processed, dateChunksMax=${existingData.meta.dateChunksMax || 'none'}`);
+
+// Only process files not already folded in. Comparing by basename so it
+// doesn't matter whether the caller passes the archive dir or explicit
+// paths, or whether a file moved between the two.
+const newFiles = files.filter(fp => !alreadyProcessed.has(path.basename(fp)));
+console.log(`  ${files.length} file(s) given, ${newFiles.length} new (not yet processed)`);
+if (!newFiles.length) {
+  console.log('Nothing new to do — every given file is already in dateChunksSourceFiles.');
+  return;
+}
 
 const acqFile = findLatestAcqFile();
 console.log(`Reading ${acqFile}…`);
@@ -336,11 +383,10 @@ acqRows.forEach(r => { if (r.CivilID) acqMap[r.CivilID] = r; });
 console.log(`  ${acqRows.length.toLocaleString()} acquisition rows, ${Object.keys(acqMap).length.toLocaleString()} unique CivilIDs`);
 
 const BOOKED = new Set(['Completed [C]', 'Pending Final Approval']);
-const buckets = new Map(); // date -> records[]
-const institutionLoanStats = {};
+const buckets = new Map(); // date -> NEW records[] from this run only
 let totalExtracted = 0, totalErrs = 0;
 
-for (const fp of files) {
+for (const fp of newFiles) {
   const fileDate = fileDateFromName(fp);
   console.log(`Reading ${path.basename(fp)}… (fallback bucket date: ${fileDate})`);
   let n = 0, errs = 0;
@@ -417,27 +463,41 @@ for (const fp of files) {
 }
 
 console.log(`Total extracted: ${totalExtracted}, total errors: ${totalErrs}`);
-console.log(`Date buckets: ${buckets.size}`);
+console.log(`New/touched date buckets this run: ${buckets.size}`);
 
+// --- Merge new records into existing per-date chunk files (append, not
+// overwrite) and update just the touched manifest entries. Dates this
+// run didn't touch are left completely alone -- both their chunk file
+// and their manifest entry. ---
 if (!fs.existsSync(CHUNK_DIR)) fs.mkdirSync(CHUNK_DIR, { recursive: true });
-const manifest = [];
 [...buckets.keys()].sort().forEach(date => {
-  const recs = buckets.get(date);
+  const newRecs = buckets.get(date);
   const fname = `${date}.json`;
-  fs.writeFileSync(path.join(CHUNK_DIR, fname), JSON.stringify(recs));
-  manifest.push({ date, count: recs.length, file: `simah_data/${fname}` });
-  console.log(`  wrote ${fname}: ${recs.length} records`);
+  const fp = path.join(CHUNK_DIR, fname);
+  let existingRecs = [];
+  if (fs.existsSync(fp)) {
+    try { existingRecs = JSON.parse(fs.readFileSync(fp, 'utf-8')); }
+    catch (e) { console.warn(`  WARNING: could not parse existing ${fname} (${e.message}) -- starting fresh for this date`); }
+  }
+  const combined = existingRecs.concat(newRecs);
+  fs.writeFileSync(fp, JSON.stringify(combined));
+  manifestByDate.set(date, { date, count: combined.length, file: `simah_data/${fname}` });
+  console.log(`  ${fname}: ${existingRecs.length} existing + ${newRecs.length} new = ${combined.length}`);
 });
 
+const manifest = [...manifestByDate.values()].sort((a, b) => a.date < b.date ? -1 : (a.date > b.date ? 1 : 0));
 const totalRecords = manifest.reduce((s, m) => s + m.count, 0);
-console.log(`Manifest: ${manifest.length} dates, ${totalRecords} total records`);
+console.log(`Manifest: ${manifest.length} dates total, ${totalRecords} total records`);
 
-// --- Splice manifest + institutionLoanStats into SIMAH_Intelligence.html ---
-console.log('Reading SIMAH_Intelligence.html…');
+// --- Splice manifest + institutionLoanStats + processed-files list back
+// into SIMAH_Intelligence.html. Re-read fresh (not htmlBefore) in case
+// something else (e.g. a SIMAH daily merge) touched the file while this
+// ran -- this script only ever writes meta.dateChunks*, institutionLoanStats,
+// and meta.dateChunksSourceFiles, so it's safe to re-splice into whatever
+// the current file's SIMAH_DATA blob is. ---
+console.log('Re-reading SIMAH_Intelligence.html…');
 const html = fs.readFileSync(HTML_OUT, 'utf-8');
-const startTag = 'const SIMAH_DATA = ';
 const startIdx = html.indexOf(startTag) + startTag.length;
-const endTag = ';\nlet D = SIMAH_DATA;';
 const endIdx = html.indexOf(endTag, startIdx);
 if (startIdx < 0 || endIdx < 0) { console.error('Could not locate SIMAH_DATA blob'); process.exit(1); }
 const data = JSON.parse(html.slice(startIdx, endIdx));
@@ -446,12 +506,13 @@ data.meta.dateChunks = manifest;
 data.meta.dateChunksMin = manifest[0]?.date || null;
 data.meta.dateChunksMax = manifest[manifest.length - 1]?.date || null;
 data.meta.dateChunksTotal = totalRecords;
+data.meta.dateChunksSourceFiles = [...alreadyProcessed, ...newFiles.map(fp => path.basename(fp))];
 data.institutionLoanStats = institutionLoanStats;
 
 const newBlob = JSON.stringify(data);
 const newHtml = html.slice(0, startIdx) + newBlob + html.slice(endIdx);
 fs.writeFileSync(HTML_OUT, newHtml, 'utf-8');
-console.log('✅ Done — manifest + institutionLoanStats written into SIMAH_Intelligence.html.');
+console.log(`✅ Done — ${newFiles.length} new file(s) folded in. dateChunksMax=${data.meta.dateChunksMax}, dateChunksTotal=${totalRecords}.`);
 console.log('   rawRecords (the default embedded window) left untouched — wire up fetch-based loading next.');
 }
 
