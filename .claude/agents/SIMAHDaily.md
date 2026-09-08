@@ -51,14 +51,25 @@ Confirm each run's `Done — N new SIMAH reports processed, TOTAL total in datas
 
 Process files **one at a time, sequentially** — never in parallel (each run reads-modifies-writes the same HTML file).
 
-### 3. Refresh Business Performance View
+### 3. Rebuild the date-chunks manifest (do this every time, even for one file)
+Step 2 updates `meta.total`/`meta.matched` and the aggregate bands (score distribution, etc.), but it does **not** touch `meta.dateChunks`/`dateChunksMax` — the separate manifest the top date-range picker uses to know which dates exist and to fetch `simah_data/<date>.json` chunks on demand. Skipping this step is why a merge can report success while the new dates stay invisible in the UI (confirmed live 2026-09: `meta.total` correctly included Sept 1–5, but `dateChunksMax` was still `2026-08-31`, so the date picker's own max bound silently excluded every September date and "All dates" couldn't reach it either).
+
+Run this **once**, after all files in this batch are merged:
+```bash
+node --max-old-space-size=16384 scripts/build_simah_datechunks.js "C:\Users\Emad.Ayyash\OneDrive - tasheelfinance\Documents\EIA Work\AI-Work\SIMAH Qarar JSON"
+```
+**Always pass the whole archive folder — it's fully safe to do this every time.** As of 2026-09 this script is **incremental**: it tracks which source files are already folded into the manifest (`meta.dateChunksSourceFiles`) and only processes files not in that list, so passing the whole folder never reprocesses what's already done — it just auto-discovers whatever's new. A normal one-file day now takes **a few minutes**, not hours (confirmed: 7m43s for one new file touching 159 date-bucket chunks, vs. 2.5-14+ hours before this rewrite, when it rebuilt from all ~250 files every single run). The 16GB heap is still needed for the Acquisition CSV read, not for archive size. If a run ever reports "0 new" when you expected one, check whether the file's basename already appears in `meta.dateChunksSourceFiles` — most likely it was already processed in an earlier run.
+
+Confirm the run's final `dateChunksMax` matches the newest date you just merged in step 2, and `dateChunksTotal` increased sensibly (a Sept-dated SIMAH file's records can land in many earlier date buckets too, since bucketing follows the matched Acquisition submission date, not the source file's own date — that's normal, not a bug).
+
+### 4. Refresh Business Performance View
 Only needs to run **once**, after all files are merged (not per-file):
 ```bash
 node --max-old-space-size=16384 scripts/update_bpv.js
 ```
 This pulls the refreshed SIMAH snapshot (total/matched) into Business_Performance_View.html.
 
-### 4. Verify
+### 5. Verify
 ```bash
 node -e "
 const fs=require('fs');
@@ -73,7 +84,7 @@ console.log('meta:', JSON.stringify(data.meta));
 ```
 Confirm no syntax errors and `meta.total`/`meta.matched` reflect the merge(s) just run. Also spot-check Business_Performance_View.html's script block the same way.
 
-### 5. Commit and push
+### 6. Commit and push
 ```bash
 git fetch origin && git status -sb
 ```
@@ -91,7 +102,7 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 git push origin master
 ```
 
-### 6. Report
+### 7. Report
 Tell the user:
 - Which date(s) were merged, in order
 - Total report count before → after, and matched count before → after
