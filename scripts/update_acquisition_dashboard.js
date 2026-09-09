@@ -50,6 +50,66 @@ function readCsv(filePath) {
 // --- Aggregation (mirrors buildDaily in the dashboard HTML) ---
 const CONFIG = { bookCol: 'SalesCompletedDate' };
 const BOOKED_SET = new Set(['Completed [C]', 'Pending Final Approval']);
+
+// Top companies (raw 'Company' column, col J). Investigated 2026-09: the
+// Arabic company names in this column are corrupted at the SOURCE -- every
+// unmappable character was already replaced with literal '?' / U+FFFD
+// placeholders before this CSV was ever created (confirmed at the byte
+// level: zero rows in the full 836K-row dataset contain valid Arabic
+// Unicode in this column). The original text is unrecoverable -- this is
+// not a bug in how this script reads the file.
+// Per explicit instruction: merge the two "unlisted company" spellings
+// (clean English "UNLISTED COMPANY" and the corrupted Arabic one -- found
+// programmatically as whichever corrupted value has by far the highest
+// row count, since it's the single dominant value ~15x any other
+// corrupted string) into one "Unlisted Company" bucket. Every OTHER
+// corrupted (unreadable) company name is excluded from the ranking
+// entirely, also per explicit instruction, rather than shown as garbage
+// or a generic placeholder.
+const CORRUPTED_COMPANY_RE = /[�?]/;
+function computeTopCompanies(rows, topN) {
+  // Pass 1: raw (trimmed) value -> row count, to find the dominant
+  // corrupted value (= the Arabic "Unlisted Company").
+  const rawCounts = new Map();
+  rows.forEach(r => {
+    const v = (r['Company'] || '').trim();
+    if (!v) return;
+    rawCounts.set(v, (rawCounts.get(v) || 0) + 1);
+  });
+  let unlistedArabicRaw = null, unlistedArabicCount = 0;
+  for (const [v, n] of rawCounts) {
+    if (CORRUPTED_COMPANY_RE.test(v) && n > unlistedArabicCount) { unlistedArabicRaw = v; unlistedArabicCount = n; }
+  }
+
+  function normalize(raw) {
+    const v = (raw || '').trim();
+    if (!v) return null;
+    if (v === unlistedArabicRaw) return 'Unlisted Company';
+    if (/^UNLISTED\s*COMPANY$/i.test(v.replace(/\s+/g, ' '))) return 'Unlisted Company';
+    if (CORRUPTED_COMPANY_RE.test(v)) return null; // other unreadable entries: excluded
+    return v;
+  }
+
+  // Pass 2: aggregate submissions/booked-count/booked-value per
+  // normalized company name.
+  const stats = new Map(); // name -> {submissions, booked, value}
+  rows.forEach(r => {
+    const name = normalize(r['Company']);
+    if (name == null) return;
+    const s = stats.get(name) || { submissions: 0, booked: 0, value: 0 };
+    s.submissions++;
+    if (BOOKED_SET.has(String(r['Altitudestatus']))) {
+      s.booked++;
+      s.value += parseFloat(r['ItemValue']) || 0;
+    }
+    stats.set(name, s);
+  });
+
+  return [...stats.entries()]
+    .sort((a, b) => b[1].submissions - a[1].submissions)
+    .slice(0, topN)
+    .map(([name, s]) => ({ name, submissions: s.submissions, booked: s.booked, value: Math.round(s.value) }));
+}
 const DIMCOL = {
   employer: 'FinalEmployerType', nationality: 'Nationality_Flag',
   income: 'DeclaredIncomeBand', risk: 'RiskRating', simah: 'SC_RiskGrade',
@@ -176,7 +236,10 @@ function buildDaily(rows, name) {
   });
   console.log(`Pending Final Approval: ${pendingFinalApproval.toLocaleString()}`);
 
-  return { meta: { min: dates[0], max: dates[dates.length - 1], total: rows.length, name, pendingFinalApproval }, dates, days };
+  const topCompanies = computeTopCompanies(rows, 10);
+  console.log('Top companies:', topCompanies.map(c => `${c.name} (${c.submissions.toLocaleString()} sub, ${c.booked.toLocaleString()} booked, SAR ${c.value.toLocaleString()})`).join(' | '));
+
+  return { meta: { min: dates[0], max: dates[dates.length - 1], total: rows.length, name, pendingFinalApproval, topCompanies }, dates, days };
 }
 
 // --- Main ---
