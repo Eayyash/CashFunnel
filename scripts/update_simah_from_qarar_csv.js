@@ -690,7 +690,14 @@ function mergeAggregates(oldAgg, newAgg) {
       dateChunks: oldAgg.meta.dateChunks,
       dateChunksMin: oldAgg.meta.dateChunksMin,
       dateChunksMax: oldAgg.meta.dateChunksMax,
-      dateChunksTotal: oldAgg.meta.dateChunksTotal
+      dateChunksTotal: oldAgg.meta.dateChunksTotal,
+      // Same carry-forward reasoning as the dateChunks* fields above --
+      // this one is what makes build_simah_datechunks.js's incremental
+      // mode work at all. Missing here once already caused a merge to
+      // silently drop it, which made the next datechunks run think NO
+      // files had ever been processed and fall back to a full ~250-file
+      // rebuild (confirmed live: 2026-09, cost hours instead of minutes).
+      dateChunksSourceFiles: oldAgg.meta.dateChunksSourceFiles
     },
     scoreDistribution: mergeBandMap(oldAgg.scoreDistribution, newAgg.scoreDistribution),
     enqIntensity: mergeBandMap(oldAgg.enqIntensity, newAgg.enqIntensity),
