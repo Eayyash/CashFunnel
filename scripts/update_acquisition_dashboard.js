@@ -65,7 +65,9 @@ const BOOKED_SET = new Set(['Completed [C]', 'Pending Final Approval']);
 // corrupted string) into one "Unlisted Company" bucket. Every OTHER
 // corrupted (unreadable) company name is excluded from the ranking
 // entirely, also per explicit instruction, rather than shown as garbage
-// or a generic placeholder.
+// or a generic placeholder. Also case-insensitive: "aramco" and "ARAMCO"
+// are the same company and are merged, displayed under whichever casing
+// is most common for that company.
 const CORRUPTED_COMPANY_RE = /[�?]/;
 function computeTopCompanies(rows, topN) {
   // Pass 1: raw (trimmed) value -> row count, to find the dominant
@@ -91,24 +93,31 @@ function computeTopCompanies(rows, topN) {
   }
 
   // Pass 2: aggregate submissions/booked-count/booked-value per
-  // normalized company name.
-  const stats = new Map(); // name -> {submissions, booked, value}
+  // normalized company name, grouped case-insensitively. Each group
+  // tracks how often each original casing occurred so the most common
+  // one can be used as the display name.
+  const stats = new Map(); // upper-case key -> {submissions, booked, value, casings: Map}
   rows.forEach(r => {
     const name = normalize(r['Company']);
     if (name == null) return;
-    const s = stats.get(name) || { submissions: 0, booked: 0, value: 0 };
+    const key = name.toUpperCase();
+    const s = stats.get(key) || { submissions: 0, booked: 0, value: 0, casings: new Map() };
     s.submissions++;
+    s.casings.set(name, (s.casings.get(name) || 0) + 1);
     if (BOOKED_SET.has(String(r['Altitudestatus']))) {
       s.booked++;
       s.value += parseFloat(r['ItemValue']) || 0;
     }
-    stats.set(name, s);
+    stats.set(key, s);
   });
 
   return [...stats.entries()]
     .sort((a, b) => b[1].submissions - a[1].submissions)
     .slice(0, topN)
-    .map(([name, s]) => ({ name, submissions: s.submissions, booked: s.booked, value: Math.round(s.value) }));
+    .map(([, s]) => {
+      const displayName = [...s.casings.entries()].sort((a, b) => b[1] - a[1])[0][0];
+      return { name: displayName, submissions: s.submissions, booked: s.booked, value: Math.round(s.value) };
+    });
 }
 const DIMCOL = {
   employer: 'FinalEmployerType', nationality: 'Nationality_Flag',
