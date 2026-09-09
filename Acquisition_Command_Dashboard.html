@@ -290,7 +290,7 @@ body.gate-locked>*:not(#login-gate){display:none!important}
   <div class="sec-h" style="margin-top:20px"><span class="k">05</span><h2>CEO Dashboard — Traffic Light</h2><span class="hint">key metrics health check for selected range</span></div>
   <div class="chart-card" id="sum-ceo-traffic"></div>
 
-  <div class="sec-h" style="margin-top:20px"><span class="k">06</span><h2>Top 10 Companies</h2><span class="hint">by submission volume · Acquisition_for_Loans column J · own date range, independent of the filter above</span></div>
+  <div class="sec-h" style="margin-top:20px"><span class="k">06</span><h2>Top 10 Companies</h2><span class="hint">Acquisition_for_Loans column J · own date range, independent of the filter above</span></div>
   <div class="datebar" style="margin-bottom:10px">
     <div class="dfield"><label>From</label><input type="date" id="tc-from"></div>
     <div class="dfield"><label>To</label><input type="date" id="tc-to"></div>
@@ -299,6 +299,13 @@ body.gate-locked>*:not(#login-gate){display:none!important}
       <button data-r="mtd">This month</button>
       <button data-r="7d">Last 7 days</button>
       <button data-r="sync">Match page range</button>
+    </div>
+    <span class="spacer"></span>
+    <div class="presets" id="tc-sort">
+      <span class="lbl" style="font-size:11px;color:var(--muted);margin-right:4px;align-self:center">Rank by</span>
+      <button data-s="sub" class="on">Submissions</button>
+      <button data-s="book">Booked loans</button>
+      <button data-s="val">Booked value</button>
     </div>
   </div>
   <div class="note-block"><div id="sum-top-companies"></div></div>
@@ -894,6 +901,9 @@ function onTCDateChange(){const f=document.getElementById('tc-from').value,t=doc
 document.getElementById('tc-from').addEventListener('change',onTCDateChange);
 document.getElementById('tc-to').addEventListener('change',onTCDateChange);
 setTCDateInputs();
+let TC_SORT='sub';
+document.querySelectorAll('#tc-sort button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#tc-sort button').forEach(x=>x.classList.remove('on'));b.classList.add('on');TC_SORT=b.dataset.s;renderAll();}));
 
 /* ============ tabs ============ */
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
@@ -1340,27 +1350,44 @@ const RAWSTORE = {"n":836293,"dates":["2025-10-06","2025-10-07","2025-10-08","20
   // same "excluded from the ranking" behavior as before. Sector = each
   // company's single most common FinalEmployerType among its in-range
   // submissions.
-  function topCompanies(fromA,toA){
+  // sortBy: 'sub' (default, ranks by submission volume) or 'val' (ranks by
+  // booked value) or 'book' (booked loan count). Also returns `totals`
+  // (the TRUE sum across every row in range, including 'Other'/excluded
+  // company names) and `companyCount` (how many distinct real companies
+  // exist in range) -- the visible top 10 rows are a small subset of
+  // this, by design (confirmed live: summing only the top-10-by-submissions
+  // rows for a single day captured 1 of 202 real booked loans that day,
+  // because most bookings belonged to companies outside that top 10).
+  function topCompanies(fromA,toA,sortBy){
     const sd=RS.sday,bd=RS.bday,flags=RS.flags,bval=RS.bval,co=RS.company,emp=RS.employer;
     const VC=VOCAB.company,VE=VOCAB.employer;
     const stats={}; // name -> {sub,book,val,sectors:{sector:count}}
+    const totals={sub:0,book:0,val:0};
     let bptr=0;
     for(let i=0;i<N;i++){
       const name=VC[co[i]];
       const isOther=(name==='Other');
       const di=sd[i];
-      if(!isOther&&di>=0&&DTS[di]>=fromA&&DTS[di]<=toA){
-        const s=stats[name]||(stats[name]={sub:0,book:0,val:0,sectors:{}});
-        s.sub++;
-        const sec=VE[emp[i]];
-        s.sectors[sec]=(s.sectors[sec]||0)+1;
+      if(di>=0&&DTS[di]>=fromA&&DTS[di]<=toA){
+        totals.sub++;
+        if(!isOther){
+          const s=stats[name]||(stats[name]={sub:0,book:0,val:0,sectors:{}});
+          s.sub++;
+          const sec=VE[emp[i]];
+          s.sectors[sec]=(s.sectors[sec]||0)+1;
+        }
       }
       const booked=(flags[i]>>2)&1,bi=bd[i];
       if(booked&&bi>=0){
         const bs=DTS[bi];
-        if(!isOther&&bs>=fromA&&bs<=toA){
-          const s=stats[name]||(stats[name]={sub:0,book:0,val:0,sectors:{}});
-          s.book++; const v=bval[bptr]; if(!isNaN(v))s.val+=v;
+        if(bs>=fromA&&bs<=toA){
+          totals.book++;
+          const v=bval[bptr]; const vOk=!isNaN(v);
+          if(vOk)totals.val+=v;
+          if(!isOther){
+            const s=stats[name]||(stats[name]={sub:0,book:0,val:0,sectors:{}});
+            s.book++; if(vOk)s.val+=v;
+          }
         }
         bptr++;
       }
@@ -1369,7 +1396,9 @@ const RAWSTORE = {"n":836293,"dates":["2025-10-06","2025-10-07","2025-10-08","20
       const sector=Object.entries(s.sectors).sort((a,b)=>b[1]-a[1])[0];
       return {name,sub:s.sub,book:s.book,val:Math.round(s.val),sector:sector?sector[0]:'Unknown'};
     });
-    return arr.sort((a,b)=>b.sub-a.sub).slice(0,10);
+    const key=sortBy==='val'?'val':(sortBy==='book'?'book':'sub');
+    arr.sort((a,b)=>b[key]-a[key]);
+    return {top:arr.slice(0,10),totals:{sub:totals.sub,book:totals.book,val:Math.round(totals.val)},companyCount:arr.length};
   }
   function windowMetrics(fromA,toA){
     const sd=RS.sday,bd=RS.bday,flags=RS.flags,bval=RS.bval;
@@ -1707,12 +1736,19 @@ function renderSummaryTab(){
   // Submissions scoped by submitted-date-in-range, Booked loans/value by
   // booking-date-in-range (same two-cohort convention as the KPI cards
   // above). Sector = each company's most common employer-type field.
-  const topCo=eng&&eng.topCompanies?eng.topCompanies(TC_RANGE.from,TC_RANGE.to):null;
-  if(topCo&&topCo.length){
-    let tch='<table class="dt"><thead><tr><th>#</th><th>Company</th><th>Sector</th><th class="num">Submissions</th><th class="num">Booked loans</th><th class="num">Booked value</th></tr></thead><tbody>';
-    topCo.forEach((cc,i)=>{
+  const tcRes=eng&&eng.topCompanies?eng.topCompanies(TC_RANGE.from,TC_RANGE.to,TC_SORT):null;
+  if(tcRes&&tcRes.top.length){
+    const sortLabel=TC_SORT==='val'?'Booked value':(TC_SORT==='book'?'Booked loans':'Submissions');
+    let tch=`<div style="font-size:11px;color:var(--faint);margin-bottom:8px">Ranked by ${sortLabel} · showing top 10 of ${fmt(tcRes.companyCount)} companies with activity in this range</div>`;
+    tch+='<table class="dt"><thead><tr><th>#</th><th>Company</th><th>Sector</th><th class="num">Submissions</th><th class="num">Booked loans</th><th class="num">Booked value</th></tr></thead><tbody>';
+    tcRes.top.forEach((cc,i)=>{
       tch+=`<tr><td class="num">${i+1}</td><td>${esc(cc.name)}</td><td>${esc(cc.sector)}</td><td class="num">${fmt(cc.sub)}</td><td class="num">${fmt(cc.book)}</td><td class="num">${money(cc.val)}</td></tr>`;
     });
+    // Total (all companies): the TRUE sum across every row in range,
+    // including 'Other'/excluded company names -- matches the main KPI
+    // cards exactly. The top-10 rows above are a small subset of this by
+    // design, not a breakdown that sums to it.
+    tch+=`<tr style="font-weight:700;border-top:2px solid var(--line2)"><td></td><td colspan="2">Total (all companies)</td><td class="num">${fmt(tcRes.totals.sub)}</td><td class="num">${fmt(tcRes.totals.book)}</td><td class="num">${money(tcRes.totals.val)}</td></tr>`;
     tch+='</tbody></table>';
     document.getElementById('sum-top-companies').innerHTML=tch;
   } else {
