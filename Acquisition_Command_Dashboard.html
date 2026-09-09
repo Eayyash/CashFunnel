@@ -1392,10 +1392,16 @@ const RAWSTORE = {"n":836293,"dates":["2025-10-06","2025-10-07","2025-10-08","20
         bptr++;
       }
     }
+    // "Top 10 companies" means companies we've actually booked loans from
+    // -- per explicit feedback, a company with 0 booked loans shouldn't
+    // fill a slot just because it has high submission volume. Filtered
+    // here (not just sorted last) so all three "Rank by" modes only ever
+    // show companies with at least one booked loan in range; fewer than
+    // 10 rows is expected/correct when fewer than 10 qualify.
     const arr=Object.entries(stats).map(([name,s])=>{
       const sector=Object.entries(s.sectors).sort((a,b)=>b[1]-a[1])[0];
       return {name,sub:s.sub,book:s.book,val:Math.round(s.val),sector:sector?sector[0]:'Unknown'};
-    });
+    }).filter(c=>c.book>0);
     const key=sortBy==='val'?'val':(sortBy==='book'?'book':'sub');
     arr.sort((a,b)=>b[key]-a[key]);
     return {top:arr.slice(0,10),totals:{sub:totals.sub,book:totals.book,val:Math.round(totals.val)},companyCount:arr.length};
@@ -1739,7 +1745,7 @@ function renderSummaryTab(){
   const tcRes=eng&&eng.topCompanies?eng.topCompanies(TC_RANGE.from,TC_RANGE.to,TC_SORT):null;
   if(tcRes&&tcRes.top.length){
     const sortLabel=TC_SORT==='val'?'Booked value':(TC_SORT==='book'?'Booked loans':'Submissions');
-    let tch=`<div style="font-size:11px;color:var(--faint);margin-bottom:8px">Ranked by ${sortLabel} · showing top 10 of ${fmt(tcRes.companyCount)} companies with activity in this range</div>`;
+    let tch=`<div style="font-size:11px;color:var(--faint);margin-bottom:8px">Companies with at least one booked loan in this range · ranked by ${sortLabel} · showing top ${Math.min(10,tcRes.companyCount)} of ${fmt(tcRes.companyCount)}</div>`;
     tch+='<table class="dt"><thead><tr><th>#</th><th>Company</th><th>Sector</th><th class="num">Submissions</th><th class="num">Booked loans</th><th class="num">Booked value</th></tr></thead><tbody>';
     tcRes.top.forEach((cc,i)=>{
       tch+=`<tr><td class="num">${i+1}</td><td>${esc(cc.name)}</td><td>${esc(cc.sector)}</td><td class="num">${fmt(cc.sub)}</td><td class="num">${fmt(cc.book)}</td><td class="num">${money(cc.val)}</td></tr>`;
@@ -1752,7 +1758,7 @@ function renderSummaryTab(){
     tch+='</tbody></table>';
     document.getElementById('sum-top-companies').innerHTML=tch;
   } else {
-    document.getElementById('sum-top-companies').innerHTML='<p class="cap">No submissions in the selected range.</p>';
+    document.getElementById('sum-top-companies').innerHTML='<p class="cap">No booked loans from any company in the selected range.</p>';
   }
 
   const dr=eng.dropoffAnalysis();
