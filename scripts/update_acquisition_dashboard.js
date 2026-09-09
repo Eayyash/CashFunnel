@@ -68,8 +68,16 @@ const BOOKED_SET = new Set(['Completed [C]', 'Pending Final Approval']);
 // or a generic placeholder. Also case-insensitive: "aramco" and "ARAMCO"
 // are the same company and are merged, displayed under whichever casing
 // is most common for that company.
+// Builds a normalizer + top-N whitelist for the 'company' RAWSTORE
+// dimension, so Top Companies can be computed LIVE client-side, filtered
+// by whatever date range is selected (not a static build-time snapshot).
+// Everything outside the top-N (including any corrupted/unreadable name)
+// collapses to 'Other', which the client-side renderer skips -- same
+// "excluded from the ranking" behavior as before, just now applied per
+// range instead of once over the whole dataset.
 const CORRUPTED_COMPANY_RE = /[�?]/;
-function computeTopCompanies(rows, topN) {
+const COMPANY_TOPN = 60; // generous headroom -- narrower date ranges can surface companies outside the all-time top 10
+function buildCompanyNormalizer(rows) {
   // Pass 1: raw (trimmed) value -> row count, to find the dominant
   // corrupted value (= the Arabic "Unlisted Company").
   const rawCounts = new Map();
@@ -92,32 +100,31 @@ function computeTopCompanies(rows, topN) {
     return v;
   }
 
-  // Pass 2: aggregate submissions/booked-count/booked-value per
-  // normalized company name, grouped case-insensitively. Each group
-  // tracks how often each original casing occurred so the most common
-  // one can be used as the display name.
-  const stats = new Map(); // upper-case key -> {submissions, booked, value, casings: Map}
+  // Pass 2: case-insensitive grouping (so "aramco"/"ARAMCO" merge), pick
+  // the most common casing per group as the canonical display name, then
+  // take the top COMPANY_TOPN groups by row count.
+  const groups = new Map(); // upper-case key -> {count, casings: Map}
   rows.forEach(r => {
     const name = normalize(r['Company']);
     if (name == null) return;
     const key = name.toUpperCase();
-    const s = stats.get(key) || { submissions: 0, booked: 0, value: 0, casings: new Map() };
-    s.submissions++;
-    s.casings.set(name, (s.casings.get(name) || 0) + 1);
-    if (BOOKED_SET.has(String(r['Altitudestatus']))) {
-      s.booked++;
-      s.value += parseFloat(r['ItemValue']) || 0;
-    }
-    stats.set(key, s);
+    const g = groups.get(key) || { count: 0, casings: new Map() };
+    g.count++;
+    g.casings.set(name, (g.casings.get(name) || 0) + 1);
+    groups.set(key, g);
   });
+  const top = [...groups.entries()].sort((a, b) => b[1].count - a[1].count).slice(0, COMPANY_TOPN);
+  const displayNameByKey = new Map(top.map(([key, g]) => [key, [...g.casings.entries()].sort((a, b) => b[1] - a[1])[0][0]]));
 
-  return [...stats.entries()]
-    .sort((a, b) => b[1].submissions - a[1].submissions)
-    .slice(0, topN)
-    .map(([, s]) => {
-      const displayName = [...s.casings.entries()].sort((a, b) => b[1] - a[1])[0][0];
-      return { name: displayName, submissions: s.submissions, booked: s.booked, value: Math.round(s.value) };
-    });
+  // companyOf(raw): the canonical display name if it's in the top-N,
+  // otherwise 'Other'.
+  function companyOf(raw) {
+    const name = normalize(raw);
+    if (name == null) return 'Other';
+    const disp = displayNameByKey.get(name.toUpperCase());
+    return disp || 'Other';
+  }
+  return { companyOf, topNames: [...displayNameByKey.values()] };
 }
 const DIMCOL = {
   employer: 'FinalEmployerType', nationality: 'Nationality_Flag',
@@ -245,10 +252,12 @@ function buildDaily(rows, name) {
   });
   console.log(`Pending Final Approval: ${pendingFinalApproval.toLocaleString()}`);
 
-  const topCompanies = computeTopCompanies(rows, 10);
-  console.log('Top companies:', topCompanies.map(c => `${c.name} (${c.submissions.toLocaleString()} sub, ${c.booked.toLocaleString()} booked, SAR ${c.value.toLocaleString()})`).join(' | '));
+  // Top Companies is now computed LIVE client-side from the 'company'
+  // RAWSTORE dimension (see buildCompanyNormalizer / buildRawstore below),
+  // filtered by whatever date range is selected -- no static meta snapshot
+  // needed here any more.
 
-  return { meta: { min: dates[0], max: dates[dates.length - 1], total: rows.length, name, pendingFinalApproval, topCompanies }, dates, days };
+  return { meta: { min: dates[0], max: dates[dates.length - 1], total: rows.length, name, pendingFinalApproval }, dates, days };
 }
 
 // --- Main ---
@@ -333,8 +342,9 @@ for (const k in longCnt) {
 
 // Build vocab and collect all dates
 const allDims = { ...DIMCOL_MAP, ...LONGCOL_MAP, ...EXTRA_DIMS };
-// region is special (derived from Region + is_panda); smart/incband15 are also derived
-const vocabSets = { region: new Set(), smart: new Set(), incband15: new Set() };
+const { companyOf, topNames: companyTopNames } = buildCompanyNormalizer(rows);
+// region is special (derived from Region + is_panda); smart/incband15/company are also derived
+const vocabSets = { region: new Set(), smart: new Set(), incband15: new Set(), company: new Set(companyTopNames.concat('Other')) };
 for (const k in allDims) vocabSets[k] = new Set();
 const dateSet = new Set();
 
@@ -423,6 +433,11 @@ rows.forEach((r, i) => {
   dimCols.region[i] = vocabIdx.region[reg] || 0;
   dimCols.smart[i] = vocabIdx.smart[smartVal(r)] || 0;
   dimCols.incband15[i] = vocabIdx.incband15[incBand15Val(r)] || 0;
+  // NOT `||` here: "Unlisted Company" (by far the most common value) sorts
+  // to vocab index 0, and `0 || x` evaluates to x in JS -- that silently
+  // rerouted every Unlisted Company row to 'Other' (confirmed live: it
+  // vanished from the ranking entirely). Explicit undefined check instead.
+  { const ci = vocabIdx.company[companyOf(r['Company'])]; dimCols.company[i] = ci !== undefined ? ci : vocabIdx.company['Other']; }
 
   // standard dims
   for (const k in DIMCOL_MAP) {
@@ -466,7 +481,7 @@ function addCol(name, arr, type) {
 addCol('flags', flags, 'b');
 addCol('sday', sday, 'h');
 addCol('bday', bday, 'h');
-const dimOrder = ['region', 'employer', 'nationality', 'income', 'risk', 'simah', 'age', 'gender', 'marital', 'product', 'source', 'scoreband', 'dbr', 'store', 'city', 'natdetail', 'de_decision', 'referreasons', 'gosi', 'mof', 'dec', 'smart', 'incband15'];
+const dimOrder = ['region', 'employer', 'nationality', 'income', 'risk', 'simah', 'age', 'gender', 'marital', 'product', 'source', 'scoreband', 'dbr', 'store', 'city', 'natdetail', 'de_decision', 'referreasons', 'gosi', 'mof', 'dec', 'smart', 'incband15', 'company'];
 dimOrder.forEach(k => addCol(k, dimCols[k], 'b'));
 addCol('civIdx', civIdx, 'i');
 addCol('bval', bval, 'd');
