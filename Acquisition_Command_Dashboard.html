@@ -310,7 +310,7 @@ body.gate-locked>*:not(#login-gate){display:none!important}
   </div>
   <div class="note-block"><div id="sum-top-companies"></div></div>
 
-  <div class="sec-h" style="margin-top:20px"><span class="k">07</span><h2>Approved, Not Yet Booked</h2><span class="hint">cleared the credit decision engine but never converted to a booked loan — a closing/follow-up gap, not a credit-risk one · whole dataset, not affected by the filter above</span></div>
+  <div class="sec-h" style="margin-top:20px"><span class="k">07</span><h2>Approved, Not Yet Booked</h2><span class="hint">cleared the credit decision engine but never converted to a booked loan — a closing/follow-up gap, not a credit-risk one · scoped to the date range above, by submitted date</span></div>
   <div class="note-block"><div id="sum-approved-not-booked"></div></div>
 </section>
 <section class="panel-tab" id="perf">
@@ -1415,13 +1415,14 @@ const RAWSTORE = {"n":842244,"dates":["2025-10-06","2025-10-07","2025-10-08","20
   // blocks them anymore, so this gap is a closing/follow-up execution
   // problem, not a credit-risk one (see decline-reason analysis: DBR and
   // Qarar Decline dominate the rest of the not-booked pool, but this A
-  // subset already cleared both). Snapshot over the WHOLE dataset, not
-  // the page date filter -- meant to read as "what needs action right
-  // now", not a historical trend. Staleness = days between an
-  // application's submitted date and the dataset's OWN latest date, same
-  // simulated-timeline convention used for BPV's forecast anchor (never
-  // the viewer's browser clock).
-  function approvedNotBooked(){
+  // subset already cleared both). Scoped by submitted-date-in-range, same
+  // convention as the main KPI cards, so it now respects the page date
+  // filter above. Staleness = days between an application's submitted
+  // date and the dataset's OWN latest date, same simulated-timeline
+  // convention used for BPV's forecast anchor (never the viewer's
+  // browser clock) -- NOT the range's `to`, so staleness stays meaningful
+  // even when a narrower/older range is selected.
+  function approvedNotBooked(fromA,toA){
     const sd=RS.sday,flags=RS.flags,co=RS.company,de=RS.de_decision;
     const VC=VOCAB.company,VD=VOCAB.de_decision;
     const asOf=DTS[DTS.length-1];
@@ -1433,7 +1434,7 @@ const RAWSTORE = {"n":842244,"dates":["2025-10-06","2025-10-07","2025-10-08","20
       if(booked)continue;
       if(VD[de[i]]!=='A')continue;
       const ds=DTS[sd[i]];
-      if(!ds)continue;
+      if(!ds||ds<fromA||ds>toA)continue;
       const age=Math.round((asOfMs-new Date(ds+'T00:00:00Z').getTime())/86400000);
       totalCount++; totalAge+=age;
       const name=VC[co[i]];
@@ -1804,7 +1805,7 @@ function renderSummaryTab(){
   // (DE_Decision === 'A') that never converted -- see approvedNotBooked()
   // above for the full rationale. Whole-dataset snapshot, sorted by
   // count so the biggest backlogs surface first.
-  const anb=eng.approvedNotBooked?eng.approvedNotBooked():null;
+  const anb=eng.approvedNotBooked?eng.approvedNotBooked(RANGE.from,RANGE.to):null;
   if(anb&&anb.totals.count){
     let anh=`<div class="summary-cards" style="margin-bottom:10px"><div class="card money kpi"><div class="lab">Approved, never booked (all companies)</div><div class="big" style="font-size:22px">${fmt(anb.totals.count)}</div></div>`+
       `<div class="card money kpi"><div class="lab">Avg days stale</div><div class="big" style="font-size:22px">${fmt(anb.totals.avgAge)}</div></div>`+
