@@ -1452,13 +1452,30 @@ const RAWSTORE = {"n":842244,"dates":["2025-10-06","2025-10-07","2025-10-08","20
   // convention used for BPV's forecast anchor (never the viewer's
   // browser clock) -- NOT the range's `to`, so staleness stays meaningful
   // even when a narrower/older range is selected.
+  // "Paid Application": did we already spend money verifying this one via
+  // GOSI, MOF, or SIMAH/Qarar (the Saudi credit bureau decision system)
+  // before it stalled post-approval? GOSI/MOF use the direct call flags
+  // (Is_GOSI_Called/Is_MOF_Called); SIMAH/Qarar has no separate "was it
+  // called" flag in the source data, so a populated SC_RiskGrade (the
+  // bureau's returned risk grade -- blank/'Unknown' when never pulled) is
+  // used as the proxy. NOTE: Yaqeen has no reliable call flag anywhere in
+  // this dataset (only shows up as a decline-reason substring on some
+  // declined rows), so it is intentionally NOT counted here -- this is a
+  // floor on "already paid", not the true total.
+  function isPaidApp(i){
+    const VG=VOCAB.gosi,VM=VOCAB.mof,VS=VOCAB.simah;
+    if(VG[RS.gosi[i]]==='Y')return true;
+    if(VM[RS.mof[i]]==='Y')return true;
+    if(VS[RS.simah[i]]!=='Unknown')return true;
+    return false;
+  }
   function approvedNotBooked(fromA,toA){
     const sd=RS.sday,flags=RS.flags,co=RS.company,de=RS.de_decision;
     const VC=VOCAB.company,VD=VOCAB.de_decision;
     const asOf=DTS[DTS.length-1];
     const asOfMs=new Date(asOf+'T00:00:00Z').getTime();
-    const stats={}; // name -> {count,sumAge}
-    let totalCount=0,totalAge=0;
+    const stats={}; // name -> {count,sumAge,paid}
+    let totalCount=0,totalAge=0,totalPaid=0;
     for(let i=0;i<N;i++){
       const booked=(flags[i]>>2)&1;
       if(booked)continue;
@@ -1466,15 +1483,16 @@ const RAWSTORE = {"n":842244,"dates":["2025-10-06","2025-10-07","2025-10-08","20
       const ds=DTS[sd[i]];
       if(!ds||ds<fromA||ds>toA)continue;
       const age=Math.round((asOfMs-new Date(ds+'T00:00:00Z').getTime())/86400000);
-      totalCount++; totalAge+=age;
+      const paid=isPaidApp(i);
+      totalCount++; totalAge+=age; if(paid)totalPaid++;
       const name=VC[co[i]];
       if(name==='Other')continue;
-      const s=stats[name]||(stats[name]={count:0,sumAge:0});
-      s.count++; s.sumAge+=age;
+      const s=stats[name]||(stats[name]={count:0,sumAge:0,paid:0});
+      s.count++; s.sumAge+=age; if(paid)s.paid++;
     }
-    const arr=Object.entries(stats).map(([name,s])=>({name,count:s.count,avgAge:Math.round(s.sumAge/s.count)}));
+    const arr=Object.entries(stats).map(([name,s])=>({name,count:s.count,avgAge:Math.round(s.sumAge/s.count),paid:s.paid,notPaid:s.count-s.paid}));
     arr.sort((a,b)=>b.count-a.count);
-    return {top:arr.slice(0,10),totals:{count:totalCount,avgAge:totalCount?Math.round(totalAge/totalCount):0},companyCount:arr.length,asOf};
+    return {top:arr.slice(0,10),totals:{count:totalCount,avgAge:totalCount?Math.round(totalAge/totalCount):0,paid:totalPaid,notPaid:totalCount-totalPaid},companyCount:arr.length,asOf};
   }
   function windowMetrics(fromA,toA){
     const sd=RS.sday,bd=RS.bday,flags=RS.flags,bval=RS.bval;
@@ -1838,13 +1856,15 @@ function renderSummaryTab(){
   const anb=eng.approvedNotBooked?eng.approvedNotBooked(ANB_RANGE.from,ANB_RANGE.to):null;
   if(anb&&anb.totals.count){
     let anh=`<div class="summary-cards" style="margin-bottom:10px"><div class="card money kpi"><div class="lab">Approved, never booked (all companies)</div><div class="big" style="font-size:22px">${fmt(anb.totals.count)}</div></div>`+
+      `<div class="card money kpi"><div class="lab">Already paid (GOSI/MOF/SIMAH)</div><div class="big" style="font-size:22px">${fmt(anb.totals.paid)}</div></div>`+
       `<div class="card money kpi"><div class="lab">Avg days stale</div><div class="big" style="font-size:22px">${fmt(anb.totals.avgAge)}</div></div>`+
       `<div class="card money kpi"><div class="lab">As of</div><div class="big" style="font-size:17px">${prettyD(anb.asOf)}</div></div></div>`;
-    anh+=`<div style="font-size:11px;color:var(--faint);margin-bottom:8px">Named companies only (excludes 'Other') · showing top ${Math.min(10,anb.companyCount)} of ${fmt(anb.companyCount)} by backlog size</div>`;
-    anh+='<table class="dt"><thead><tr><th>#</th><th>Company</th><th class="num">Approved, not booked</th><th class="num">Avg days stale</th></tr></thead><tbody>';
+    anh+=`<div style="font-size:11px;color:var(--faint);margin-bottom:8px">Named companies only (excludes 'Other') · showing top ${Math.min(10,anb.companyCount)} of ${fmt(anb.companyCount)} by backlog size · "Paid Application" = GOSI, MOF, and/or SIMAH/Qarar already called for that application (Yaqeen has no reliable call flag in this data, so it's not counted — this is a floor, not the true total)</div>`;
+    anh+='<table class="dt"><thead><tr><th>#</th><th>Company</th><th class="num">Approved, not booked</th><th class="num">Paid Application (Yes)</th><th class="num">Paid Application (No)</th><th class="num">Avg days stale</th></tr></thead><tbody>';
     anb.top.forEach((c,i)=>{
-      anh+=`<tr><td class="num">${i+1}</td><td>${esc(c.name)}</td><td class="num">${fmt(c.count)}</td><td class="num">${fmt(c.avgAge)}</td></tr>`;
+      anh+=`<tr><td class="num">${i+1}</td><td>${esc(c.name)}</td><td class="num">${fmt(c.count)}</td><td class="num">${fmt(c.paid)}</td><td class="num">${fmt(c.notPaid)}</td><td class="num">${fmt(c.avgAge)}</td></tr>`;
     });
+    anh+=`<tr style="font-weight:700;border-top:2px solid var(--line2)"><td></td><td>Total (all companies)</td><td class="num">${fmt(anb.totals.count)}</td><td class="num">${fmt(anb.totals.paid)}</td><td class="num">${fmt(anb.totals.notPaid)}</td><td class="num">${fmt(anb.totals.avgAge)}</td></tr>`;
     anh+='</tbody></table>';
     document.getElementById('sum-approved-not-booked').innerHTML=anh;
   } else {
