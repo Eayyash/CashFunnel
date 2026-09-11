@@ -310,7 +310,17 @@ body.gate-locked>*:not(#login-gate){display:none!important}
   </div>
   <div class="note-block"><div id="sum-top-companies"></div></div>
 
-  <div class="sec-h" style="margin-top:20px"><span class="k">07</span><h2>Approved, Not Yet Booked</h2><span class="hint">cleared the credit decision engine but never converted to a booked loan — a closing/follow-up gap, not a credit-risk one · scoped to the date range above, by submitted date</span></div>
+  <div class="sec-h" style="margin-top:20px"><span class="k">07</span><h2>Approved, Not Yet Booked</h2><span class="hint">cleared the credit decision engine but never converted to a booked loan — a closing/follow-up gap, not a credit-risk one · own date range, independent of the filter above</span></div>
+  <div class="datebar" style="margin-bottom:10px">
+    <div class="dfield"><label>From</label><input type="date" id="anb-from"></div>
+    <div class="dfield"><label>To</label><input type="date" id="anb-to"></div>
+    <div class="presets" id="anb-presets">
+      <button data-r="all" class="on">All</button>
+      <button data-r="mtd">This month</button>
+      <button data-r="7d">Last 7 days</button>
+      <button data-r="sync">Match page range</button>
+    </div>
+  </div>
   <div class="note-block"><div id="sum-approved-not-booked"></div></div>
 </section>
 <section class="panel-tab" id="perf">
@@ -908,6 +918,25 @@ let TC_SORT='sub';
 document.querySelectorAll('#tc-sort button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('#tc-sort button').forEach(x=>x.classList.remove('on'));b.classList.add('on');TC_SORT=b.dataset.s;renderAll();}));
 
+/* ============ Approved, Not Yet Booked: own date range, independent of RANGE above ============ */
+let ANB_RANGE={from:cD.meta.min,to:cD.meta.max};
+function setANBDateInputs(){const f=document.getElementById('anb-from'),t=document.getElementById('anb-to');
+  if(!f||!t)return;f.min=t.min=cD.meta.min;f.max=t.max=cD.meta.max;f.value=ANB_RANGE.from;t.value=ANB_RANGE.to;}
+function applyANBPreset(r){const mn=cD.meta.min,mx=cD.meta.max,mxD=parseD(mx);
+  const mxCap=capToYesterday(mx);
+  if(r==='sync')ANB_RANGE={from:RANGE.from,to:RANGE.to};
+  else if(r==='mtd'){const first=ymd(new Date(mxD.getFullYear(),mxD.getMonth(),1));ANB_RANGE={from:first<mn?mn:first,to:mxCap};}
+  else if(r==='7d')ANB_RANGE={from:addDays(mxCap,-6)<mn?mn:addDays(mxCap,-6),to:mxCap};
+  else ANB_RANGE={from:mn,to:mx};
+  setANBDateInputs();renderAll();}
+document.querySelectorAll('#anb-presets button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#anb-presets button').forEach(x=>x.classList.remove('on'));b.classList.add('on');applyANBPreset(b.dataset.r);}));
+function onANBDateChange(){const f=document.getElementById('anb-from').value,t=document.getElementById('anb-to').value;
+  if(!f||!t)return;ANB_RANGE={from:f<=t?f:t,to:f<=t?t:f};document.querySelectorAll('#anb-presets button').forEach(x=>x.classList.remove('on'));renderAll();}
+document.getElementById('anb-from').addEventListener('change',onANBDateChange);
+document.getElementById('anb-to').addEventListener('change',onANBDateChange);
+setANBDateInputs();
+
 /* ============ tabs ============ */
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));t.classList.add('on');const id=t.dataset.tab;
@@ -967,6 +996,7 @@ function buildDaily(rows,name){
 }
 function loadDataset(nd){cD=nd;defaultRange();setDateInputs();document.querySelectorAll('#presets button').forEach((x,i)=>x.classList.toggle('on',i===0));
   TC_RANGE={from:cD.meta.min,to:cD.meta.max};setTCDateInputs();document.querySelectorAll('#tc-presets button').forEach((x,i)=>x.classList.toggle('on',i===0));
+  ANB_RANGE={from:cD.meta.min,to:cD.meta.max};setANBDateInputs();document.querySelectorAll('#anb-presets button').forEach((x,i)=>x.classList.toggle('on',i===0));
   renderAll();}
 
 document.getElementById('btn-upload').onclick=()=>document.getElementById('file-xlsx').click();
@@ -1805,7 +1835,7 @@ function renderSummaryTab(){
   // (DE_Decision === 'A') that never converted -- see approvedNotBooked()
   // above for the full rationale. Whole-dataset snapshot, sorted by
   // count so the biggest backlogs surface first.
-  const anb=eng.approvedNotBooked?eng.approvedNotBooked(RANGE.from,RANGE.to):null;
+  const anb=eng.approvedNotBooked?eng.approvedNotBooked(ANB_RANGE.from,ANB_RANGE.to):null;
   if(anb&&anb.totals.count){
     let anh=`<div class="summary-cards" style="margin-bottom:10px"><div class="card money kpi"><div class="lab">Approved, never booked (all companies)</div><div class="big" style="font-size:22px">${fmt(anb.totals.count)}</div></div>`+
       `<div class="card money kpi"><div class="lab">Avg days stale</div><div class="big" style="font-size:22px">${fmt(anb.totals.avgAge)}</div></div>`+
