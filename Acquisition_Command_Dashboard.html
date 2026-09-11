@@ -1859,12 +1859,13 @@ function renderSummaryTab(){
       `<div class="card money kpi"><div class="lab">Already paid (GOSI/MOF/SIMAH)</div><div class="big" style="font-size:22px">${fmt(anb.totals.paid)}</div></div>`+
       `<div class="card money kpi"><div class="lab">Avg days stale</div><div class="big" style="font-size:22px">${fmt(anb.totals.avgAge)}</div></div>`+
       `<div class="card money kpi"><div class="lab">As of</div><div class="big" style="font-size:17px">${prettyD(anb.asOf)}</div></div></div>`;
-    anh+=`<div style="font-size:11px;color:var(--faint);margin-bottom:8px">Named companies only (excludes 'Other') · showing top ${Math.min(10,anb.companyCount)} of ${fmt(anb.companyCount)} by backlog size · "Paid Application" = GOSI, MOF, and/or SIMAH/Qarar already called for that application (Yaqeen has no reliable call flag in this data, so it's not counted — this is a floor, not the true total)</div>`;
-    anh+='<table class="dt"><thead><tr><th>#</th><th>Company</th><th class="num">Approved, not booked</th><th class="num">Paid Application (Yes)</th><th class="num">Paid Application (No)</th><th class="num">Avg days stale</th></tr></thead><tbody>';
+    anh+=`<div style="font-size:11px;color:var(--faint);margin-bottom:8px">Named companies only (excludes 'Other') · showing top ${Math.min(10,anb.companyCount)} of ${fmt(anb.companyCount)} by backlog size · "Paid Application" = Yes if GOSI, MOF, and/or SIMAH/Qarar was already called for that application (Yaqeen has no reliable call flag in this data, so it's not counted — this is a floor, not the true total)</div>`;
+    anh+='<table class="dt"><thead><tr><th>#</th><th>Company</th><th class="num">Approved, not booked</th><th>Paid Application</th><th class="num">Avg days stale</th></tr></thead><tbody>';
+    const paidLabel=(paid,total)=>paid===0?'No':(paid===total?'Yes':`Mixed (${fmt(paid)}/${fmt(total)})`);
     anb.top.forEach((c,i)=>{
-      anh+=`<tr><td class="num">${i+1}</td><td>${esc(c.name)}</td><td class="num">${fmt(c.count)}</td><td class="num">${fmt(c.paid)}</td><td class="num">${fmt(c.notPaid)}</td><td class="num">${fmt(c.avgAge)}</td></tr>`;
+      anh+=`<tr><td class="num">${i+1}</td><td>${esc(c.name)}</td><td class="num">${fmt(c.count)}</td><td>${paidLabel(c.paid,c.count)}</td><td class="num">${fmt(c.avgAge)}</td></tr>`;
     });
-    anh+=`<tr style="font-weight:700;border-top:2px solid var(--line2)"><td></td><td>Total (all companies)</td><td class="num">${fmt(anb.totals.count)}</td><td class="num">${fmt(anb.totals.paid)}</td><td class="num">${fmt(anb.totals.notPaid)}</td><td class="num">${fmt(anb.totals.avgAge)}</td></tr>`;
+    anh+=`<tr style="font-weight:700;border-top:2px solid var(--line2)"><td></td><td>Total (all companies)</td><td class="num">${fmt(anb.totals.count)}</td><td>${paidLabel(anb.totals.paid,anb.totals.count)}</td><td class="num">${fmt(anb.totals.avgAge)}</td></tr>`;
     anh+='</tbody></table>';
     document.getElementById('sum-approved-not-booked').innerHTML=anh;
   } else {
