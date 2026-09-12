@@ -77,6 +77,22 @@ const BOOKED_SET = new Set(['Completed [C]', 'Pending Final Approval']);
 // range instead of once over the whole dataset.
 const CORRUPTED_COMPANY_RE = /[�?]/;
 const COMPANY_TOPN = 60; // generous headroom -- narrower date ranges can surface companies outside the all-time top 10
+// Rows patched by scripts/patch_company_from_xlsx.js now carry the CLEAN
+// Arabic literal instead of the corrupted placeholder -- this is the exact
+// text confirmed 2026-09-12 by streaming a source xlsx's sheet1.xml/
+// sharedStrings.xml directly (67,402 rows in one day's export alone).
+// "غير مدرجة" literally means "not listed" -- this is a genuine category
+// value the source system writes, not a real company name, so it still
+// belongs in the "Unlisted Company" bucket post-patch.
+const UNLISTED_ARABIC_LITERAL = 'شركة غير مدرجة';
+// Also confirmed in that same export: an upstream rejection MESSAGE
+// sitting in the Company field instead of an actual company name (2,756
+// rows across its Arabic/English forms) -- excluded like corrupted/blank
+// entries so it can't pollute the Top Companies ranking as a fake company.
+const JUNK_COMPANY_VALUES = new Set([
+  'تم الرفض بسبب السجل التجاري 0',
+  'Rejected due to CR number is 0',
+]);
 function buildCompanyNormalizer(rows) {
   // Pass 1: raw (trimmed) value -> row count, to find the dominant
   // corrupted value (= the Arabic "Unlisted Company").
@@ -94,8 +110,16 @@ function buildCompanyNormalizer(rows) {
   function normalize(raw) {
     const v = (raw || '').trim();
     if (!v) return null;
+    if (JUNK_COMPANY_VALUES.has(v)) return null; // rejection message, not a company
     if (v === unlistedArabicRaw) return 'Unlisted Company';
-    if (/^UNLISTED\s*COMPANY$/i.test(v.replace(/\s+/g, ' '))) return 'Unlisted Company';
+    // \s matches U+00A0 (non-breaking space) too -- confirmed 2026-09-12 that
+    // the xlsx-recovered literal uses NBSP between words, not a regular
+    // space, so a plain === against a hand-typed literal silently failed to
+    // match ("شركة غير مدرجة" showed up as its own separate row instead of
+    // folding into "Unlisted Company"). Normalize whitespace before compare.
+    const vNormWs = v.replace(/\s+/g, ' ');
+    if (vNormWs === UNLISTED_ARABIC_LITERAL) return 'Unlisted Company';
+    if (/^UNLISTED\s*COMPANY$/i.test(vNormWs)) return 'Unlisted Company';
     if (CORRUPTED_COMPANY_RE.test(v)) return null; // other unreadable entries: excluded
     return v;
   }
