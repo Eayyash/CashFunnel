@@ -305,8 +305,17 @@ console.log(`Reading ${fileName}…`);
 const rows = readCsv(filePath);
 console.log(`Parsed ${rows.length.toLocaleString()} rows`);
 
+// Acquisition_Command_Dashboard.html excludes the SNB sales channel (column
+// CJ, Region_for_Sales === 'SNB') per explicit request 2026-09-13 -- SNB
+// gets its own separate scorecard (scripts/build_snb_overview.js ->
+// SNB_Overview.html) instead. `rows` (above, unfiltered) is still used
+// as-is for Application_Cost.html below -- this exclusion is scoped to
+// the Acquisition dashboard only, not applied silently everywhere.
+const dashboardRows = rows.filter(r => (r['Region_for_Sales'] || '').trim().toUpperCase() !== 'SNB');
+console.log(`Excluding SNB: ${rows.length.toLocaleString()} -> ${dashboardRows.length.toLocaleString()} rows for the dashboard`);
+
 console.log('Aggregating…');
-const result = buildDaily(rows, fileName);
+const result = buildDaily(dashboardRows, fileName);
 console.log(`Date range: ${result.meta.min} → ${result.meta.max} (${result.dates.length} days)`);
 
 const newLine = `const DAILY_DEFAULT = ${JSON.stringify(result)};`;
@@ -351,7 +360,7 @@ function incBand15Val(r) {
 // Count values for LONGCOL to pick top 20
 const longCnt = {};
 for (const k in LONGCOL_MAP) longCnt[k] = {};
-rows.forEach(r => {
+dashboardRows.forEach(r => {
   for (const k in LONGCOL_MAP) {
     const v = gv(r, LONGCOL_MAP[k]);
     longCnt[k][v] = (longCnt[k][v] || 0) + 1;
@@ -366,13 +375,13 @@ for (const k in longCnt) {
 
 // Build vocab and collect all dates
 const allDims = { ...DIMCOL_MAP, ...LONGCOL_MAP, ...EXTRA_DIMS };
-const { companyOf, topNames: companyTopNames } = buildCompanyNormalizer(rows);
+const { companyOf, topNames: companyTopNames } = buildCompanyNormalizer(dashboardRows);
 // region is special (derived from Region + is_panda); smart/incband15/company are also derived
 const vocabSets = { region: new Set(), smart: new Set(), incband15: new Set(), company: new Set(companyTopNames.concat('Other')) };
 for (const k in allDims) vocabSets[k] = new Set();
 const dateSet = new Set();
 
-rows.forEach(r => {
+dashboardRows.forEach(r => {
   const sd = toYMD(r['submitted']);
   if (sd) dateSet.add(sd);
   const booked = BOOKED_SET.has(String(r['Altitudestatus']));
@@ -411,7 +420,7 @@ for (const k in vocab) {
 }
 
 // Build columnar arrays
-const N = rows.length;
+const N = dashboardRows.length;
 const flags = new Uint8Array(N);
 const sday = new Uint16Array(N);
 const bday = new Uint16Array(N);
@@ -434,7 +443,7 @@ const civIdx = new Uint32Array(N);
 const STAGING_ID_LEN = 8;
 const stagingIdBytes = new Uint8Array(N * STAGING_ID_LEN);
 
-rows.forEach((r, i) => {
+dashboardRows.forEach((r, i) => {
   const sid = String(r['StagingID'] || '').slice(0, STAGING_ID_LEN);
   for (let k = 0; k < STAGING_ID_LEN; k++) {
     stagingIdBytes[i * STAGING_ID_LEN + k] = k < sid.length ? sid.charCodeAt(k) : 32; // space-pad
@@ -499,7 +508,7 @@ const blim = new Float64Array(bookedRows.length);
 // ever populated once a contract books). NaN when Max_Principal isn't usable.
 const butil = new Float64Array(bookedRows.length);
 bookedRows.forEach((ri, j) => {
-  const r = rows[ri];
+  const r = dashboardRows[ri];
   bval[j] = parseFloat(r['ItemValue']) || 0;
   bten[j] = parseFloat(r['TENURE']) || 0;
   blim[j] = parseFloat(r['CREDIT_LIMIT']) || 0;
@@ -563,7 +572,7 @@ if (ri !== -1) {
 }
 
 fs.writeFileSync(HTML_FILE, updatedHtml, 'utf-8');
-console.log(`Done — dashboard updated with ${rows.length.toLocaleString()} rows (${result.meta.min} → ${result.meta.max}).`);
+console.log(`Done — dashboard updated with ${dashboardRows.length.toLocaleString()} rows (${result.meta.min} → ${result.meta.max}).`);
 
 // --- Application Cost scorecard ---
 const COST_HTML = path.join(ROOT, 'Application_Cost.html');

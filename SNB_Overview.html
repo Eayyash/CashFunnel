@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tasheel · SNB Overview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<style>
+:root{--bg:#eef1f7;--panel:#fff;--panel2:#f5f7fb;--line:rgba(30,45,75,.10);--line2:rgba(30,45,75,.17);
+ --ink:#141c2b;--ink2:#3a475e;--muted:#5b6b83;--faint:#8493a8;
+ --cyan:#0e9e90;--cyan-d:#0b7d72;--gold:#bd7d12;--gold-d:#9a6410;--green:#22b571;--red:#d1493f;}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-serif}
+h1,h2,h3{font-family:'Space Grotesk',sans-serif;margin:0}
+header{padding:18px 26px;display:flex;align-items:center;gap:12px;background:var(--panel);border-bottom:1px solid var(--line)}
+header .t{font-weight:700;font-size:16px}header .s{font-size:11px;color:var(--muted)}
+header a{color:var(--cyan-d);text-decoration:none;font-size:12px;margin-left:auto}
+main{max-width:1100px;margin:0 auto;padding:22px 20px 60px}
+.sec-h{margin:26px 0 12px}.sec-h h2{font-size:16px}.sec-h .hint{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:0 1px 2px rgba(20,30,50,.04)}
+.card .lab{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.card .big{font-family:'Space Grotesk';font-weight:700;font-size:22px;margin-top:4px}
+.note-block{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:0 1px 2px rgba(20,30,50,.04)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:800px){.two{grid-template-columns:1fr}}
+.chart-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.chart-card h3{font-size:13.5px;margin-bottom:8px}
+.cwrap{height:260px}
+table.dt{width:100%;border-collapse:collapse;font-size:12.5px}
+table.dt th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--line2)}
+table.dt td{padding:7px 8px;border-bottom:1px solid var(--line)}
+table.dt td.num{text-align:right;font-variant-numeric:tabular-nums}
+.faint{color:var(--faint);font-size:11px}
+.foot{text-align:center;color:var(--faint);font-size:11px;font-family:'JetBrains Mono';padding:24px}
+.foot a{color:var(--cyan-d);text-decoration:none}
+</style></head>
+<body>
+<header>
+ <div><div class="t">SNB Overview</div><div class="s">Acquisition_for_Loans · Region_for_Sales = SNB</div></div>
+ <a href="index.html">← Command Center</a>
+</header>
+<main>
+ <div class="sec-h"><h2>Core KPIs</h2><span class="hint" id="kpi-hint"></span></div>
+ <div class="grid" id="kpi-grid"></div>
+
+ <div class="sec-h"><h2>Daily Booking Count</h2><span class="hint">current month · today excluded</span></div>
+ <div class="two">
+   <div class="chart-card"><h3>Daily booking count</h3><div class="cwrap"><canvas id="c-daily-book"></canvas></div></div>
+   <div class="chart-card"><h3>Daily booking count table</h3><p class="faint" id="daily-book-cap"></p><div style="max-height:260px;overflow-y:auto" id="daily-book-table"></div></div>
+ </div>
+
+ <div class="sec-h"><h2>Approved, Not Yet Booked</h2><span class="hint">cleared the credit decision engine but never converted to a booked loan — grouped by Employer Type (column N, FinalEmployerType), same logic as Acquisition_Command_Dashboard.html</span></div>
+ <div class="note-block"><div id="anb-block"></div></div>
+</main>
+<div class="foot">Built for <a href="https://www.linkedin.com/in/emadayyash" target="_blank">Emad Ayyash</a> · Tasheel Finance</div>
+<script>
+const SNB_DATA = {"meta":{"min":"2026-06-02","max":"2026-09-13","total":1076,"pendingFinalApproval":6,"asOf":"2026-09-13"},"dates":["2026-06-02","2026-06-04","2026-06-07","2026-06-08","2026-06-14","2026-06-16","2026-06-17","2026-06-18","2026-06-21","2026-06-22","2026-06-23","2026-06-24","2026-06-25","2026-06-28","2026-06-29","2026-06-30","2026-07-01","2026-07-02","2026-07-03","2026-07-04","2026-07-05","2026-07-06","2026-07-07","2026-07-08","2026-07-09","2026-07-11","2026-07-12","2026-07-13","2026-07-14","2026-07-15","2026-07-16","2026-07-19","2026-07-20","2026-07-21","2026-07-22","2026-07-23","2026-07-26","2026-07-27","2026-07-28","2026-07-29","2026-07-30","2026-07-31","2026-08-02","2026-08-03","2026-08-04","2026-08-05","2026-08-06","2026-08-09","2026-08-10","2026-08-11","2026-08-12","2026-08-13","2026-08-14","2026-08-15","2026-08-16","2026-08-17","2026-08-18","2026-08-19","2026-08-20","2026-08-21","2026-08-22","2026-08-23","2026-08-24","2026-08-25","2026-08-26","2026-08-27","2026-08-28","2026-08-30","2026-08-31","2026-09-01","2026-09-02","2026-09-03","2026-09-04","2026-09-05","2026-09-06","2026-09-07","2026-09-08","2026-09-09","2026-09-10","2026-09-11","2026-09-12","2026-09-13"],"days":{"2026-07-09":{"sub":18,"init":5,"final":1,"book":0,"val":0},"2026-06-21":{"sub":6,"init":0,"final":0,"book":0,"val":0},"2026-07-16":{"sub":13,"init":5,"final":2,"book":3,"val":79712},"2026-06-30":{"sub":6,"init":2,"final":2,"book":2,"val":104205},"2026-07-13":{"sub":14,"init":7,"final":3,"book":1,"val":30000},"2026-07-06":{"sub":17,"init":6,"final":3,"book":3,"val":62314},"2026-07-01":{"sub":10,"init":2,"final":1,"book":1,"val":39700},"2026-07-14":{"sub":9,"init":6,"final":5,"book":5,"val":93935},"2026-06-18":{"sub":3,"init":0,"final":0,"book":0,"val":0},"2026-07-02":{"sub":9,"init":2,"final":0,"book":1,"val":100000},"2026-07-15":{"sub":7,"init":3,"final":2,"book":1,"val":15000},"2026-07-21":{"sub":19,"init":7,"final":5,"book":3,"val":38980},"2026-06-17":{"sub":5,"init":1,"final":0,"book":0,"val":0},"2026-06-23":{"sub":10,"init":3,"final":0,"book":1,"val":60700},"2026-06-04":{"sub":3,"init":1,"final":1,"book":1,"val":10000},"2026-06-07":{"sub":3,"init":1,"final":0,"book":0,"val":0},"2026-07-11":{"sub":1,"init":0,"final":0,"book":0,"val":0},"2026-07-05":{"sub":10,"init":4,"final":1,"book":1,"val":100000},"2026-07-12":{"sub":8,"init":5,"final":1,"book":0,"val":0},"2026-06-25":{"sub":5,"init":1,"final":0,"book":0,"val":0},"2026-07-07":{"sub":7,"init":2,"final":1,"book":1,"val":13137},"2026-07-04":{"sub":1,"init":0,"final":0,"book":0,"val":0},"2026-07-08":{"sub":8,"init":2,"final":1,"book":1,"val":10000},"2026-07-20":{"sub":13,"init":3,"final":1,"book":1,"val":10067},"2026-07-19":{"sub":8,"init":1,"final":1,"book":0,"val":0},"2026-06-16":{"sub":4,"init":2,"final":0,"book":0,"val":0},"2026-06-28":{"sub":5,"init":3,"final":1,"book":0,"val":0},"2026-06-02":{"sub":1,"init":0,"final":0,"book":0,"val":0},"2026-07-03":{"sub":2,"init":2,"final":0,"book":0,"val":0},"2026-06-29":{"sub":6,"init":0,"final":0,"book":1,"val":17471},"2026-07-22":{"sub":9,"init":4,"final":2,"book":4,"val":130854},"2026-07-26":{"sub":13,"init":3,"final":3,"book":2,"val":28000},"2026-06-22":{"sub":6,"init":2,"final":2,"book":0,"val":0},"2026-06-14":{"sub":1,"init":0,"final":0,"book":0,"val":0},"2026-06-24":{"sub":3,"init":1,"final":1,"book":1,"val":16003},"2026-07-30":{"sub":9,"init":1,"final":0,"book":0,"val":0},"2026-07-28":{"sub":12,"init":4,"final":1,"book":2,"val":26368},"2026-07-23":{"sub":4,"init":1,"final":1,"book":3,"val":101104},"2026-06-08":{"sub":1,"init":0,"final":0,"book":0,"val":0},"2026-07-27":{"sub":15,"init":7,"final":3,"book":2,"val":296443},"2026-08-02":{"sub":8,"init":3,"final":1,"book":2,"val":105984},"2026-08-11":{"sub":16,"init":7,"final":3,"book":4,"val":275894},"2026-08-04":{"sub":11,"init":4,"final":1,"book":2,"val":23509},"2026-07-29":{"sub":10,"init":1,"final":1,"book":1,"val":15000},"2026-07-31":{"sub":2,"init":0,"final":0,"book":0,"val":0},"2026-08-03":{"sub":17,"init":3,"final":2,"book":1,"val":12000},"2026-09-01":{"sub":19,"init":2,"final":2,"book":2,"val":37500},"2026-08-09":{"sub":10,"init":2,"final":1,"book":2,"val":102253},"2026-08-05":{"sub":10,"init":3,"final":2,"book":0,"val":0},"2026-08-06":{"sub":21,"init":5,"final":1,"book":1,"val":30000},"2026-08-12":{"sub":27,"init":9,"final":6,"book":5,"val":297201},"2026-08-13":{"sub":31,"init":9,"final":6,"book":2,"val":59500},"2026-08-10":{"sub":14,"init":6,"final":2,"book":2,"val":71895},"2026-08-18":{"sub":27,"init":3,"final":2,"book":3,"val":70788},"2026-08-26":{"sub":24,"init":8,"final":6,"book":3,"val":55500},"2026-08-17":{"sub":25,"init":5,"final":3,"book":5,"val":175847},"2026-08-16":{"sub":22,"init":8,"final":4,"book":1,"val":50056},"2026-08-14":{"sub":1,"init":0,"final":0,"book":0,"val":0},"2026-08-15":{"sub":4,"init":0,"final":0,"book":0,"val":0},"2026-08-20":{"sub":32,"init":11,"final":7,"book":2,"val":89206},"2026-08-19":{"sub":15,"init":6,"final":2,"book":1,"val":15533},"2026-08-25":{"sub":17,"init":1,"final":0,"book":1,"val":16310},"2026-08-24":{"sub":13,"init":6,"final":3,"book":2,"val":110000},"2026-08-23":{"sub":27,"init":10,"final":8,"book":4,"val":76900},"2026-09-07":{"sub":46,"init":5,"final":3,"book":2,"val":67768},"2026-08-21":{"sub":1,"init":1,"final":0,"book":0,"val":0},"2026-08-22":{"sub":4,"init":0,"final":0,"book":0,"val":0},"2026-08-27":{"sub":25,"init":4,"final":2,"book":4,"val":74306},"2026-08-30":{"sub":26,"init":8,"final":3,"book":3,"val":92840},"2026-09-02":{"sub":18,"init":4,"final":4,"book":2,"val":86583},"2026-08-28":{"sub":1,"init":0,"final":0,"book":0,"val":0},"2026-08-31":{"sub":22,"init":4,"final":3,"book":0,"val":0},"2026-09-06":{"sub":66,"init":10,"final":5,"book":1,"val":13500},"2026-09-08":{"sub":52,"init":9,"final":8,"book":4,"val":125162},"2026-09-09":{"sub":37,"init":11,"final":6,"book":5,"val":385837},"2026-09-03":{"sub":12,"init":3,"final":0,"book":1,"val":68939},"2026-09-04":{"sub":4,"init":2,"final":2,"book":2,"val":45278},"2026-09-05":{"sub":7,"init":0,"final":0,"book":0,"val":0},"2026-09-12":{"sub":2,"init":0,"final":0,"book":1,"val":23086},"2026-09-10":{"sub":42,"init":12,"final":5,"book":5,"val":173132},"2026-09-11":{"sub":3,"init":0,"final":0,"book":0,"val":0},"2026-09-13":{"sub":1,"init":1,"final":0,"book":0,"val":0}},"approvedNotBooked":{"top":[{"name":"Private Company","count":122,"avgAge":37,"paid":122,"notPaid":0},{"name":"Government Entity","count":15,"avgAge":34,"paid":15,"notPaid":0},{"name":"Military with Grades","count":7,"avgAge":43,"paid":7,"notPaid":0},{"name":"Pension","count":4,"avgAge":64,"paid":4,"notPaid":0}],"totals":{"count":148,"avgAge":38,"paid":148,"notPaid":0},"employerTypeCount":4}};
+const fmt=n=>n==null?'—':n.toLocaleString('en-US');
+const money=n=>n==null?'—':'SAR '+Math.round(n).toLocaleString('en-US');
+const pct1=n=>n==null||!isFinite(n)?'—':(n*100).toFixed(1)+'%';
+const prettyD=s=>{const [y,m,d]=s.split('-').map(Number);return new Date(Date.UTC(y,m-1,d)).toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'});};
+const prettyDLong=s=>{const [y,m,d]=s.split('-').map(Number);return new Date(Date.UTC(y,m-1,d)).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric',timeZone:'UTC'});};
+const isKsaWeekend=s=>{const [y,m,d]=s.split('-').map(Number);const dow=new Date(Date.UTC(y,m-1,d)).getUTCDay();return dow===5||dow===6;};
+
+function renderKPI(){
+  let sub=0,init=0,final=0,book=0,val=0;
+  SNB_DATA.dates.forEach(d=>{const k=SNB_DATA.days[d];sub+=k.sub;init+=k.init;final+=k.final;book+=k.book;val+=k.val;});
+  const cards=[
+    {lab:'Submissions',big:fmt(sub)},
+    {lab:'Initial approved',big:fmt(init),sub:pct1(sub?init/sub:null)+' of submissions'},
+    {lab:'Final approved',big:fmt(final),sub:pct1(init?final/init:null)+' of initial'},
+    {lab:'Booked & funded',big:fmt(book),sub:pct1(sub?book/sub:null)+' of submissions'},
+    {lab:'Loan value',big:money(val)},
+    {lab:'Ticket size',big:money(book?val/book:0)},
+    {lab:'Pending Final Approval',big:fmt(SNB_DATA.meta.pendingFinalApproval),sub:'Altitudestatus = "Pending Final Approval"'}
+  ];
+  document.getElementById('kpi-grid').innerHTML=cards.map(c=>
+    `<div class="card"><div class="lab">${c.lab}</div><div class="big">${c.big}</div>${c.sub?'<div class="faint" style="margin-top:4px">'+c.sub+'</div>':''}</div>`
+  ).join('');
+  document.getElementById('kpi-hint').textContent=`${prettyD(SNB_DATA.meta.min)}–${prettyD(SNB_DATA.meta.max)} · ${fmt(SNB_DATA.meta.total)} total applications`;
+}
+
+function renderDailyBook(){
+  const monthStart=(SNB_DATA.meta.max||SNB_DATA.meta.min||'').slice(0,7)+'-01';
+  const labels=[],vals=[];
+  SNB_DATA.dates.forEach(d=>{if(d>=monthStart){labels.push(prettyD(d));vals.push(SNB_DATA.days[d].book);}});
+  new Chart(document.getElementById('c-daily-book'),{type:'line',
+    plugins:[window.ChartDataLabels].filter(Boolean),
+    data:{labels,datasets:[{label:'Bookings',data:vals,borderColor:'#22b571',backgroundColor:'rgba(34,181,113,.10)',fill:true,tension:.35,pointRadius:2,pointBackgroundColor:'#22b571',borderWidth:2.2}]},
+    options:{maintainAspectRatio:false,plugins:{legend:{display:false},
+      datalabels:{align:'top',anchor:'end',offset:4,color:'#22b571',font:{weight:'700',size:9},formatter:v=>v>0?fmt(v):''}},
+      scales:{x:{ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:10,font:{size:10}}},y:{title:{display:true,text:'Bookings',font:{size:10}}}}}});
+  const today=new Date().toISOString().slice(0,10);
+  const rows=[];
+  SNB_DATA.dates.forEach(d=>{if(d>=monthStart&&d<today){rows.push([d,SNB_DATA.days[d].book,SNB_DATA.days[d].val||0]);}});
+  rows.sort((a,b)=>a[0]<b[0]?1:-1);
+  let h='<table class="dt"><thead><tr><th>Report date</th><th class="num">Bookings</th><th class="num">Value (SAR)</th></tr></thead><tbody>';
+  rows.forEach(([d,v,val])=>{
+    const tag=isKsaWeekend(d)?' <span class="faint">(weekend)</span>':'';
+    h+=`<tr><td>${prettyDLong(d)}${tag}</td><td class="num">${fmt(v)}</td><td class="num">${fmt(Math.round(val))}</td></tr>`;
+  });
+  h+='</tbody></table>';
+  document.getElementById('daily-book-table').innerHTML=h;
+  document.getElementById('daily-book-cap').textContent=`since ${prettyDLong(monthStart)} · ${rows.length} rows · today excluded`;
+}
+
+function renderANB(){
+  const anb=SNB_DATA.approvedNotBooked;
+  if(!anb||!anb.totals.count){document.getElementById('anb-block').innerHTML='<p class="faint">No approved-but-unbooked applications found.</p>';return;}
+  let h=`<div class="grid" style="margin-bottom:12px"><div class="card"><div class="lab">Approved, never booked (all sectors)</div><div class="big">${fmt(anb.totals.count)}</div></div>`+
+    `<div class="card"><div class="lab">Already paid (GOSI/MOF/SIMAH)</div><div class="big">${fmt(anb.totals.paid)}</div></div>`+
+    `<div class="card"><div class="lab">Avg days stale</div><div class="big">${fmt(anb.totals.avgAge)}</div></div>`+
+    `<div class="card"><div class="lab">As of</div><div class="big" style="font-size:16px">${prettyD(SNB_DATA.meta.asOf)}</div></div></div>`;
+  h+=`<p class="faint">Grouped by Employer Type (column N) · ${fmt(anb.employerTypeCount)} sector${anb.employerTypeCount===1?'':'s'}</p>`;
+  const paidLabel=(paid,total)=>paid===0?'No':(paid===total?'Yes':`Mixed (${fmt(paid)}/${fmt(total)})`);
+  h+='<table class="dt"><thead><tr><th>#</th><th>Employer Type</th><th class="num">Approved, not booked</th><th>Paid Application</th></tr></thead><tbody>';
+  anb.top.forEach((c,i)=>{
+    h+=`<tr><td class="num">${i+1}</td><td>${c.name}</td><td class="num">${fmt(c.count)}</td><td>${paidLabel(c.paid,c.count)}</td></tr>`;
+  });
+  h+=`<tr style="font-weight:700"><td></td><td>Total (all sectors)</td><td class="num">${fmt(anb.totals.count)}</td><td>${paidLabel(anb.totals.paid,anb.totals.count)}</td></tr>`;
+  h+='</tbody></table>';
+  document.getElementById('anb-block').innerHTML=h;
+}
+
+renderKPI(); renderDailyBook(); renderANB();
+</script>
+</body></html>
