@@ -1483,9 +1483,17 @@ const RAWSTORE = {"n":846427,"dates":["2025-10-06","2025-10-07","2025-10-08","20
     if(VS[RS.simah[i]]!=='Unknown')return true;
     return false;
   }
+  // Grouped by FinalEmployerType (column N -- the "employer" RAWSTORE dim),
+  // per explicit request 2026-09-13, NOT by individual company (column J).
+  // This is a small, fixed set of broad categories (Private Company,
+  // Government Entity, Pension, Military with Grades, Unlisted, Unknown) --
+  // confirmed with the user that this collapses the table from ~60
+  // individual companies down to these few sector-level rows, in exchange
+  // for a field that's always clean (no corrupted-Arabic-text problem the
+  // 'company' dim has).
   function approvedNotBooked(fromA,toA){
-    const sd=RS.sday,flags=RS.flags,co=RS.company,de=RS.de_decision;
-    const VC=VOCAB.company,VD=VOCAB.de_decision;
+    const sd=RS.sday,flags=RS.flags,emp=RS.employer,de=RS.de_decision;
+    const VE=VOCAB.employer,VD=VOCAB.de_decision;
     const asOf=DTS[DTS.length-1];
     const asOfMs=new Date(asOf+'T00:00:00Z').getTime();
     const stats={}; // name -> {count,sumAge,paid}
@@ -1499,8 +1507,7 @@ const RAWSTORE = {"n":846427,"dates":["2025-10-06","2025-10-07","2025-10-08","20
       const age=Math.round((asOfMs-new Date(ds+'T00:00:00Z').getTime())/86400000);
       const paid=isPaidApp(i);
       totalCount++; totalAge+=age; if(paid)totalPaid++;
-      const name=VC[co[i]];
-      if(name==='Other')continue;
+      const name=VE[emp[i]];
       const s=stats[name]||(stats[name]={count:0,sumAge:0,paid:0});
       s.count++; s.sumAge+=age; if(paid)s.paid++;
     }
@@ -1525,7 +1532,11 @@ const RAWSTORE = {"n":846427,"dates":["2025-10-06","2025-10-07","2025-10-08","20
   // table renderable in-browser -- the biggest single bucket today (the
   // portfolio Total) can run into six figures.
   const ANB_DETAIL_CAP=3000;
-  function approvedNotBookedDetail(companyName,fromA,toA){
+  // sectorName===null means "every sector" (the Total row's drill-down).
+  // Still surfaces the raw individual `company` (column J) text per
+  // application as extra context/detail, even though grouping/matching is
+  // now on `employer` (FinalEmployerType, column N) -- see approvedNotBooked().
+  function approvedNotBookedDetail(sectorName,fromA,toA){
     const sd=RS.sday,flags=RS.flags,co=RS.company,de=RS.de_decision,emp=RS.employer;
     const VC=VOCAB.company,VD=VOCAB.de_decision,VE=VOCAB.employer;
     const VSt=VOCAB.store,VRe=VOCAB.region,VPr=VOCAB.product,VSb=VOCAB.scoreband,VDb=VOCAB.dbr;
@@ -1538,14 +1549,14 @@ const RAWSTORE = {"n":846427,"dates":["2025-10-06","2025-10-07","2025-10-08","20
       if(VD[de[i]]!=='A')continue;
       const ds=DTS[sd[i]];
       if(!ds||ds<fromA||ds>toA)continue;
-      const name=VC[co[i]];
-      if(companyName!=null && name!==companyName)continue;
+      const sector=VE[emp[i]];
+      if(sectorName!=null && sector!==sectorName)continue;
       totalMatched++;
       if(out.length>=ANB_DETAIL_CAP)continue;
       const age=Math.round((asOfMs-new Date(ds+'T00:00:00Z').getTime())/86400000);
       out.push({
-        stagingId:getStagingId(i), submitted:ds, daysStale:age, company:name,
-        sector:VE[emp[i]], region:VRe[RS.region[i]], store:VSt[RS.store[i]],
+        stagingId:getStagingId(i), submitted:ds, daysStale:age, company:VC[co[i]],
+        sector, region:VRe[RS.region[i]], store:VSt[RS.store[i]],
         product:VPr[RS.product[i]], scoreband:VSb[RS.scoreband[i]], dbr:VDb[RS.dbr[i]],
         paid:isPaidApp(i)
       });
@@ -1862,15 +1873,15 @@ function renderDuplicateCustomers(){
 function showAnbDetail(idx){
   const eng=E(); if(!eng||!eng.approvedNotBookedDetail||!ANB_LAST)return;
   const isTotal=idx===-1;
-  const companyName=isTotal?null:ANB_LAST.top[idx].name;
-  const label=isTotal?'All companies':ANB_LAST.top[idx].name;
-  const det=eng.approvedNotBookedDetail(companyName,ANB_RANGE.from,ANB_RANGE.to);
+  const sectorName=isTotal?null:ANB_LAST.top[idx].name;
+  const label=isTotal?'All sectors':ANB_LAST.top[idx].name;
+  const det=eng.approvedNotBookedDetail(sectorName,ANB_RANGE.from,ANB_RANGE.to);
   document.getElementById('anb-modal-title').textContent='Approved, Not Yet Booked — '+label;
   document.getElementById('anb-modal-sub').textContent=fmt(det.totalMatched)+' application'+(det.totalMatched===1?'':'s')+
     (det.truncated?' · showing first '+fmt(det.rows.length)+' (narrow the date range above for the full list)':'');
-  let h='<table class="dt"><thead><tr><th>Staging ID</th><th>Submitted</th><th class="num">Days stale</th><th>Sector</th><th>Region</th><th>Store</th><th>Product</th><th>Scoreband</th><th>DBR</th><th>Paid</th></tr></thead><tbody>';
+  let h='<table class="dt"><thead><tr><th>Staging ID</th><th>Submitted</th><th class="num">Days stale</th><th>Company</th><th>Region</th><th>Store</th><th>Product</th><th>Scoreband</th><th>DBR</th><th>Paid</th></tr></thead><tbody>';
   det.rows.forEach(r=>{
-    h+=`<tr><td>${esc(r.stagingId||'—')}</td><td>${prettyD(r.submitted)}</td><td class="num">${fmt(r.daysStale)}</td><td>${esc(r.sector)}</td><td>${esc(r.region)}</td><td>${esc(r.store)}</td><td>${esc(r.product)}</td><td>${esc(r.scoreband)}</td><td>${esc(r.dbr)}</td><td>${r.paid?'Yes':'No'}</td></tr>`;
+    h+=`<tr><td>${esc(r.stagingId||'—')}</td><td>${prettyD(r.submitted)}</td><td class="num">${fmt(r.daysStale)}</td><td>${esc(r.company)}</td><td>${esc(r.region)}</td><td>${esc(r.store)}</td><td>${esc(r.product)}</td><td>${esc(r.scoreband)}</td><td>${esc(r.dbr)}</td><td>${r.paid?'Yes':'No'}</td></tr>`;
   });
   h+='</tbody></table>';
   if(!det.rows.length) h='<p class="cap">No applications found.</p>';
@@ -1944,17 +1955,17 @@ function renderSummaryTab(){
   const anb=eng.approvedNotBooked?eng.approvedNotBooked(ANB_RANGE.from,ANB_RANGE.to):null;
   ANB_LAST=anb;
   if(anb&&anb.totals.count){
-    let anh=`<div class="summary-cards" style="margin-bottom:10px"><div class="card money kpi"><div class="lab">Approved, never booked (all companies)</div><div class="big" style="font-size:22px">${fmt(anb.totals.count)}</div></div>`+
+    let anh=`<div class="summary-cards" style="margin-bottom:10px"><div class="card money kpi"><div class="lab">Approved, never booked (all sectors)</div><div class="big" style="font-size:22px">${fmt(anb.totals.count)}</div></div>`+
       `<div class="card money kpi"><div class="lab">Already paid (GOSI/MOF/SIMAH)</div><div class="big" style="font-size:22px">${fmt(anb.totals.paid)}</div></div>`+
       `<div class="card money kpi"><div class="lab">Avg days stale</div><div class="big" style="font-size:22px">${fmt(anb.totals.avgAge)}</div></div>`+
       `<div class="card money kpi"><div class="lab">As of</div><div class="big" style="font-size:17px">${prettyD(anb.asOf)}</div></div></div>`;
-    anh+=`<div style="font-size:11px;color:var(--faint);margin-bottom:8px">Named companies only (excludes 'Other') · showing top ${Math.min(10,anb.companyCount)} of ${fmt(anb.companyCount)} by backlog size · "Paid Application" = Yes if GOSI, MOF, and/or SIMAH/Qarar was already called for that application (Yaqeen has no reliable call flag in this data, so it's not counted — this is a floor, not the true total) · click a count to see the applications</div>`;
-    anh+='<table class="dt"><thead><tr><th>#</th><th>Company</th><th class="num">Approved, not booked</th><th>Paid Application</th></tr></thead><tbody>';
+    anh+=`<div style="font-size:11px;color:var(--faint);margin-bottom:8px">Grouped by Employer Type (column N, FinalEmployerType) · ${fmt(anb.companyCount)} sector${anb.companyCount===1?'':'s'} · "Paid Application" = Yes if GOSI, MOF, and/or SIMAH/Qarar was already called for that application (Yaqeen has no reliable call flag in this data, so it's not counted — this is a floor, not the true total) · click a count to see the applications</div>`;
+    anh+='<table class="dt"><thead><tr><th>#</th><th>Employer Type</th><th class="num">Approved, not booked</th><th>Paid Application</th></tr></thead><tbody>';
     const paidLabel=(paid,total)=>paid===0?'No':(paid===total?'Yes':`Mixed (${fmt(paid)}/${fmt(total)})`);
     anb.top.forEach((c,i)=>{
       anh+=`<tr><td class="num">${i+1}</td><td>${esc(c.name)}</td><td class="num"><button class="anb-link" onclick="showAnbDetail(${i})">${fmt(c.count)}</button></td><td>${paidLabel(c.paid,c.count)}</td></tr>`;
     });
-    anh+=`<tr style="font-weight:700;border-top:2px solid var(--line2)"><td></td><td>Total (all companies)</td><td class="num"><button class="anb-link" onclick="showAnbDetail(-1)">${fmt(anb.totals.count)}</button></td><td>${paidLabel(anb.totals.paid,anb.totals.count)}</td></tr>`;
+    anh+=`<tr style="font-weight:700;border-top:2px solid var(--line2)"><td></td><td>Total (all sectors)</td><td class="num"><button class="anb-link" onclick="showAnbDetail(-1)">${fmt(anb.totals.count)}</button></td><td>${paidLabel(anb.totals.paid,anb.totals.count)}</td></tr>`;
     anh+='</tbody></table>';
     document.getElementById('sum-approved-not-booked').innerHTML=anh;
   } else {
