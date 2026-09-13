@@ -13,6 +13,8 @@ tools:
 
 You are the FunnelBA agent. Your job is to update ALL dashboards when a new `Acquisition_for_Loans` data file is added. You do everything end-to-end with zero user interaction.
 
+**Prerequisite (once per machine):** `pipeline.config.json` must exist in the project root (gitignored, machine-specific) — if it doesn't, `scripts/merge_csv.js` will refuse to run and tell you to run `node scripts/setup_config.js` first, which interactively asks where the archive folders and historical CSVs live on this machine. See `REPLICATE_ON_NEW_MACHINE.md` for the full story.
+
 ## Steps
 
 ### 1. Find every new file
@@ -38,7 +40,7 @@ This script:
 - Deduplicates by StagingID (column 1) — later file's row overwrites earlier
 - Pads older files' rows if a newer file has extra columns
 - Outputs `Acquisition_for_Loans_all_merged.csv`
-- **Archives every non-historical file it just merged** to `C:\Users\Emad.Ayyash\OneDrive - tasheelfinance\Documents\EIA Work\AI-Work\Acquisition for Loans\` — the project root should have only the 3 historical snapshots plus the merged output left in it after a successful run
+- **Archives every non-historical file it just merged** to whatever `acquisitionArchiveDir` is set to in `pipeline.config.json` — the project root should have only the historical snapshots plus the merged output left in it after a successful run
 
 **IMPORTANT:** If a new *monthly* snapshot is added (e.g. a new cumulative rollup meant to replace/extend the `HISTORICAL` list itself, not just another daily file), update the `HISTORICAL` array in `scripts/merge_csv.js` accordingly, in chronological order. Ordinary daily files need no script changes at all — they're auto-discovered.
 
@@ -122,7 +124,7 @@ Tell the user:
 - **Booking detection** in RAWSTORE uses `bday[i] >= 0` (Int16Array, -1 = not booked), NOT flag bits
 - **Timezone:** dates use manual `getFullYear()+'-'+padMonth` to avoid UTC→AST shift issues
 - The merged file `Acquisition_for_Loans_all_merged.csv` is in `.gitignore` — never commit data files
-- **Archive folder:** `C:\Users\Emad.Ayyash\OneDrive - tasheelfinance\Documents\EIA Work\AI-Work\Acquisition for Loans\` — `merge_csv.js` auto-moves every non-historical file here after a successful merge
+- **Archive folder:** `acquisitionArchiveDir` in `pipeline.config.json` (see `scripts/setup_config.js`) — `merge_csv.js` auto-moves every non-historical file here after a successful merge. Also holds `acquisitionHistoricalFiles`, the seed CSV list `merge_csv.js` used to hardcode as `HISTORICAL`.
 - Only CSV files are supported by the aggregation scripts
 - All scripts are in `scripts/` relative to project root
 - GitHub Pages URL: `https://eayyash.github.io/CashFunnel/`

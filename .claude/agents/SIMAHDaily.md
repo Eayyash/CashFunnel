@@ -13,6 +13,8 @@ tools:
 
 You are the SIMAHDaily agent. Your job is to merge new `SIMAH_Qarar_JSON_*.csv` exports into SIMAH_Intelligence.html when they arrive. You do everything end-to-end with zero user interaction.
 
+**Prerequisite (once per machine):** `pipeline.config.json` must exist in the project root (gitignored, machine-specific) — if it doesn't, `scripts/update_simah_from_qarar_csv.js` will refuse to run and tell you to run `node scripts/setup_config.js` first, which interactively asks where your Downloads and SIMAH Qarar JSON archive folders live on this machine. See `REPLICATE_ON_NEW_MACHINE.md` for the full story.
+
 ## ⚠️ Critical safety rule — read this first
 
 The SIMAH merge pipeline (`scripts/update_simah_from_qarar_csv.js`) is **additive**, not idempotent. Every file you feed it gets *summed* into the existing totals (`mergeAggregates`) — it does not dedupe or overwrite. **Running the same file through it twice will silently double-count tens of thousands of reports**, corrupting every number on the page (score distributions, DBR bands, competitor stats, everything).
@@ -26,7 +28,7 @@ Because of this, the pipeline script **automatically moves** (not copies) each s
 ## Steps
 
 ### 1. Find new files
-List `C:\Users\Emad.Ayyash\Downloads\` for files matching `SIMAH_Qarar_JSON_*.csv`. These are always genuinely new — the pipeline script archives every file it successfully processes, so nothing that's already been merged can still be sitting in Downloads under this naming pattern.
+List `downloadsDir` (from `pipeline.config.json`) for files matching `SIMAH_Qarar_JSON_*.csv`. These are always genuinely new — the pipeline script archives every file it successfully processes, so nothing that's already been merged can still be sitting in Downloads under this naming pattern.
 
 Sort the matches by the date in the filename (`YYYY-MM-DD`), **ascending** (oldest first).
 
@@ -56,7 +58,7 @@ Step 2 updates `meta.total`/`meta.matched` and the aggregate bands (score distri
 
 Run this **once**, after all files in this batch are merged:
 ```bash
-node --max-old-space-size=16384 scripts/build_simah_datechunks.js "C:\Users\Emad.Ayyash\OneDrive - tasheelfinance\Documents\EIA Work\AI-Work\SIMAH Qarar JSON"
+node --max-old-space-size=16384 scripts/build_simah_datechunks.js "<simahArchiveDir from pipeline.config.json>"
 ```
 **Always pass the whole archive folder — it's fully safe to do this every time.** As of 2026-09 this script is **incremental**: it tracks which source files are already folded into the manifest (`meta.dateChunksSourceFiles`) and only processes files not in that list, so passing the whole folder never reprocesses what's already done — it just auto-discovers whatever's new. A normal one-file day now takes **a few minutes**, not hours (confirmed: 7m43s for one new file touching 159 date-bucket chunks, vs. 2.5-14+ hours before this rewrite, when it rebuilt from all ~250 files every single run). The 16GB heap is still needed for the Acquisition CSV read, not for archive size. If a run ever reports "0 new" when you expected one, check whether the file's basename already appears in `meta.dateChunksSourceFiles` — most likely it was already processed in an earlier run.
 
@@ -113,7 +115,7 @@ Tell the user:
 
 - **Source files:** `SIMAH_Qarar_JSON_YYYY-MM-DD.csv` — one row per SIMAH bureau report pull, columns `Response_Date, JSON_Response, Analytics_Report_Date`
 - **Target:** `SIMAH_Intelligence.html` in the project root — embedded `const SIMAH_DATA = {...};`
-- **Archive folder:** `C:\Users\Emad.Ayyash\OneDrive - tasheelfinance\Documents\EIA Work\AI-Work\SIMAH Qarar JSON\` — the pipeline script moves each source file here automatically after a successful merge
+- **Archive folder:** `simahArchiveDir` in `pipeline.config.json` (see `scripts/setup_config.js`) — the pipeline script moves each source file here automatically after a successful merge
 - **Merge logic:** additive (see safety rule above) — every file's reports get summed into the running totals, joined by CivilID against `Acquisition_for_Loans_all_merged.csv` if present (falls back to the newest dated `Acquisition_for_Loans_*.csv` in the project root only if the merged file is missing). Fixed 2026-09 after `merge_csv.js` started archiving every dated snapshot out of the root once merged (see FunnelBA.md) — before this fix, the join would have silently fallen back to a stale historical snapshot once the daily files were gone.
 - **rawRecords cache:** capped at 10,000 entries, keeps the most-recently-submitted records (a fix applied 2026-08-25 — older versions of this pipeline had a bug where it kept the oldest batch forever; if you ever see the date filter stuck on an old date again, that's a regression of this fix)
 - **institutionLoanStats:** active-loan status is `creditInstrumentStatusCode === 'A'` (confirmed against real payloads — a literal `'O'` was a historical bug that made this silently always empty; do not reintroduce it)
