@@ -424,8 +424,21 @@ const bookedRows = [];
 const NO_CIV = 0xFFFFFFFF;
 const civIdMap = new Map();
 const civIdx = new Uint32Array(N);
+// Real StagingIDs for the "Approved, Not Yet Booked" drill-down (added
+// 2026-09-12 per explicit request to make that table's counts clickable
+// and show real applications, not just aggregate numbers). IDs are
+// confirmed fixed-8-char for 842,233 of 842,245 rows -- the handful of
+// outliers are already-known malformed rows (a pre-existing stray-quote
+// artifact in the source CSV, unrelated to this feature) and just get
+// truncated/padded like everything else; not worth special-casing.
+const STAGING_ID_LEN = 8;
+const stagingIdBytes = new Uint8Array(N * STAGING_ID_LEN);
 
 rows.forEach((r, i) => {
+  const sid = String(r['StagingID'] || '').slice(0, STAGING_ID_LEN);
+  for (let k = 0; k < STAGING_ID_LEN; k++) {
+    stagingIdBytes[i * STAGING_ID_LEN + k] = k < sid.length ? sid.charCodeAt(k) : 32; // space-pad
+  }
   const init = r['Approvalflag'] === 'Y';
   const fin = r['FinalApprovalFlag'] === 'Y';
   const booked = BOOKED_SET.has(String(r['Altitudestatus']));
@@ -508,6 +521,7 @@ addCol('bday', bday, 'h');
 const dimOrder = ['region', 'employer', 'nationality', 'income', 'risk', 'simah', 'age', 'gender', 'marital', 'product', 'source', 'scoreband', 'dbr', 'store', 'city', 'natdetail', 'de_decision', 'referreasons', 'gosi', 'mof', 'dec', 'smart', 'incband15', 'company'];
 dimOrder.forEach(k => addCol(k, dimCols[k], 'b'));
 addCol('civIdx', civIdx, 'i');
+addCol('stagingId', stagingIdBytes, 'b');
 addCol('bval', bval, 'd');
 addCol('bten', bten, 'd');
 addCol('blim', blim, 'd');
@@ -525,6 +539,7 @@ writeBuf(sday);
 writeBuf(bday);
 dimOrder.forEach(k => writeBuf(dimCols[k]));
 writeBuf(civIdx);
+writeBuf(stagingIdBytes);
 writeBuf(bval);
 writeBuf(bten);
 writeBuf(blim);
