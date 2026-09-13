@@ -13,17 +13,18 @@
 const fs = require('fs');
 const path = require('path');
 const XLSX = require('xlsx');
+const { loadConfig } = require('./pipeline_config.js');
 
 const ROOT = path.resolve(__dirname, '..');
 const HTML_PATH = path.join(ROOT, 'Funnel_Analysis.html');
+const cfg = loadConfig();
 
-// Folder where daily Tawarruq_Funnel xlsx files are stored
-const FUNNEL_FOLDER = path.resolve(
-  'C:\\Users\\Emad.Ayyash\\OneDrive - tasheelfinance\\Documents\\EIA Work\\AI-Work\\Tawarruq Funnel'
-);
+// Folder where daily Tawarruq_Funnel xlsx files are stored. Machine-specific
+// -- see pipeline.config.json / setup_config.js.
+const FUNNEL_FOLDER = path.resolve(cfg.funnelArchiveDir);
 
 // Also check Downloads for newly dropped files
-const DOWNLOADS = path.resolve('C:\\Users\\Emad.Ayyash\\Downloads');
+const DOWNLOADS = path.resolve(cfg.downloadsDir);
 
 const JOURNEYS = ['New Customer', 'Existing Customer', 'BO (Tawarruq)', 'BO (Combo)', 'UI to BO'];
 

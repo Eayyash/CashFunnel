@@ -10,8 +10,10 @@
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
+const { loadConfig } = require('./pipeline_config.js');
 
 const dir = path.resolve(__dirname, '..');
+const cfg = loadConfig();
 
 // Every non-historical daily/monthly CSV this script has ever merged gets
 // moved here afterward -- mirroring DailyBA's Tawarruq Funnel archive and
@@ -24,17 +26,16 @@ const dir = path.resolve(__dirname, '..');
 // missing from Acquisition_for_Loans_all_merged.csv). Archiving processed
 // files keeps the root clean so future runs stay fast (one new file, not
 // dozens) and keeps this exact silent-data-loss failure mode from
-// recurring.
-const ARCHIVE_DIR = path.join('C:', 'Users', 'Emad.Ayyash', 'OneDrive - tasheelfinance', 'Documents', 'EIA Work', 'AI-Work', 'Acquisition for Loans');
+// recurring. Machine-specific -- see pipeline.config.json / setup_config.js.
+const ARCHIVE_DIR = cfg.acquisitionArchiveDir;
 
 // ── Historical monthly snapshots (chronological order) ──
 // These are cumulative extracts that together cover Oct 2025 onward.
-// Add new monthly snapshots here as they arrive.
-const HISTORICAL = [
-  'Acquisition_for_Loans_2026-01-31.csv',  // Oct 2025 – Jan 2026
-  'Acquisition_for_Loans_2026-02-28.csv',  // Oct 2025 – Feb 2026
-  'Acquisition_for_Loans_2026-05-31.csv',  // Oct 2025 – May 2026
-];
+// Configured via pipeline.config.json (setup_config.js asks for these) --
+// if left empty there, falls back to every Acquisition_for_Loans_*.csv
+// already sitting in the project root, treating none of them as special.
+// Add new monthly snapshots to the config as they arrive.
+const HISTORICAL = cfg.acquisitionHistoricalFiles || [];
 
 async function main() {
   const historicalSet = new Set(HISTORICAL);

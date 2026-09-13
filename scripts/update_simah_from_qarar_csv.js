@@ -7,15 +7,18 @@
  */
 const fs = require('fs');
 const path = require('path');
+const { loadConfig } = require('./pipeline_config.js');
 
 const ROOT = path.resolve(__dirname, '..');
 const HTML_OUT = path.join(ROOT, 'SIMAH_Intelligence.html');
 const CSV_FILE = process.argv[2];
+const cfg = loadConfig();
 // This pipeline is ADDITIVE (mergeAggregates sums, not overwrites/dedupes) —
 // re-running the same file would silently double-count reports. Once a merge
 // succeeds, the source file is MOVED (not copied) out of Downloads into this
 // archive folder so it can never be picked up and reprocessed by accident.
-const SIMAH_ARCHIVE_FOLDER = 'C:\\Users\\Emad.Ayyash\\OneDrive - tasheelfinance\\Documents\\EIA Work\\AI-Work\\SIMAH Qarar JSON';
+// Machine-specific -- see pipeline.config.json / setup_config.js.
+const SIMAH_ARCHIVE_FOLDER = cfg.simahArchiveDir;
 
 // User-specified competitor classification (BNPL / NBFI / Bank). Names are
 // matched trimmed — several appear with trailing spaces in real SIMAH data.
