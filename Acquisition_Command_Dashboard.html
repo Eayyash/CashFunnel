@@ -299,7 +299,7 @@ body.gate-locked>*:not(#login-gate){display:none!important}
   <div class="sec-h" style="margin-top:20px"><span class="k">05</span><h2>CEO Dashboard — Traffic Light</h2><span class="hint">key metrics health check for selected range</span></div>
   <div class="chart-card" id="sum-ceo-traffic"></div>
 
-  <div class="sec-h" style="margin-top:20px"><span class="k">06</span><h2>Top 10 Companies</h2><span class="hint">Acquisition_for_Loans column J · own date range, independent of the filter above</span></div>
+  <div class="sec-h" style="margin-top:20px"><span class="k">06</span><h2>Top Employer Types</h2><span class="hint">Acquisition_for_Loans column N (FinalEmployerType) · own date range, independent of the filter above</span></div>
   <div class="datebar" style="margin-bottom:10px">
     <div class="dfield"><label>From</label><input type="date" id="tc-from"></div>
     <div class="dfield"><label>To</label><input type="date" id="tc-to"></div>
@@ -1405,24 +1405,28 @@ const RAWSTORE = {"n":846427,"dates":["2025-10-06","2025-10-07","2025-10-08","20
   // this, by design (confirmed live: summing only the top-10-by-submissions
   // rows for a single day captured 1 of 202 real booked loans that day,
   // because most bookings belonged to companies outside that top 10).
+  // Grouped by FinalEmployerType (column N -- the "employer" RAWSTORE dim),
+  // per explicit request 2026-09-13 (same change as section 07's
+  // approvedNotBooked() just above), NOT by individual company (column J).
+  // Collapses this from ~60 individual companies down to the ~6 broad
+  // categories that field actually contains (Private Company, Government
+  // Entity, Military with Grades, Pension, Unlisted, Unknown) -- in
+  // exchange for a field that's always clean (no corrupted-Arabic-text
+  // problem the 'company' dim has). No more per-company "most common
+  // sector" lookup needed since the group itself now IS the sector.
   function topCompanies(fromA,toA,sortBy){
-    const sd=RS.sday,bd=RS.bday,flags=RS.flags,bval=RS.bval,co=RS.company,emp=RS.employer;
-    const VC=VOCAB.company,VE=VOCAB.employer;
-    const stats={}; // name -> {sub,book,val,sectors:{sector:count}}
+    const sd=RS.sday,bd=RS.bday,flags=RS.flags,bval=RS.bval,emp=RS.employer;
+    const VE=VOCAB.employer;
+    const stats={}; // name -> {sub,book,val}
     const totals={sub:0,book:0,val:0};
     let bptr=0;
     for(let i=0;i<N;i++){
-      const name=VC[co[i]];
-      const isOther=(name==='Other');
+      const name=VE[emp[i]];
       const di=sd[i];
       if(di>=0&&DTS[di]>=fromA&&DTS[di]<=toA){
         totals.sub++;
-        if(!isOther){
-          const s=stats[name]||(stats[name]={sub:0,book:0,val:0,sectors:{}});
-          s.sub++;
-          const sec=VE[emp[i]];
-          s.sectors[sec]=(s.sectors[sec]||0)+1;
-        }
+        const s=stats[name]||(stats[name]={sub:0,book:0,val:0});
+        s.sub++;
       }
       const booked=(flags[i]>>2)&1,bi=bd[i];
       if(booked&&bi>=0){
@@ -1431,24 +1435,17 @@ const RAWSTORE = {"n":846427,"dates":["2025-10-06","2025-10-07","2025-10-08","20
           totals.book++;
           const v=bval[bptr]; const vOk=!isNaN(v);
           if(vOk)totals.val+=v;
-          if(!isOther){
-            const s=stats[name]||(stats[name]={sub:0,book:0,val:0,sectors:{}});
-            s.book++; if(vOk)s.val+=v;
-          }
+          const s=stats[name]||(stats[name]={sub:0,book:0,val:0});
+          s.book++; if(vOk)s.val+=v;
         }
         bptr++;
       }
     }
-    // "Top 10 companies" means companies we've actually booked loans from
-    // -- per explicit feedback, a company with 0 booked loans shouldn't
-    // fill a slot just because it has high submission volume. Filtered
-    // here (not just sorted last) so all three "Rank by" modes only ever
-    // show companies with at least one booked loan in range; fewer than
-    // 10 rows is expected/correct when fewer than 10 qualify.
-    const arr=Object.entries(stats).map(([name,s])=>{
-      const sector=Object.entries(s.sectors).sort((a,b)=>b[1]-a[1])[0];
-      return {name,sub:s.sub,book:s.book,val:Math.round(s.val),sector:sector?sector[0]:'Unknown'};
-    }).filter(c=>c.book>0);
+    // "Top employer types" means sectors we've actually booked loans from
+    // -- same "0 booked shouldn't fill a slot" rule as before, kept for
+    // consistency even though a sector realistically dropping to 0 across
+    // this small a category set would be unusual.
+    const arr=Object.entries(stats).map(([name,s])=>({name,sub:s.sub,book:s.book,val:Math.round(s.val)})).filter(c=>c.book>0);
     const key=sortBy==='val'?'val':(sortBy==='book'?'book':'sub');
     arr.sort((a,b)=>b[key]-a[key]);
     return {top:arr.slice(0,10),totals:{sub:totals.sub,book:totals.book,val:Math.round(totals.val)},companyCount:arr.length};
@@ -1921,31 +1918,28 @@ function renderSummaryTab(){
   document.getElementById('sum-top-employer').innerHTML=segCard(top.employer,'Top employer type');
   document.getElementById('sum-top-nationality').innerHTML=segCard(top.nationality,'Top nationality flag');
 
-  // Top 10 Companies: LIVE for the selected date range (raw 'Company'
-  // column, col J). "شركة غير مدرجة" / "UNLISTED COMPANY" are pre-merged
-  // into "Unlisted Company" server-side, same for case (aramco/ARAMCO);
-  // other unreadable (source-corrupted Arabic) company names are excluded
-  // entirely -- see buildCompanyNormalizer in update_acquisition_dashboard.js.
+  // Top Employer Types: LIVE for the selected date range, grouped by
+  // FinalEmployerType (column N) -- per explicit request 2026-09-13,
+  // matching the same change made to section 07's approvedNotBooked().
   // Submissions scoped by submitted-date-in-range, Booked loans/value by
   // booking-date-in-range (same two-cohort convention as the KPI cards
-  // above). Sector = each company's most common employer-type field.
+  // above).
   const tcRes=eng&&eng.topCompanies?eng.topCompanies(TC_RANGE.from,TC_RANGE.to,TC_SORT):null;
   if(tcRes&&tcRes.top.length){
     const sortLabel=TC_SORT==='val'?'Booked value':(TC_SORT==='book'?'Booked loans':'Submissions');
-    let tch=`<div style="font-size:11px;color:var(--faint);margin-bottom:8px">Companies with at least one booked loan in this range · ranked by ${sortLabel} · showing top ${Math.min(10,tcRes.companyCount)} of ${fmt(tcRes.companyCount)}</div>`;
-    tch+='<table class="dt"><thead><tr><th>#</th><th>Company</th><th>Sector</th><th class="num">Submissions</th><th class="num">Booked loans</th><th class="num">Booked value</th></tr></thead><tbody>';
+    let tch=`<div style="font-size:11px;color:var(--faint);margin-bottom:8px">Employer types with at least one booked loan in this range · ranked by ${sortLabel} · ${fmt(tcRes.companyCount)} employer type${tcRes.companyCount===1?'':'s'}</div>`;
+    tch+='<table class="dt"><thead><tr><th>#</th><th>Employer Type</th><th class="num">Submissions</th><th class="num">Booked loans</th><th class="num">Booked value</th></tr></thead><tbody>';
     tcRes.top.forEach((cc,i)=>{
-      tch+=`<tr><td class="num">${i+1}</td><td>${esc(cc.name)}</td><td>${esc(cc.sector)}</td><td class="num">${fmt(cc.sub)}</td><td class="num">${fmt(cc.book)}</td><td class="num">${money(cc.val)}</td></tr>`;
+      tch+=`<tr><td class="num">${i+1}</td><td>${esc(cc.name)}</td><td class="num">${fmt(cc.sub)}</td><td class="num">${fmt(cc.book)}</td><td class="num">${money(cc.val)}</td></tr>`;
     });
-    // Total (all companies): the TRUE sum across every row in range,
-    // including 'Other'/excluded company names -- matches the main KPI
-    // cards exactly. The top-10 rows above are a small subset of this by
-    // design, not a breakdown that sums to it.
-    tch+=`<tr style="font-weight:700;border-top:2px solid var(--line2)"><td></td><td colspan="2">Total (all companies)</td><td class="num">${fmt(tcRes.totals.sub)}</td><td class="num">${fmt(tcRes.totals.book)}</td><td class="num">${money(tcRes.totals.val)}</td></tr>`;
+    // Total (all employer types): the TRUE sum across every row in range --
+    // matches the main KPI cards exactly. The rows above are a small
+    // subset of this by design, not a breakdown that sums to it.
+    tch+=`<tr style="font-weight:700;border-top:2px solid var(--line2)"><td></td><td>Total (all employer types)</td><td class="num">${fmt(tcRes.totals.sub)}</td><td class="num">${fmt(tcRes.totals.book)}</td><td class="num">${money(tcRes.totals.val)}</td></tr>`;
     tch+='</tbody></table>';
     document.getElementById('sum-top-companies').innerHTML=tch;
   } else {
-    document.getElementById('sum-top-companies').innerHTML='<p class="cap">No booked loans from any company in the selected range.</p>';
+    document.getElementById('sum-top-companies').innerHTML='<p class="cap">No booked loans from any employer type in the selected range.</p>';
   }
 
   // Approved, Not Yet Booked: applications already past underwriting
