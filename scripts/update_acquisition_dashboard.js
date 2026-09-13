@@ -284,57 +284,13 @@ function buildDaily(rows, name) {
   return { meta: { min: dates[0], max: dates[dates.length - 1], total: rows.length, name, pendingFinalApproval }, dates, days };
 }
 
-// --- Main ---
-const targetFile = process.argv[2] || findLatestFile();
-const filePath = path.isAbsolute(targetFile) ? targetFile : path.join(ROOT, targetFile);
-
-if (!fs.existsSync(filePath)) {
-  console.error(`File not found: ${filePath}`);
-  process.exit(1);
-}
-
-const ext = path.extname(filePath).toLowerCase();
-if (ext !== '.csv') {
-  console.error(`Only CSV files are supported by this script. Got: ${ext}`);
-  console.error('Convert the xlsx to CSV first, or use the dashboard upload button.');
-  process.exit(1);
-}
-
-const fileName = path.basename(filePath);
-console.log(`Reading ${fileName}…`);
-const rows = readCsv(filePath);
-console.log(`Parsed ${rows.length.toLocaleString()} rows`);
-
-// Acquisition_Command_Dashboard.html excludes the SNB sales channel (column
-// CJ, Region_for_Sales === 'SNB') per explicit request 2026-09-13 -- SNB
-// gets its own separate scorecard (scripts/build_snb_overview.js ->
-// SNB_Overview.html) instead. `rows` (above, unfiltered) is still used
-// as-is for Application_Cost.html below -- this exclusion is scoped to
-// the Acquisition dashboard only, not applied silently everywhere.
-const dashboardRows = rows.filter(r => (r['Region_for_Sales'] || '').trim().toUpperCase() !== 'SNB');
-console.log(`Excluding SNB: ${rows.length.toLocaleString()} -> ${dashboardRows.length.toLocaleString()} rows for the dashboard`);
-
-console.log('Aggregating…');
-const result = buildDaily(dashboardRows, fileName);
-console.log(`Date range: ${result.meta.min} → ${result.meta.max} (${result.dates.length} days)`);
-
-const newLine = `const DAILY_DEFAULT = ${JSON.stringify(result)};`;
-
-console.log('Updating Acquisition_Command_Dashboard.html…');
-let html = fs.readFileSync(HTML_FILE, 'utf-8');
-const marker = 'const DAILY_DEFAULT = {';
-const startIdx = html.indexOf(marker);
-if (startIdx === -1) {
-  console.error('ERROR: Could not find DAILY_DEFAULT in HTML — file format may have changed.');
-  process.exit(1);
-}
-const lineStart = html.lastIndexOf('\n', startIdx) + 1;
-const lineEnd = html.indexOf('\n', startIdx);
-let updatedHtml = html.slice(0, lineStart) + newLine + html.slice(lineEnd);
-console.log(`DAILY_DEFAULT updated.`);
-
-// --- Build RAWSTORE (columnar binary for the trend engine) ---
-console.log('Building RAWSTORE…');
+// --- Reusable core builder: aggregates `dashboardRows` into DAILY_DEFAULT +
+// RAWSTORE and injects both into `htmlFilePath` (any HTML file carrying the
+// same two markers -- used for both Acquisition_Command_Dashboard.html
+// (CLI entry point below) and SNB_Overview.html (scripts/build_snb_overview.js,
+// which requires this file as a module instead of running it standalone) --
+// see that script for why a full clone reuses this exact engine rather than
+// hand-writing a parallel one. ---
 const zlib = require('zlib');
 
 const DIMCOL_MAP = {
@@ -356,6 +312,29 @@ function incBand15Val(r) {
   if (isNaN(inc)) return 'Unknown';
   return inc >= 15000 ? '15K+' : '<15K';
 }
+
+function buildDashboardArtifact(dashboardRows, htmlFilePath, fileName) {
+console.log('Aggregating…');
+const result = buildDaily(dashboardRows, fileName);
+console.log(`Date range: ${result.meta.min} → ${result.meta.max} (${result.dates.length} days)`);
+
+const newLine = `const DAILY_DEFAULT = ${JSON.stringify(result)};`;
+
+console.log(`Updating ${path.basename(htmlFilePath)}…`);
+let html = fs.readFileSync(htmlFilePath, 'utf-8');
+const marker = 'const DAILY_DEFAULT = {';
+const startIdx = html.indexOf(marker);
+if (startIdx === -1) {
+  console.error('ERROR: Could not find DAILY_DEFAULT in HTML — file format may have changed.');
+  process.exit(1);
+}
+const lineStart = html.lastIndexOf('\n', startIdx) + 1;
+const lineEnd = html.indexOf('\n', startIdx);
+let updatedHtml = html.slice(0, lineStart) + newLine + html.slice(lineEnd);
+console.log(`DAILY_DEFAULT updated.`);
+
+// --- Build RAWSTORE (columnar binary for the trend engine) ---
+console.log('Building RAWSTORE…');
 
 // Count values for LONGCOL to pick top 20
 const longCnt = {};
@@ -571,10 +550,56 @@ if (ri !== -1) {
   console.warn('WARN: RAWSTORE marker not found — skipping columnar update.');
 }
 
-fs.writeFileSync(HTML_FILE, updatedHtml, 'utf-8');
+fs.writeFileSync(htmlFilePath, updatedHtml, 'utf-8');
 console.log(`Done — dashboard updated with ${dashboardRows.length.toLocaleString()} rows (${result.meta.min} → ${result.meta.max}).`);
+return result;
+}
+module.exports = { buildDashboardArtifact, readCsv, buildDaily, findLatestFile };
 
-// --- Application Cost scorecard ---
+// --- CLI entry point (only runs when this file is executed directly, e.g.
+// `node scripts/update_acquisition_dashboard.js <file>` -- NOT when
+// scripts/build_snb_overview.js requires this file as a module to reuse
+// buildDashboardArtifact for its own full-clone build). ---
+if (require.main === module) {
+  const targetFile = process.argv[2] || findLatestFile();
+  const filePath = path.isAbsolute(targetFile) ? targetFile : path.join(ROOT, targetFile);
+
+  if (!fs.existsSync(filePath)) {
+    console.error(`File not found: ${filePath}`);
+    process.exit(1);
+  }
+
+  const ext = path.extname(filePath).toLowerCase();
+  if (ext !== '.csv') {
+    console.error(`Only CSV files are supported by this script. Got: ${ext}`);
+    console.error('Convert the xlsx to CSV first, or use the dashboard upload button.');
+    process.exit(1);
+  }
+
+  const fileName = path.basename(filePath);
+  console.log(`Reading ${fileName}…`);
+  const rows = readCsv(filePath);
+  console.log(`Parsed ${rows.length.toLocaleString()} rows`);
+
+  // Acquisition_Command_Dashboard.html excludes the SNB sales channel
+  // (column CJ, Region_for_Sales === 'SNB') per explicit request
+  // 2026-09-13 -- SNB gets its own full-clone scorecard instead (see
+  // scripts/build_snb_overview.js -> SNB_Overview.html, which reuses
+  // buildDashboardArtifact() above with SNB-only rows). `rows` (above,
+  // unfiltered) is still used as-is for Application_Cost.html below --
+  // this exclusion is scoped to the Acquisition dashboard only, not
+  // applied silently everywhere.
+  const dashboardRows = rows.filter(r => (r['Region_for_Sales'] || '').trim().toUpperCase() !== 'SNB');
+  console.log(`Excluding SNB: ${rows.length.toLocaleString()} -> ${dashboardRows.length.toLocaleString()} rows for the dashboard`);
+
+  buildDashboardArtifact(dashboardRows, HTML_FILE, fileName);
+
+  runApplicationCost(rows, fileName);
+}
+
+// --- Application Cost scorecard (unfiltered `rows` -- SNB stays included
+// here, see note above) ---
+function runApplicationCost(rows, fileName) {
 const COST_HTML = path.join(ROOT, 'Application_Cost.html');
 if (fs.existsSync(COST_HTML)) {
   console.log('Computing application cost data…');
@@ -660,4 +685,5 @@ if (fs.existsSync(COST_HTML)) {
   } else {
     console.warn('WARN: COST_DATA marker not found in Application_Cost.html — skipping cost update.');
   }
+}
 }
