@@ -269,19 +269,27 @@ function buildDaily(rows, name) {
   }
 
   // Pending Final Approval KPI: straight count of Altitudestatus ===
-  // 'Pending Final Approval', straight from the dataset.
-  let pendingFinalApproval = 0;
+  // 'Pending Final Approval', straight from the dataset, plus the total
+  // ItemValue (loan amount) across those applications -- added 2026-09-14
+  // per explicit request. ItemValue is populated for these rows because
+  // 'Pending Final Approval' is in BOOKED_SET (see below), i.e. these
+  // applications already have an allocated loan amount awaiting final
+  // sign-off, not a blank/unset one like a plain in-progress application.
+  let pendingFinalApproval = 0, pendingFinalApprovalAmount = 0;
   rows.forEach(r => {
-    if (String(r['Altitudestatus'] || '').trim() === 'Pending Final Approval') pendingFinalApproval++;
+    if (String(r['Altitudestatus'] || '').trim() === 'Pending Final Approval') {
+      pendingFinalApproval++;
+      pendingFinalApprovalAmount += parseFloat(r['ItemValue']) || 0;
+    }
   });
-  console.log(`Pending Final Approval: ${pendingFinalApproval.toLocaleString()}`);
+  console.log(`Pending Final Approval: ${pendingFinalApproval.toLocaleString()} (SAR ${Math.round(pendingFinalApprovalAmount).toLocaleString()})`);
 
   // Top Companies is now computed LIVE client-side from the 'company'
   // RAWSTORE dimension (see buildCompanyNormalizer / buildRawstore below),
   // filtered by whatever date range is selected -- no static meta snapshot
   // needed here any more.
 
-  return { meta: { min: dates[0], max: dates[dates.length - 1], total: rows.length, name, pendingFinalApproval }, dates, days };
+  return { meta: { min: dates[0], max: dates[dates.length - 1], total: rows.length, name, pendingFinalApproval, pendingFinalApprovalAmount }, dates, days };
 }
 
 // --- Reusable core builder: aggregates `dashboardRows` into DAILY_DEFAULT +
