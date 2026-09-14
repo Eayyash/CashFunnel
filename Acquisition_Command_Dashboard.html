@@ -319,7 +319,7 @@ body.gate-locked>*:not(#login-gate){display:none!important}
   </div>
   <div class="note-block"><div id="sum-top-companies"></div></div>
 
-  <div class="sec-h" style="margin-top:20px"><span class="k">07</span><h2>Approved, Not Yet Booked</h2><span class="hint">cleared the credit decision engine but never converted to a booked loan — a closing/follow-up gap, not a credit-risk one · own date range, independent of the filter above</span></div>
+  <div class="sec-h" style="margin-top:20px"><span class="k">07</span><h2>Approved, Not Yet Booked</h2><span class="hint">cleared the credit decision engine but never converted to a booked loan — a closing/follow-up gap, not a credit-risk one · within 29 days of approval (lapsed/expired approvals excluded) · own date range, independent of the filter above</span></div>
   <div class="datebar" style="margin-bottom:10px">
     <div class="dfield"><label>From</label><input type="date" id="anb-from"></div>
     <div class="dfield"><label>To</label><input type="date" id="anb-to"></div>
@@ -1502,6 +1502,7 @@ const RAWSTORE = {"n":848398,"dates":["2025-10-06","2025-10-07","2025-10-08","20
       const ds=DTS[sd[i]];
       if(!ds||ds<fromA||ds>toA)continue;
       const age=Math.round((asOfMs-new Date(ds+'T00:00:00Z').getTime())/86400000);
+      if(age>29)continue; // lapsed -- approval validity window is 29 days, exclude stale/expired approvals
       const paid=isPaidApp(i);
       totalCount++; totalAge+=age; if(paid)totalPaid++;
       const name=VE[emp[i]];
@@ -1546,11 +1547,12 @@ const RAWSTORE = {"n":848398,"dates":["2025-10-06","2025-10-07","2025-10-08","20
       if(VD[de[i]]!=='A')continue;
       const ds=DTS[sd[i]];
       if(!ds||ds<fromA||ds>toA)continue;
+      const age=Math.round((asOfMs-new Date(ds+'T00:00:00Z').getTime())/86400000);
+      if(age>29)continue; // lapsed -- approval validity window is 29 days, exclude stale/expired approvals
       const sector=VE[emp[i]];
       if(sectorName!=null && sector!==sectorName)continue;
       totalMatched++;
       if(out.length>=ANB_DETAIL_CAP)continue;
-      const age=Math.round((asOfMs-new Date(ds+'T00:00:00Z').getTime())/86400000);
       out.push({
         stagingId:getStagingId(i), submitted:ds, daysStale:age, company:VC[co[i]],
         sector, region:VRe[RS.region[i]], store:VSt[RS.store[i]],
