@@ -301,7 +301,7 @@ const DIMCOL_MAP = {
   dbr: 'CurrentDBRBand'
 };
 const LONGCOL_MAP = { store: 'StoreName', city: 'CITY', natdetail: 'NATIONALITY' };
-const EXTRA_DIMS = { de_decision: 'DE_Decision', referreasons: 'referreasons', gosi: 'Is_GOSI_Called', mof: 'Is_MOF_Called', dec: 'SimplifiedDeclinedReason' };
+const EXTRA_DIMS = { de_decision: 'DE_Decision', referreasons: 'referreasons', gosi: 'Is_GOSI_Called', mof: 'Is_MOF_Called', dec: 'SimplifiedDeclinedReason', status: 'Altitudestatus' };
 
 // Smart Finance: the column holds reason-text when flagged, blank otherwise.
 function smartVal(r) { return String(r['SmartFinance'] || '').trim() !== '' ? 'Smart Finance' : 'Normal'; }
@@ -506,7 +506,7 @@ function addCol(name, arr, type) {
 addCol('flags', flags, 'b');
 addCol('sday', sday, 'h');
 addCol('bday', bday, 'h');
-const dimOrder = ['region', 'employer', 'nationality', 'income', 'risk', 'simah', 'age', 'gender', 'marital', 'product', 'source', 'scoreband', 'dbr', 'store', 'city', 'natdetail', 'de_decision', 'referreasons', 'gosi', 'mof', 'dec', 'smart', 'incband15', 'company'];
+const dimOrder = ['region', 'employer', 'nationality', 'income', 'risk', 'simah', 'age', 'gender', 'marital', 'product', 'source', 'scoreband', 'dbr', 'store', 'city', 'natdetail', 'de_decision', 'referreasons', 'gosi', 'mof', 'dec', 'smart', 'incband15', 'company', 'status'];
 dimOrder.forEach(k => addCol(k, dimCols[k], 'b'));
 addCol('civIdx', civIdx, 'i');
 addCol('stagingId', stagingIdBytes, 'b');
