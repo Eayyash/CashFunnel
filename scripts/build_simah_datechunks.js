@@ -480,7 +480,31 @@ if (!fs.existsSync(CHUNK_DIR)) fs.mkdirSync(CHUNK_DIR, { recursive: true });
     catch (e) { console.warn(`  WARNING: could not parse existing ${fname} (${e.message}) -- starting fresh for this date`); }
   }
   const combined = existingRecs.concat(newRecs);
-  fs.writeFileSync(fp, JSON.stringify(combined));
+  // Write via temp-file + rename rather than fs.writeFileSync(fp, ...) directly.
+  // Confirmed 2026-09-15: writeFileSync's in-place truncate on this OneDrive-synced
+  // folder intermittently fails with UNKNOWN/ftruncate right after a neighboring
+  // chunk file was just written (OneDrive's sync engine briefly holds a lock that
+  // blocks truncation specifically, even though a plain open/read on the same file
+  // succeeds) -- this crashed the whole run partway through the sorted date list,
+  // every single time, always on the file immediately after the one just written.
+  // Writing to a fresh temp file (a plain create, never a truncate of a synced
+  // file) then renaming over the target sidesteps the lock entirely.
+  const tmp = `${fp}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify(combined));
+  // The rename itself can also transiently EPERM on this OneDrive-synced folder
+  // (confirmed 2026-09-15, right after the temp write succeeded) -- retry a few
+  // times with a short pause rather than crashing the whole run. Safe to retry:
+  // renameSync either fully succeeds or leaves the original fp untouched.
+  for (let attempt = 1; ; attempt++) {
+    try { fs.renameSync(tmp, fp); break; }
+    catch (e) {
+      if (attempt >= 5) throw e;
+      const waitMs = attempt * 500;
+      console.warn(`  ${fname}: rename attempt ${attempt} failed (${e.code}), retrying in ${waitMs}ms…`);
+      const until = Date.now() + waitMs;
+      while (Date.now() < until) { /* busy-wait: this script has no async loop */ }
+    }
+  }
   manifestByDate.set(date, { date, count: combined.length, file: `simah_data/${fname}` });
   console.log(`  ${fname}: ${existingRecs.length} existing + ${newRecs.length} new = ${combined.length}`);
 });
