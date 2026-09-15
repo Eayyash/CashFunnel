@@ -45,51 +45,12 @@ td.num,th.num{text-align:right;font-family:'JetBrains Mono'}
 .bar{height:100%;background:linear-gradient(90deg,var(--cyan),var(--cyan-d));border-radius:6px}
 .foot{text-align:center;color:var(--faint);font-size:11px;font-family:'JetBrains Mono';padding:22px}
 .tablewrap{overflow-x:auto}
-#login-gate{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
-#login-gate .box{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:32px 30px;max-width:380px;width:100%;box-shadow:0 10px 40px -12px rgba(20,30,50,.25);text-align:center}
-#login-gate .logo{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--gold),var(--gold-d));margin:0 auto 14px}
-#login-gate h1{font-size:17px;margin:0 0 4px;color:var(--ink)}
-#login-gate p{font-size:12.5px;color:var(--muted);margin:0 0 20px}
-#login-gate input{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--line2);border-radius:9px;background:var(--panel2);color:var(--ink);font-family:'Space Grotesk',sans-serif;font-size:13.5px;margin-bottom:10px}
-#login-gate input:focus{outline:none;border-color:var(--cyan)}
-#login-gate button{width:100%;padding:10px 12px;border:none;border-radius:9px;background:linear-gradient(var(--gold),var(--gold-d));color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:'Space Grotesk',sans-serif}
-#login-gate .err{color:#c0392b;font-size:12px;margin-top:10px;display:none}
-#login-gate.hidden{display:none}
-body.gate-locked>*:not(#login-gate){display:none!important}
+.camp-block{margin-bottom:22px}
+.camp-block:last-child{margin-bottom:0}
+.camp-block h3{font-size:13px;margin:0 0 10px;font-family:'Space Grotesk';display:flex;align-items:center;gap:8px}
+.camp-block h3 .n{font-size:10px;color:var(--faint);font-weight:400;font-family:'JetBrains Mono'}
 </style></head>
-<body class="gate-locked">
-<div id="login-gate">
-  <div class="box">
-    <div class="logo"></div>
-    <h1>SMS Analyzer</h1>
-    <p>Enter your Tasheel Finance email to view this dashboard.</p>
-    <input type="email" id="gate-email" placeholder="Enter your email" autocomplete="email">
-    <button id="gate-btn">Continue</button>
-    <div class="err" id="gate-err">That email isn't on the access list. Contact Emad Ayyash for access.</div>
-  </div>
-</div>
-<script>
-(function(){
-  var ALLOWED=['emad.ayyash@tasheelfinance.com','muhammad.akram@tasheelfinance.com','omar.hassan@tasheelfinance.com','mostafa.ashour@tasheelfinance.com','abdallah.elmasry@tasheelfinance.com','partha.dev@tasheelfinance.com','imad_ayyash@hotmail.com','ali.jaber@tasheelfinance.com','ali.abdelmuhsin@tasheelfinance.com'];
-  var LSKEY='tasheel_sms_gate_email';
-  function unlock(){document.body.classList.remove('gate-locked');document.getElementById('login-gate').classList.add('hidden');}
-  function tryEmail(raw){
-    var e=(raw||'').trim().toLowerCase();
-    if(ALLOWED.indexOf(e)!==-1){try{localStorage.setItem(LSKEY,e);}catch(err){}unlock();return true;}
-    return false;
-  }
-  var saved=null;
-  try{saved=localStorage.getItem(LSKEY);}catch(err){}
-  if(saved && tryEmail(saved)){/* unlocked */}
-  document.getElementById('gate-btn').addEventListener('click',function(){
-    var val=document.getElementById('gate-email').value;
-    if(!tryEmail(val)){document.getElementById('gate-err').style.display='block';}
-  });
-  document.getElementById('gate-email').addEventListener('keydown',function(e){
-    if(e.key==='Enter')document.getElementById('gate-btn').click();
-  });
-})();
-</script>
+<body>
 <header>
   <div class="hleft">
     <div class="logo"></div>
@@ -101,8 +62,8 @@ body.gate-locked>*:not(#login-gate){display:none!important}
 <div class="hint" id="source-hint"></div>
 
 <div class="section">
-  <div class="sec-h"><h2>Overall</h2><span class="n">this export</span></div>
-  <div class="kpis" id="overall-kpis"></div>
+  <div class="sec-h"><h2>Overall</h2><span class="n">this export · by campaign</span></div>
+  <div id="overall-kpis"></div>
 </div>
 
 <div class="section">
@@ -119,7 +80,7 @@ body.gate-locked>*:not(#login-gate){display:none!important}
 </main>
 <div class="foot">Built for <a href="https://www.linkedin.com/in/emadayyash" target="_blank">Emad Ayyash</a> · Tasheel Finance</div>
 <script>
-const SMS_DATA = {"meta":{"sourceFile":"SMS_Campaign_2026-09-14.xlsx","generatedAt":"2026-09-15T07:18:07.370Z","totalRows":3292,"deliveredMin":"2026-08-05","deliveredMax":"2026-08-19"},"overall":{"submitted":3292,"submittedToMaster":1455,"approved":488,"booked":407,"bookedAmount":7523479,"cancelled":214,"declined":206},"campaigns":{"ABNB":{"submitted":3017,"submittedToMaster":1304,"approved":432,"booked":359,"bookedAmount":6621080,"cancelled":195,"declined":177,"byDate":{"2026-08-05":2701,"2026-08-19":316},"statusBreakdown":{"Completed [C]":359,"Cancelled [X]":195,"Lapsed [L]":73,"Declined [D]":177,"Sales Vetting":85,"(not submitted to master)":1713,"Abandoned [B]":272,"Incomplete [I]":69,"Offered [F]":33,"Promissory Note Expired":1,"Pending Nafath Authorization":10,"Pending Contract Signature [G]":5,"Withdrawn [W]":23,"Pending CITC Verification":1,"Approval Call Process Completed":1}},"MultipleLoans":{"submitted":275,"submittedToMaster":151,"approved":56,"booked":48,"bookedAmount":902399,"cancelled":19,"declined":29,"byDate":{"2026-08-12":275},"statusBreakdown":{"Completed [C]":48,"Incomplete [I]":5,"(not submitted to master)":124,"Abandoned [B]":35,"Declined [D]":29,"Cancelled [X]":19,"Withdrawn [W]":6,"Pending Manual Promissory Note [K]":1,"Sales Vetting":6,"Lapsed [L]":1,"Offered [F]":1}}},"summaryTrend":[{"month":202606,"campaign":"ABNB","duration":"5-19 June 26","submissions":3079,"approvals":444,"bookings":1345},{"month":202606,"campaign":"MultipleLoans","duration":"12-12 June 26","submissions":212,"approvals":45,"bookings":75},{"month":202607,"campaign":"MultipleLoans","duration":"12-12 July 26","submissions":2,"approvals":0,"bookings":0},{"month":202608,"campaign":"ABNB","duration":"5-19 August 26","submissions":3004,"approvals":431,"bookings":1299},{"month":202608,"campaign":"MultipleLoans","duration":"12-12 August 26","submissions":275,"approvals":56,"bookings":151}]};
+const SMS_DATA = {"meta":{"sourceFile":"SMS_Campaign_2026-09-14.xlsx","generatedAt":"2026-09-15T07:23:40.808Z","totalRows":3292,"deliveredMin":"2026-08-05","deliveredMax":"2026-08-19"},"overall":{"submitted":3292,"submittedToMaster":1455,"approved":488,"booked":407,"bookedAmount":7523479,"cancelled":214,"declined":206},"campaigns":{"ABNB":{"submitted":3017,"submittedToMaster":1304,"approved":432,"booked":359,"bookedAmount":6621080,"cancelled":195,"declined":177,"byDate":{"2026-08-05":2701,"2026-08-19":316},"statusBreakdown":{"Completed [C]":359,"Cancelled [X]":195,"Lapsed [L]":73,"Declined [D]":177,"Sales Vetting":85,"(not submitted to master)":1713,"Abandoned [B]":272,"Incomplete [I]":69,"Offered [F]":33,"Promissory Note Expired":1,"Pending Nafath Authorization":10,"Pending Contract Signature [G]":5,"Withdrawn [W]":23,"Pending CITC Verification":1,"Approval Call Process Completed":1}},"MultipleLoans":{"submitted":275,"submittedToMaster":151,"approved":56,"booked":48,"bookedAmount":902399,"cancelled":19,"declined":29,"byDate":{"2026-08-12":275},"statusBreakdown":{"Completed [C]":48,"Incomplete [I]":5,"(not submitted to master)":124,"Abandoned [B]":35,"Declined [D]":29,"Cancelled [X]":19,"Withdrawn [W]":6,"Pending Manual Promissory Note [K]":1,"Sales Vetting":6,"Lapsed [L]":1,"Offered [F]":1}}},"summaryTrend":[{"month":202606,"campaign":"ABNB","duration":"5-19 June 26","submissions":3079,"approvals":444,"bookings":1345},{"month":202606,"campaign":"MultipleLoans","duration":"12-12 June 26","submissions":212,"approvals":45,"bookings":75},{"month":202607,"campaign":"MultipleLoans","duration":"12-12 July 26","submissions":2,"approvals":0,"bookings":0},{"month":202608,"campaign":"ABNB","duration":"5-19 August 26","submissions":3004,"approvals":431,"bookings":1299},{"month":202608,"campaign":"MultipleLoans","duration":"12-12 August 26","submissions":275,"approvals":56,"bookings":151}]};
 
 function fmt(n){ return (n==null||isNaN(n))?'—':Math.round(n).toLocaleString(); }
 function money(n){ return (n==null||isNaN(n))?'—':'SAR '+Math.round(n).toLocaleString(); }
@@ -137,20 +98,27 @@ function render(){
     `Source: ${d.meta.sourceFile} · ${fmt(d.meta.totalRows)} applications · SMS delivered ${d.meta.deliveredMin} → ${d.meta.deliveredMax}`;
 
   // Overall KPIs
-  const o = d.overall;
-  const rate = o.submitted ? (o.booked/o.submitted*100) : 0;
-  const toMasterRate = o.submitted ? (o.submittedToMaster/o.submitted*100) : 0;
-  const kpis = [
-    ['Applications Created', fmt(o.submitted), 'from SMS click-through'],
-    ['Submitted to Master', fmt(o.submittedToMaster), pct(toMasterRate)+' of created'],
-    ['Final Approved', fmt(o.approved), 'FinalApprovalFlag = Y'],
-    ['Booked', fmt(o.booked), pct(rate)+' of created'],
-    ['Booked Value', money(o.bookedAmount), 'total ItemValue'],
-    ['Cancelled', fmt(o.cancelled), ''],
-  ];
-  document.getElementById('overall-kpis').innerHTML = kpis.map(([lab,big,sub])=>
-    `<div class="card"><div class="lab">${lab}</div><div class="big">${big}</div><div class="sub">${sub}</div></div>`
+  function kpiBlock(b, total){
+    const rate = b.submitted ? (b.booked/b.submitted*100) : 0;
+    const toMasterRate = b.submitted ? (b.submittedToMaster/b.submitted*100) : 0;
+    const kpis = [
+      ['Applications Created', fmt(b.submitted), 'from SMS click-through'],
+      ['Submitted to Master', fmt(b.submittedToMaster), pct(toMasterRate)+' of created'],
+      ['Final Approved', fmt(b.approved), 'FinalApprovalFlag = Y'],
+      ['Booked', fmt(b.booked), pct(rate)+' of created'],
+      ['Booked Value', money(b.bookedAmount), 'total ItemValue'],
+      ['Cancelled', fmt(b.cancelled), ''],
+    ];
+    return `<div class="kpis">${kpis.map(([lab,big,sub])=>
+      `<div class="card"><div class="lab">${lab}</div><div class="big">${big}</div><div class="sub">${sub}</div></div>`
+    ).join('')}</div>`;
+  }
+  const campNamesForKpi = Object.keys(d.campaigns).sort((a,b)=>d.campaigns[b].submitted-d.campaigns[a].submitted);
+  let overallHtml = `<div class="camp-block"><h3>All Campaigns <span class="n">combined</span></h3>${kpiBlock(d.overall)}</div>`;
+  overallHtml += campNamesForKpi.map(name =>
+    `<div class="camp-block"><h3>${name}</h3>${kpiBlock(d.campaigns[name])}</div>`
   ).join('');
+  document.getElementById('overall-kpis').innerHTML = overallHtml;
 
   // Campaign table
   const campNames = Object.keys(d.campaigns).sort((a,b)=>d.campaigns[b].submitted-d.campaigns[a].submitted);

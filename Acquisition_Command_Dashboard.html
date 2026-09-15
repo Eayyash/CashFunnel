@@ -203,39 +203,7 @@ select.dd-filter:focus{outline:none;border-color:var(--cyan)}
 #login-gate.hidden{display:none}
 body.gate-locked>*:not(#login-gate){display:none!important}
 </style></head>
-<body class="gate-locked">
-<div id="login-gate">
-  <div class="box">
-    <div class="logo"></div>
-    <h1>Acquisition Command</h1>
-    <p>Enter your Tasheel Finance email to view this dashboard.</p>
-    <input type="email" id="gate-email" placeholder="Enter your email" autocomplete="email">
-    <button id="gate-btn">Continue</button>
-    <div class="err" id="gate-err">That email isn't on the access list. Contact Emad Ayyash for access.</div>
-  </div>
-</div>
-<script>
-(function(){
-  var ALLOWED=['emad.ayyash@tasheelfinance.com','muhammad.akram@tasheelfinance.com','omar.hassan@tasheelfinance.com','mostafa.ashour@tasheelfinance.com','abdallah.elmasry@tasheelfinance.com','partha.dev@tasheelfinance.com','imad_ayyash@hotmail.com','ali.jaber@tasheelfinance.com','ali.abdelmuhsin@tasheelfinance.com'];
-  var LSKEY='tasheel_acq_gate_email';
-  function unlock(){document.body.classList.remove('gate-locked');document.getElementById('login-gate').classList.add('hidden');}
-  function tryEmail(raw){
-    var e=(raw||'').trim().toLowerCase();
-    if(ALLOWED.indexOf(e)!==-1){try{localStorage.setItem(LSKEY,e);}catch(err){}unlock();return true;}
-    return false;
-  }
-  var saved=null;
-  try{saved=localStorage.getItem(LSKEY);}catch(err){}
-  if(saved && tryEmail(saved)){/* unlocked */}
-  document.getElementById('gate-btn').addEventListener('click',function(){
-    var val=document.getElementById('gate-email').value;
-    if(!tryEmail(val)){document.getElementById('gate-err').style.display='block';}
-  });
-  document.getElementById('gate-email').addEventListener('keydown',function(e){
-    if(e.key==='Enter')document.getElementById('gate-btn').click();
-  });
-})();
-</script>
+<body>
 <header>
   <div class="hrow">
     <div class="brand"><div class="logo"></div>
