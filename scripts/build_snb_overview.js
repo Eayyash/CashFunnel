@@ -94,14 +94,34 @@ shell = shell.replace(
 shell = shell.replace(
   '<div class="foot" id="foot"></div>',
   `<section class="panel-tab" id="custinfo">
-  <div class="sec-h"><span class="k">08</span><h2>Customer Info</h2><span class="hint">booked applications use the range filter above · Pending Final Approval is a live snapshot, not affected by the range filter</span></div>
+  <div class="sec-h"><span class="k">08</span><h2>Customer Info</h2><span class="hint">Booked Applications has its own date range below (defaults to All, independent of the filter above) · Pending Final Approval is a live snapshot, not affected by any date filter</span></div>
 
   <div class="sec-h" style="margin-top:8px"><span class="k">BOOKED</span><h2>Booked Applications — Customer Info</h2><span class="hint" id="ci-booked-hint"></span></div>
+  <div class="datebar" style="margin-bottom:10px">
+    <div class="dfield"><label>From</label><input type="date" id="ci-booked-from"></div>
+    <div class="dfield"><label>To</label><input type="date" id="ci-booked-to"></div>
+    <div class="presets" id="ci-booked-presets">
+      <button data-r="all" class="on">All</button>
+      <button data-r="mtd">This month</button>
+      <button data-r="7d">Last 7 days</button>
+      <button data-r="sync">Match page range</button>
+    </div>
+  </div>
   <div class="grid k7" id="ci-booked-kpis" style="margin-bottom:12px"></div>
+  <div class="controls">
+    <input type="text" id="ci-booked-search" placeholder="Search Staging ID, employer, nationality, city…" style="border:1px solid var(--line2);background:var(--panel);color:var(--ink2);font-family:'Space Grotesk',sans-serif;font-size:12px;padding:6px 10px;border-radius:8px;min-width:260px">
+    <button id="ci-booked-reset" class="btn" style="padding:6px 12px;font-size:12px">Reset</button>
+    <span class="hint" id="ci-booked-count"></span>
+  </div>
   <div id="ci-booked-table" style="overflow-x:auto"></div>
 
   <div class="sec-h" style="margin-top:26px"><span class="k">PENDING</span><h2>Pending Final Approval — Customer Info</h2><span class="hint">not affected by the range filter above</span></div>
   <div class="grid k7" id="ci-pfa-kpis" style="margin-bottom:12px"></div>
+  <div class="controls">
+    <input type="text" id="ci-pfa-search" placeholder="Search Staging ID, employer, nationality, city…" style="border:1px solid var(--line2);background:var(--panel);color:var(--ink2);font-family:'Space Grotesk',sans-serif;font-size:12px;padding:6px 10px;border-radius:8px;min-width:260px">
+    <button id="ci-pfa-reset" class="btn" style="padding:6px 12px;font-size:12px">Reset</button>
+    <span class="hint" id="ci-pfa-count"></span>
+  </div>
   <div id="ci-pfa-table" style="overflow-x:auto"></div>
 </section>
 <div class="foot" id="foot"></div>`
@@ -242,19 +262,74 @@ function ciKpis(count,total,label1,label2){
   return [['Applications',fmt(count),label1],['Total value',money(total),label2]]
     .map(x=>'<div class="card kpi"><div class="lab">'+x[0]+'</div><div class="big" style="font-size:21px">'+x[1]+'</div><div class="cap" style="color:var(--faint);font-size:10px">'+x[2]+'</div></div>').join('');
 }
+// Booked Applications gets its OWN date range, independent of the page's
+// main RANGE (which defaults to just "Yesterday") -- same convention as
+// ANB_RANGE for "Approved, Not Yet Booked" above. Confirmed 2026-09-16:
+// defaulting this to the shared RANGE made the section show "0
+// applications" on a typical page load (SNB booking volume is a small
+// daily trickle, so a single-day window is very often empty) even though
+// the underlying calculation was correct for that narrow window -- looked
+// like a bug, wasn't one. Defaulting to All fixes that.
+let CI_BOOKED_RANGE={from:cD.meta.min,to:cD.meta.max};
+function setCIBookedDateInputs(){const f=document.getElementById('ci-booked-from'),t=document.getElementById('ci-booked-to');
+  if(!f||!t)return;f.min=t.min=cD.meta.min;f.max=t.max=cD.meta.max;f.value=CI_BOOKED_RANGE.from;t.value=CI_BOOKED_RANGE.to;}
+function applyCIBookedPreset(r){const mn=cD.meta.min,mx=cD.meta.max,mxD=parseD(mx);
+  const mxCap=capToYesterday(mx);
+  if(r==='sync')CI_BOOKED_RANGE={from:RANGE.from,to:RANGE.to};
+  else if(r==='mtd'){const first=ymd(new Date(mxD.getFullYear(),mxD.getMonth(),1));CI_BOOKED_RANGE={from:first<mn?mn:first,to:mxCap};}
+  else if(r==='7d')CI_BOOKED_RANGE={from:addDays(mxCap,-6)<mn?mn:addDays(mxCap,-6),to:mxCap};
+  else CI_BOOKED_RANGE={from:mn,to:mx};
+  setCIBookedDateInputs();renderCustomerInfo();}
+document.querySelectorAll('#ci-booked-presets button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#ci-booked-presets button').forEach(x=>x.classList.remove('on'));b.classList.add('on');applyCIBookedPreset(b.dataset.r);}));
+function onCIBookedDateChange(){const f=document.getElementById('ci-booked-from').value,t=document.getElementById('ci-booked-to').value;
+  if(!f||!t)return;CI_BOOKED_RANGE={from:f<=t?f:t,to:f<=t?t:f};document.querySelectorAll('#ci-booked-presets button').forEach(x=>x.classList.remove('on'));renderCustomerInfo();}
+document.getElementById('ci-booked-from').addEventListener('change',onCIBookedDateChange);
+document.getElementById('ci-booked-to').addEventListener('change',onCIBookedDateChange);
+setCIBookedDateInputs();
+
+// Search filter for Booked/PFA tables (added 2026-09-15, matching the
+// Reconcile table's search-box pattern) -- filters the already-computed
+// row set client-side by a free-text match across the identifying/
+// demographic fields, no re-query of RAWSTORE needed.
+let CI_BOOKED_ROWS=[], CI_PFA_ROWS=[];
+function ciMatchesSearch(r,q){
+  if(!q)return true;
+  return [r.stagingId,r.employer,r.nationality,r.city,r.region,r.store,r.product,r.status]
+    .some(v=>String(v||'').toLowerCase().includes(q));
+}
+function ciApplyBookedFilter(){
+  const q=(document.getElementById('ci-booked-search').value||'').trim().toLowerCase();
+  const rows=CI_BOOKED_ROWS.filter(r=>ciMatchesSearch(r,q));
+  const total=rows.reduce((s,r)=>s+(r.amount||0),0);
+  document.getElementById('ci-booked-kpis').innerHTML=ciKpis(rows.length,total,'in selected range','SAR');
+  document.getElementById('ci-booked-table').innerHTML=ciTable(rows,true);
+  document.getElementById('ci-booked-count').textContent=fmt(rows.length)+' of '+fmt(CI_BOOKED_ROWS.length)+' shown'+(rows.length>CI_CAP?' · table capped at '+fmt(CI_CAP):'');
+}
+function ciApplyPfaFilter(){
+  const q=(document.getElementById('ci-pfa-search').value||'').trim().toLowerCase();
+  const rows=CI_PFA_ROWS.filter(r=>ciMatchesSearch(r,q));
+  const total=rows.reduce((s,r)=>s+(r.amount||0),0);
+  document.getElementById('ci-pfa-kpis').innerHTML=ciKpis(rows.length,total,'live snapshot','SAR');
+  document.getElementById('ci-pfa-table').innerHTML=ciTable(rows,false);
+  document.getElementById('ci-pfa-count').textContent=fmt(rows.length)+' of '+fmt(CI_PFA_ROWS.length)+' shown'+(rows.length>CI_CAP?' · table capped at '+fmt(CI_CAP):'');
+}
+document.getElementById('ci-booked-search').addEventListener('input',ciApplyBookedFilter);
+document.getElementById('ci-booked-reset').addEventListener('click',()=>{document.getElementById('ci-booked-search').value='';ciApplyBookedFilter();});
+document.getElementById('ci-pfa-search').addEventListener('input',ciApplyPfaFilter);
+document.getElementById('ci-pfa-reset').addEventListener('click',()=>{document.getElementById('ci-pfa-search').value='';ciApplyPfaFilter();});
+
 function renderCustomerInfo(){
   if(!window.__engine||!window.__engine.customerInfoRows)return;
-  const bookedRows=window.__engine.customerInfoRows('booked',RANGE.from,RANGE.to);
-  const pfaRows=window.__engine.customerInfoRows('pfa',null,null);
+  CI_BOOKED_ROWS=window.__engine.customerInfoRows('booked',CI_BOOKED_RANGE.from,CI_BOOKED_RANGE.to);
+  CI_PFA_ROWS=window.__engine.customerInfoRows('pfa',null,null);
 
-  document.getElementById('ci-booked-hint').textContent=prettyD(RANGE.from)+'–'+prettyD(RANGE.to)+(bookedRows.length>CI_CAP?' · showing first '+fmt(CI_CAP)+' of '+fmt(bookedRows.length):'');
-  const bookedTotal=bookedRows.reduce((s,r)=>s+(r.amount||0),0);
-  document.getElementById('ci-booked-kpis').innerHTML=ciKpis(bookedRows.length,bookedTotal,'in selected range','SAR');
-  document.getElementById('ci-booked-table').innerHTML=ciTable(bookedRows,true);
+  document.getElementById('ci-booked-hint').textContent=prettyD(CI_BOOKED_RANGE.from)+'–'+prettyD(CI_BOOKED_RANGE.to)+' · own date range, independent of the filter above'+(CI_BOOKED_ROWS.length>CI_CAP?' · showing first '+fmt(CI_CAP)+' of '+fmt(CI_BOOKED_ROWS.length):'');
+  document.getElementById('ci-booked-search').value='';
+  ciApplyBookedFilter();
 
-  const pfaTotal=pfaRows.reduce((s,r)=>s+(r.amount||0),0);
-  document.getElementById('ci-pfa-kpis').innerHTML=ciKpis(pfaRows.length,pfaTotal,'live snapshot','SAR');
-  document.getElementById('ci-pfa-table').innerHTML=ciTable(pfaRows,false);
+  document.getElementById('ci-pfa-search').value='';
+  ciApplyPfaFilter();
 }
 
 // Reconciliation table filter (added 2026-09-16) -- static data (computed
