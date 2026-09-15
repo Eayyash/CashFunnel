@@ -160,49 +160,7 @@ shell = shell.replace(
   'topCompanies,approvedNotBooked,approvedNotBookedDetail,customerInfoRows};'
 );
 
-// Rendering lives in the SAME (non-IIFE) top-level scope as RANGE/money/
-// fmt/prettyD/rendered/the tab-click wiring, so those are all directly
-// available here -- only the RS-touching row computation had to cross the
-// window.__engine bridge above. esc() lives in yet a THIRD, separate IIFE
-// (not reachable from here either), so this defines its own tiny escaper
-// rather than reach for that one.
-shell = shell.replace(
-  '/* ============ tabs ============ */',
-  `/* ============ Customer Info (SNB only) ============ */
-const CI_CAP=500;
-function ciEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function ciTable(rows,showBooked){
-  if(!rows.length) return '<p class="cap">No applications found.</p>';
-  let h='<table class="dt"><thead><tr><th>Staging ID</th><th>Submitted</th>'+(showBooked?'<th>Booked</th>':'')+'<th>Status</th><th class="num">Amount</th><th>Employer</th><th>Nationality</th><th>Age</th><th>Gender</th><th>Marital</th><th>Income</th><th>City</th><th>Region</th><th>Store</th><th>Product</th><th>Score</th><th>DBR</th><th>SIMAH</th></tr></thead><tbody>';
-  rows.slice(0,CI_CAP).forEach(r=>{
-    h+='<tr><td>'+ciEsc(r.stagingId||'—')+'</td><td>'+prettyD(r.submitted)+'</td>'+(showBooked?'<td>'+(r.booked?prettyD(r.booked):'—')+'</td>':'')+
-      '<td>'+ciEsc(r.status)+'</td><td class="num">'+money(r.amount)+'</td><td>'+ciEsc(r.employer)+'</td><td>'+ciEsc(r.nationality)+'</td><td>'+ciEsc(r.age)+'</td><td>'+ciEsc(r.gender)+'</td><td>'+ciEsc(r.marital)+'</td><td>'+ciEsc(r.income)+'</td><td>'+ciEsc(r.city)+'</td><td>'+ciEsc(r.region)+'</td><td>'+ciEsc(r.store)+'</td><td>'+ciEsc(r.product)+'</td><td>'+ciEsc(r.scoreband)+'</td><td>'+ciEsc(r.dbr)+'</td><td>'+ciEsc(r.simah)+'</td></tr>';
-  });
-  return h+'</tbody></table>';
-}
-function ciKpis(count,total,label1,label2){
-  return [['Applications',fmt(count),label1],['Total value',money(total),label2]]
-    .map(x=>'<div class="card kpi"><div class="lab">'+x[0]+'</div><div class="big" style="font-size:21px">'+x[1]+'</div><div class="cap" style="color:var(--faint);font-size:10px">'+x[2]+'</div></div>').join('');
-}
-function renderCustomerInfo(){
-  if(!window.__engine||!window.__engine.customerInfoRows)return;
-  const bookedRows=window.__engine.customerInfoRows('booked',RANGE.from,RANGE.to);
-  const pfaRows=window.__engine.customerInfoRows('pfa',null,null);
-
-  document.getElementById('ci-booked-hint').textContent=prettyD(RANGE.from)+'–'+prettyD(RANGE.to)+(bookedRows.length>CI_CAP?' · showing first '+fmt(CI_CAP)+' of '+fmt(bookedRows.length):'');
-  const bookedTotal=bookedRows.reduce((s,r)=>s+(r.amount||0),0);
-  document.getElementById('ci-booked-kpis').innerHTML=ciKpis(bookedRows.length,bookedTotal,'in selected range','SAR');
-  document.getElementById('ci-booked-table').innerHTML=ciTable(bookedRows,true);
-
-  const pfaTotal=pfaRows.reduce((s,r)=>s+(r.amount||0),0);
-  document.getElementById('ci-pfa-kpis').innerHTML=ciKpis(pfaRows.length,pfaTotal,'live snapshot','SAR');
-  document.getElementById('ci-pfa-table').innerHTML=ciTable(pfaRows,false);
-}
-
-/* ============ tabs ============ */`
-);
-
-// --- Step 1c: Civil ID reconciliation list (added 2026-09-16, per explicit
+// --- Civil ID reconciliation list (added 2026-09-16, per explicit
 // request) -- a fixed, hand-provided list of Civil IDs, checked against
 // whether each currently has an SNB application in Pending Final Approval.
 // For the ones that don't ("missing" -- confirmed via clarifying question
@@ -212,7 +170,9 @@ function renderCustomerInfo(){
 // just an absence. Recomputed fresh from live data every run (so this
 // evolves as these specific applications move through the pipeline) --
 // edit CIVIL_ID_RECONCILE_LIST below to change the set, or delete this
-// block entirely to remove the feature.
+// block entirely to remove the feature. Computed here (before the JS
+// injection below) so its result can be embedded directly as data for the
+// filter UI added 2026-09-16.
 const CIVIL_ID_RECONCILE_LIST = [
   '1028721742','1086461272','1121040180','1105548224','2300158579','1071945230',
   '2218898399','1063625816','2498747290','2563385133','1015706979','1102306659',
@@ -254,20 +214,96 @@ function buildReconcileTable() {
   });
 
   console.log(`Civil ID reconciliation: ${missing.length} of ${CIVIL_ID_RECONCILE_LIST.length} not currently SNB Pending Final Approval`);
-
-  const rowsHtml = missing.map(m => `<tr>
-    <td>${m.civilId}</td>
-    <td>${m.stagingId || '—'}</td>
-    <td>${m.status}</td>
-    <td>${m.region || '—'}</td>
-    <td>${m.submitted || '—'}</td>
-    <td>${m.otherApps ? m.otherApps + ' other application(s)' : ''}</td>
-  </tr>`).join('');
-  return `
-  <div class="sec-h" style="margin-top:26px"><span class="k">RECONCILE</span><h2>Provided Civil IDs — not currently SNB Pending Final Approval</h2><span class="hint">${missing.length} of ${CIVIL_ID_RECONCILE_LIST.length} provided Civil IDs · Staging ID + current status shown for context · recomputed fresh from live data on every rebuild</span></div>
-  <table class="dt"><thead><tr><th>Civil ID</th><th>Staging ID</th><th>Current Status</th><th>Sales Region</th><th>Submitted</th><th>Note</th></tr></thead><tbody>${rowsHtml}</tbody></table>`;
+  return missing;
 }
-const reconcileHtml = buildReconcileTable();
+const reconcileData = buildReconcileTable();
+
+// Rendering lives in the SAME (non-IIFE) top-level scope as RANGE/money/
+// fmt/prettyD/rendered/the tab-click wiring, so those are all directly
+// available here -- only the RS-touching row computation had to cross the
+// window.__engine bridge above. esc() lives in yet a THIRD, separate IIFE
+// (not reachable from here either), so this defines its own tiny escaper
+// rather than reach for that one.
+shell = shell.replace(
+  '/* ============ tabs ============ */',
+  `/* ============ Customer Info (SNB only) ============ */
+const CI_CAP=500;
+function ciEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function ciTable(rows,showBooked){
+  if(!rows.length) return '<p class="cap">No applications found.</p>';
+  let h='<table class="dt"><thead><tr><th>Staging ID</th><th>Submitted</th>'+(showBooked?'<th>Booked</th>':'')+'<th>Status</th><th class="num">Amount</th><th>Employer</th><th>Nationality</th><th>Age</th><th>Gender</th><th>Marital</th><th>Income</th><th>City</th><th>Region</th><th>Store</th><th>Product</th><th>Score</th><th>DBR</th><th>SIMAH</th></tr></thead><tbody>';
+  rows.slice(0,CI_CAP).forEach(r=>{
+    h+='<tr><td>'+ciEsc(r.stagingId||'—')+'</td><td>'+prettyD(r.submitted)+'</td>'+(showBooked?'<td>'+(r.booked?prettyD(r.booked):'—')+'</td>':'')+
+      '<td>'+ciEsc(r.status)+'</td><td class="num">'+money(r.amount)+'</td><td>'+ciEsc(r.employer)+'</td><td>'+ciEsc(r.nationality)+'</td><td>'+ciEsc(r.age)+'</td><td>'+ciEsc(r.gender)+'</td><td>'+ciEsc(r.marital)+'</td><td>'+ciEsc(r.income)+'</td><td>'+ciEsc(r.city)+'</td><td>'+ciEsc(r.region)+'</td><td>'+ciEsc(r.store)+'</td><td>'+ciEsc(r.product)+'</td><td>'+ciEsc(r.scoreband)+'</td><td>'+ciEsc(r.dbr)+'</td><td>'+ciEsc(r.simah)+'</td></tr>';
+  });
+  return h+'</tbody></table>';
+}
+function ciKpis(count,total,label1,label2){
+  return [['Applications',fmt(count),label1],['Total value',money(total),label2]]
+    .map(x=>'<div class="card kpi"><div class="lab">'+x[0]+'</div><div class="big" style="font-size:21px">'+x[1]+'</div><div class="cap" style="color:var(--faint);font-size:10px">'+x[2]+'</div></div>').join('');
+}
+function renderCustomerInfo(){
+  if(!window.__engine||!window.__engine.customerInfoRows)return;
+  const bookedRows=window.__engine.customerInfoRows('booked',RANGE.from,RANGE.to);
+  const pfaRows=window.__engine.customerInfoRows('pfa',null,null);
+
+  document.getElementById('ci-booked-hint').textContent=prettyD(RANGE.from)+'–'+prettyD(RANGE.to)+(bookedRows.length>CI_CAP?' · showing first '+fmt(CI_CAP)+' of '+fmt(bookedRows.length):'');
+  const bookedTotal=bookedRows.reduce((s,r)=>s+(r.amount||0),0);
+  document.getElementById('ci-booked-kpis').innerHTML=ciKpis(bookedRows.length,bookedTotal,'in selected range','SAR');
+  document.getElementById('ci-booked-table').innerHTML=ciTable(bookedRows,true);
+
+  const pfaTotal=pfaRows.reduce((s,r)=>s+(r.amount||0),0);
+  document.getElementById('ci-pfa-kpis').innerHTML=ciKpis(pfaRows.length,pfaTotal,'live snapshot','SAR');
+  document.getElementById('ci-pfa-table').innerHTML=ciTable(pfaRows,false);
+}
+
+// Reconciliation table filter (added 2026-09-16) -- static data (computed
+// at build time, not RAWSTORE-derived), so this runs immediately on page
+// load rather than waiting for the Customer Info tab to be clicked; the
+// table itself just sits invisible inside the hidden tab panel until then.
+const CI_RECONCILE_DATA=${JSON.stringify(reconcileData)};
+function ciRenderReconcile(){
+  const q=(document.getElementById('ci-rec-search').value||'').trim().toLowerCase();
+  const st=document.getElementById('ci-rec-status').value;
+  const filtered=CI_RECONCILE_DATA.filter(m=>{
+    if(q && !((m.civilId||'').toLowerCase().includes(q) || (m.stagingId||'').toLowerCase().includes(q))) return false;
+    if(st && m.status!==st) return false;
+    return true;
+  });
+  let h='<table class="dt"><thead><tr><th>Civil ID</th><th>Staging ID</th><th>Current Status</th><th>Sales Region</th><th>Submitted</th><th>Note</th></tr></thead><tbody>';
+  filtered.forEach(m=>{
+    h+='<tr><td>'+ciEsc(m.civilId)+'</td><td>'+ciEsc(m.stagingId||'—')+'</td><td>'+ciEsc(m.status)+'</td><td>'+ciEsc(m.region||'—')+'</td><td>'+ciEsc(m.submitted||'—')+'</td><td>'+(m.otherApps?m.otherApps+' other application(s)':'')+'</td></tr>';
+  });
+  h+='</tbody></table>';
+  if(!filtered.length) h='<p class="cap">No matching Civil IDs.</p>';
+  document.getElementById('ci-reconcile-table').innerHTML=h;
+  document.getElementById('ci-rec-count').textContent=fmt(filtered.length)+' of '+fmt(CI_RECONCILE_DATA.length)+' shown';
+}
+function ciInitReconcile(){
+  const statuses=[...new Set(CI_RECONCILE_DATA.map(m=>m.status))].sort();
+  const sel=document.getElementById('ci-rec-status');
+  statuses.forEach(s=>{const o=document.createElement('option'); o.value=s; o.textContent=s; sel.appendChild(o);});
+  document.getElementById('ci-rec-search').addEventListener('input',ciRenderReconcile);
+  sel.addEventListener('change',ciRenderReconcile);
+  document.getElementById('ci-rec-reset').addEventListener('click',()=>{document.getElementById('ci-rec-search').value='';sel.value='';ciRenderReconcile();});
+  ciRenderReconcile();
+}
+ciInitReconcile();
+
+/* ============ tabs ============ */`
+);
+
+// HTML for the reconciliation section (data already computed above, as
+// reconcileData, so both this markup and the embedded CI_RECONCILE_DATA
+// used by the filter JS come from the exact same computation).
+const reconcileHtml = `
+  <div class="sec-h" style="margin-top:26px"><span class="k">RECONCILE</span><h2>Provided Civil IDs — not currently SNB Pending Final Approval</h2><span class="hint" id="ci-rec-count">${reconcileData.length} of ${CIVIL_ID_RECONCILE_LIST.length} shown</span></div>
+  <div class="controls">
+    <input type="text" id="ci-rec-search" placeholder="Search Civil ID or Staging ID…" style="border:1px solid var(--line2);background:var(--panel);color:var(--ink2);font-family:'Space Grotesk',sans-serif;font-size:12px;padding:6px 10px;border-radius:8px;min-width:220px">
+    <select id="ci-rec-status" class="dd-filter"><option value="">All statuses</option></select>
+    <button id="ci-rec-reset" class="btn" style="padding:6px 12px;font-size:12px">Reset</button>
+  </div>
+  <div id="ci-reconcile-table"></div>`;
 shell = shell.replace(
   '<div id="ci-pfa-table" style="overflow-x:auto"></div>\n</section>',
   `<div id="ci-pfa-table" style="overflow-x:auto"></div>
