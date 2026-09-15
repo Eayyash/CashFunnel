@@ -173,6 +173,64 @@ function toYMD(v) {
   return isNaN(d) ? null : d.toISOString().slice(0, 10);
 }
 
+// --- "Booked, then Cancelled" (yesterday) -- cross-references against the
+// previous day's ARCHIVED raw daily snapshot (acquisitionArchiveDir) to
+// detect StagingIDs that were booked (Completed [C] / Pending Final
+// Approval) as of yesterday's pull but show Cancelled [X] in today's merged
+// data. Altitudestatus alone can't tell us this from a single snapshot --
+// it's overwritten on every status change, so a currently-Cancelled row
+// carries no trace of ever having been booked; SalesCompletedDate is also
+// no help, confirmed always blank once cancelled. Confirmed 2026-09-15 this
+// is a real but rare event (1 match across the last 14 archived days), so a
+// count of 0 on most days is expected, not a bug. Silently returns a zero
+// stat (never throws) if yesterday's archived file or pipeline.config.json
+// isn't found -- this is a bonus KPI, never worth failing the whole
+// dashboard build over.
+function computeBookedThenCancelledYesterday(dashboardRows) {
+  const empty = { count: 0, amount: 0, yesterday: null };
+  let maxDate = null;
+  dashboardRows.forEach(r => {
+    const d = toYMD(r['submitted']);
+    if (d && (!maxDate || d > maxDate)) maxDate = d;
+  });
+  if (!maxDate) return empty;
+  const dt = new Date(maxDate + 'T00:00:00Z');
+  dt.setUTCDate(dt.getUTCDate() - 1);
+  const yesterday = dt.toISOString().slice(0, 10);
+
+  let archiveDir;
+  try { archiveDir = require('./pipeline_config.js').loadConfig().acquisitionArchiveDir; }
+  catch (e) { return { ...empty, yesterday }; }
+  if (!archiveDir) return { ...empty, yesterday };
+
+  const candidates = [
+    path.join(archiveDir, `Acquisition_for_Loans_${yesterday}.csv`),
+    path.join(ROOT, `Acquisition_for_Loans_${yesterday}.csv`), // in case it hasn't been archived yet
+  ];
+  const yFile = candidates.find(p => fs.existsSync(p));
+  if (!yFile) return { ...empty, yesterday };
+
+  let yRows;
+  try { yRows = readCsv(yFile); } catch (e) { return { ...empty, yesterday }; }
+  const yBookedIds = new Set();
+  yRows.forEach(r => {
+    if (BOOKED_SET.has(String(r['Altitudestatus'] || '').trim())) {
+      const sid = String(r['StagingID'] || '').trim();
+      if (sid) yBookedIds.add(sid);
+    }
+  });
+
+  let count = 0, amount = 0;
+  dashboardRows.forEach(r => {
+    if (String(r['Altitudestatus'] || '').trim() !== 'Cancelled [X]') return;
+    const sid = String(r['StagingID'] || '').trim();
+    if (!sid || !yBookedIds.has(sid)) return;
+    count++;
+    amount += parseFloat(r['ItemValue']) || 0;
+  });
+  return { count, amount, yesterday };
+}
+
 function buildDaily(rows, name) {
   const cnt = { store: {}, city: {}, natdetail: {} };
   rows.forEach(r => {
@@ -325,6 +383,12 @@ function buildDashboardArtifact(dashboardRows, htmlFilePath, fileName) {
 console.log('Aggregating…');
 const result = buildDaily(dashboardRows, fileName);
 console.log(`Date range: ${result.meta.min} → ${result.meta.max} (${result.dates.length} days)`);
+
+const btc = computeBookedThenCancelledYesterday(dashboardRows);
+result.meta.bookedThenCancelledYesterday = btc.count;
+result.meta.bookedThenCancelledYesterdayAmount = btc.amount;
+result.meta.bookedThenCancelledYesterdayDate = btc.yesterday;
+console.log(`Booked then Cancelled (yesterday ${btc.yesterday}): ${btc.count} (SAR ${Math.round(btc.amount).toLocaleString()})`);
 
 const newLine = `const DAILY_DEFAULT = ${JSON.stringify(result)};`;
 
