@@ -241,6 +241,7 @@ body.gate-locked>*:not(#login-gate){display:none!important}
   <button class="tab" data-tab="notes"><span class="n">05</span>Notes &amp; Quality</button>
   <button class="tab" data-tab="demo"><span class="n">06</span>Demographic</button>
   <button class="tab" data-tab="appr"><span class="n">07</span>Approved Criteria</button>
+  <button class="tab" data-tab="custinfo"><span class="n">08</span>Customer Info</button>
 </nav>
 <main>
 <section class="panel-tab on" id="summary">
@@ -511,6 +512,188 @@ body.gate-locked>*:not(#login-gate){display:none!important}
   <div class="sec-h" style="margin-top:24px"><span class="k mkt">MARKETING INSIGHTS</span><h2>Who to target to grow bookings</h2><span class="hint">audience segments · auto-generated from the selected range</span></div>
   <div class="mk-spec" id="ap-mkt-spec"></div>
   <div class="ap-ins" id="ap-marketing" style="margin-top:12px"></div>
+</section>
+<section class="panel-tab" id="custinfo">
+  <div class="sec-h"><span class="k">08</span><h2>Customer Info</h2><span class="hint">booked applications use the range filter above · Pending Final Approval is a live snapshot, not affected by the range filter</span></div>
+
+  <div class="sec-h" style="margin-top:8px"><span class="k">BOOKED</span><h2>Booked Applications — Customer Info</h2><span class="hint" id="ci-booked-hint"></span></div>
+  <div class="grid k7" id="ci-booked-kpis" style="margin-bottom:12px"></div>
+  <div id="ci-booked-table" style="overflow-x:auto"></div>
+
+  <div class="sec-h" style="margin-top:26px"><span class="k">PENDING</span><h2>Pending Final Approval — Customer Info</h2><span class="hint">not affected by the range filter above</span></div>
+  <div class="grid k7" id="ci-pfa-kpis" style="margin-bottom:12px"></div>
+  <div id="ci-pfa-table" style="overflow-x:auto"></div>
+
+  <div class="sec-h" style="margin-top:26px"><span class="k">RECONCILE</span><h2>Provided Civil IDs — not currently SNB Pending Final Approval</h2><span class="hint">24 of 24 provided Civil IDs · Staging ID + current status shown for context · recomputed fresh from live data on every rebuild</span></div>
+  <table class="dt"><thead><tr><th>Civil ID</th><th>Staging ID</th><th>Current Status</th><th>Sales Region</th><th>Submitted</th><th>Note</th></tr></thead><tbody><tr>
+    <td>1028721742</td>
+    <td>BO-4XY37</td>
+    <td>(blank)</td>
+    <td>SNB</td>
+    <td>2026-09-14</td>
+    <td>7 other application(s)</td>
+  </tr><tr>
+    <td>1086461272</td>
+    <td>BO-7XZTQ</td>
+    <td>Completed [C]</td>
+    <td>SNB</td>
+    <td>2026-09-10</td>
+    <td>1 other application(s)</td>
+  </tr><tr>
+    <td>1121040180</td>
+    <td>BO-4BLEG</td>
+    <td>Completed [C]</td>
+    <td>SNB</td>
+    <td>2026-09-10</td>
+    <td></td>
+  </tr><tr>
+    <td>1105548224</td>
+    <td>BO-WFHYY</td>
+    <td>Completed [C]</td>
+    <td>SNB</td>
+    <td>2026-09-09</td>
+    <td>3 other application(s)</td>
+  </tr><tr>
+    <td>2300158579</td>
+    <td>LBQD6SFH</td>
+    <td>Completed [C]</td>
+    <td>SNB</td>
+    <td>2026-09-09</td>
+    <td>4 other application(s)</td>
+  </tr><tr>
+    <td>1071945230</td>
+    <td>BO-NX8X5</td>
+    <td>Completed [C]</td>
+    <td>SNB</td>
+    <td>2026-09-08</td>
+    <td>1 other application(s)</td>
+  </tr><tr>
+    <td>2218898399</td>
+    <td>BO-YQYSK</td>
+    <td>Completed [C]</td>
+    <td>SNB</td>
+    <td>2026-09-08</td>
+    <td>2 other application(s)</td>
+  </tr><tr>
+    <td>1063625816</td>
+    <td>BO-EC477</td>
+    <td>(blank)</td>
+    <td>SNB</td>
+    <td>2026-09-09</td>
+    <td>1 other application(s)</td>
+  </tr><tr>
+    <td>2498747290</td>
+    <td>BO-A8UVJ</td>
+    <td>Completed [C]</td>
+    <td>SNB</td>
+    <td>2026-09-08</td>
+    <td>1 other application(s)</td>
+  </tr><tr>
+    <td>2563385133</td>
+    <td>BO-393F1</td>
+    <td>Completed [C]</td>
+    <td>SNB</td>
+    <td>2026-09-08</td>
+    <td>1 other application(s)</td>
+  </tr><tr>
+    <td>1015706979</td>
+    <td>BO-CEQDB</td>
+    <td>(blank)</td>
+    <td>SNB</td>
+    <td>2026-09-08</td>
+    <td></td>
+  </tr><tr>
+    <td>1102306659</td>
+    <td>DGXL8LOG</td>
+    <td>Completed [C]</td>
+    <td>SNB</td>
+    <td>2026-09-08</td>
+    <td></td>
+  </tr><tr>
+    <td>1067749141</td>
+    <td>BO-VHCGP</td>
+    <td>Completed [C]</td>
+    <td>SNB</td>
+    <td>2026-09-08</td>
+    <td></td>
+  </tr><tr>
+    <td>1091031706</td>
+    <td>BO-AP1V3</td>
+    <td>Abandoned [B]</td>
+    <td>SNB</td>
+    <td>2026-09-07</td>
+    <td>1 other application(s)</td>
+  </tr><tr>
+    <td>2545447340</td>
+    <td>4HWS7JJC</td>
+    <td>Completed [C]</td>
+    <td>SNB</td>
+    <td>2026-09-09</td>
+    <td></td>
+  </tr><tr>
+    <td>1015021981</td>
+    <td>413ESCG4</td>
+    <td>Abandoned [B]</td>
+    <td>SNB</td>
+    <td>2026-09-07</td>
+    <td>2 other application(s)</td>
+  </tr><tr>
+    <td>1029633151</td>
+    <td>7QE9EAPD</td>
+    <td>(blank)</td>
+    <td>SNB</td>
+    <td>2026-09-09</td>
+    <td>15 other application(s)</td>
+  </tr><tr>
+    <td>1076051307</td>
+    <td>FBZBFYC3</td>
+    <td>Completed [C]</td>
+    <td>SNB</td>
+    <td>2026-09-06</td>
+    <td></td>
+  </tr><tr>
+    <td>2537808178</td>
+    <td>BO-89K51</td>
+    <td>Completed [C]</td>
+    <td>SNB</td>
+    <td>2026-09-04</td>
+    <td>2 other application(s)</td>
+  </tr><tr>
+    <td>1102405857</td>
+    <td>FFP1JY66</td>
+    <td>Completed [C]</td>
+    <td>SNB</td>
+    <td>2026-09-04</td>
+    <td></td>
+  </tr><tr>
+    <td>1017219625</td>
+    <td>AGSFWU1A</td>
+    <td>Completed [C]</td>
+    <td>SNB</td>
+    <td>2026-09-02</td>
+    <td>1 other application(s)</td>
+  </tr><tr>
+    <td>1070558232</td>
+    <td>WN8H3Q5L</td>
+    <td>Completed [C]</td>
+    <td>SNB</td>
+    <td>2026-09-02</td>
+    <td></td>
+  </tr><tr>
+    <td>1001619228</td>
+    <td>BO-4Q8NC</td>
+    <td>Completed [C]</td>
+    <td>SNB</td>
+    <td>2026-09-08</td>
+    <td></td>
+  </tr><tr>
+    <td>2355395829</td>
+    <td>BO-6FTKX</td>
+    <td>Completed [C]</td>
+    <td>SNB</td>
+    <td>2026-09-01</td>
+    <td>2 other application(s)</td>
+  </tr></tbody></table>
 </section>
 <div class="foot" id="foot"></div>
 </main>
@@ -866,7 +1049,7 @@ function renderApproved(){
 /* ============ master render ============ */
 const rendered={perf:true};
 function renderAll(){computeCUR();renderKPI();renderDailyBook();renderTrend();
-  ['credit','geo','demo'].forEach(t=>{if(rendered[t])renderChartTab(t);});if(rendered.notes)renderNotes();if(rendered.appr)renderApproved();updateChips();}
+  ['credit','geo','demo'].forEach(t=>{if(rendered[t])renderChartTab(t);});if(rendered.notes)renderNotes();if(rendered.appr)renderApproved();if(rendered.custinfo)renderCustomerInfo();updateChips();}
 function updateChips(){
   document.getElementById('data-chip').innerHTML=`${cD.meta.name} · <b>${fmt(cD.meta.total)}</b> apps`;
   document.getElementById('range-chip').textContent=`Coverage ${prettyD(cD.meta.min)} – ${prettyD(cD.meta.max)}`;
@@ -935,11 +1118,42 @@ document.getElementById('anb-from').addEventListener('change',onANBDateChange);
 document.getElementById('anb-to').addEventListener('change',onANBDateChange);
 setANBDateInputs();
 
+/* ============ Customer Info (SNB only) ============ */
+const CI_CAP=500;
+function ciEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function ciTable(rows,showBooked){
+  if(!rows.length) return '<p class="cap">No applications found.</p>';
+  let h='<table class="dt"><thead><tr><th>Staging ID</th><th>Submitted</th>'+(showBooked?'<th>Booked</th>':'')+'<th>Status</th><th class="num">Amount</th><th>Employer</th><th>Nationality</th><th>Age</th><th>Gender</th><th>Marital</th><th>Income</th><th>City</th><th>Region</th><th>Store</th><th>Product</th><th>Score</th><th>DBR</th><th>SIMAH</th></tr></thead><tbody>';
+  rows.slice(0,CI_CAP).forEach(r=>{
+    h+='<tr><td>'+ciEsc(r.stagingId||'—')+'</td><td>'+prettyD(r.submitted)+'</td>'+(showBooked?'<td>'+(r.booked?prettyD(r.booked):'—')+'</td>':'')+
+      '<td>'+ciEsc(r.status)+'</td><td class="num">'+money(r.amount)+'</td><td>'+ciEsc(r.employer)+'</td><td>'+ciEsc(r.nationality)+'</td><td>'+ciEsc(r.age)+'</td><td>'+ciEsc(r.gender)+'</td><td>'+ciEsc(r.marital)+'</td><td>'+ciEsc(r.income)+'</td><td>'+ciEsc(r.city)+'</td><td>'+ciEsc(r.region)+'</td><td>'+ciEsc(r.store)+'</td><td>'+ciEsc(r.product)+'</td><td>'+ciEsc(r.scoreband)+'</td><td>'+ciEsc(r.dbr)+'</td><td>'+ciEsc(r.simah)+'</td></tr>';
+  });
+  return h+'</tbody></table>';
+}
+function ciKpis(count,total,label1,label2){
+  return [['Applications',fmt(count),label1],['Total value',money(total),label2]]
+    .map(x=>'<div class="card kpi"><div class="lab">'+x[0]+'</div><div class="big" style="font-size:21px">'+x[1]+'</div><div class="cap" style="color:var(--faint);font-size:10px">'+x[2]+'</div></div>').join('');
+}
+function renderCustomerInfo(){
+  if(!window.__engine||!window.__engine.customerInfoRows)return;
+  const bookedRows=window.__engine.customerInfoRows('booked',RANGE.from,RANGE.to);
+  const pfaRows=window.__engine.customerInfoRows('pfa',null,null);
+
+  document.getElementById('ci-booked-hint').textContent=prettyD(RANGE.from)+'–'+prettyD(RANGE.to)+(bookedRows.length>CI_CAP?' · showing first '+fmt(CI_CAP)+' of '+fmt(bookedRows.length):'');
+  const bookedTotal=bookedRows.reduce((s,r)=>s+(r.amount||0),0);
+  document.getElementById('ci-booked-kpis').innerHTML=ciKpis(bookedRows.length,bookedTotal,'in selected range','SAR');
+  document.getElementById('ci-booked-table').innerHTML=ciTable(bookedRows,true);
+
+  const pfaTotal=pfaRows.reduce((s,r)=>s+(r.amount||0),0);
+  document.getElementById('ci-pfa-kpis').innerHTML=ciKpis(pfaRows.length,pfaTotal,'live snapshot','SAR');
+  document.getElementById('ci-pfa-table').innerHTML=ciTable(pfaRows,false);
+}
+
 /* ============ tabs ============ */
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));t.classList.add('on');const id=t.dataset.tab;
   document.querySelectorAll('.panel-tab').forEach(p=>p.classList.toggle('on',p.id===id));
-  if(!rendered[id]){rendered[id]=true;if(['credit','geo','demo'].includes(id))renderChartTab(id);if(id==='notes')renderNotes();if(id==='appr')renderApproved();}
+  if(!rendered[id]){rendered[id]=true;if(['credit','geo','demo'].includes(id))renderChartTab(id);if(id==='notes')renderNotes();if(id==='appr')renderApproved();if(id==='custinfo')renderCustomerInfo();}
   if(typeof renderNewCards==='function')setTimeout(renderNewCards,0);}));
 document.querySelectorAll('#credit,#geo,#demo').forEach(sec=>{const tab=sec.id;
   sec.querySelectorAll('.stage-ctl button').forEach(b=>b.addEventListener('click',()=>{
@@ -1510,6 +1724,34 @@ const RAWSTORE = {"n":1153,"dates":["2026-06-02","2026-06-04","2026-06-07","2026
     return {top:arr.slice(0,10),totals:{count:totalCount,avgAge:totalCount?Math.round(totalAge/totalCount):0,paid:totalPaid,notPaid:totalCount-totalPaid},companyCount:arr.length,asOf};
   }
   const STAGING_ID_LEN=8;
+  // Customer Info tab (SNB only) -- kind is 'booked' (Altitudestatus ===
+  // 'Completed [C]', booked date within [fromA,toA]) or 'pfa' (Altitudestatus
+  // === 'Pending Final Approval', live snapshot, fromA/toA ignored).
+  function customerInfoRows(kind, fromA, toA){
+    const sd=RS.sday,bd=RS.bday,flags=RS.flags,bval=RS.bval,stArr=RS.status;
+    const VSt=VOCAB.status;
+    const out=[]; let bptr=0;
+    for(let i=0;i<N;i++){
+      const isBooked=(flags[i]>>2)&1;
+      if(!isBooked)continue;
+      const v=bval[bptr]; const bi=bd[i]; const bDate=bi>=0?DTS[bi]:null;
+      const st=VSt[stArr[i]];
+      bptr++;
+      let match=false;
+      if(kind==='booked' && st==='Completed [C]' && bDate && bDate>=fromA && bDate<=toA) match=true;
+      if(kind==='pfa' && st==='Pending Final Approval') match=true;
+      if(!match)continue;
+      out.push({
+        stagingId:getStagingId(i), submitted:DTS[sd[i]], booked:bDate, amount:v, status:st,
+        employer:VOCAB.employer[RS.employer[i]], nationality:VOCAB.nationality[RS.nationality[i]],
+        age:VOCAB.age[RS.age[i]], gender:VOCAB.gender[RS.gender[i]], marital:VOCAB.marital[RS.marital[i]],
+        income:VOCAB.income[RS.income[i]], city:VOCAB.city[RS.city[i]], region:VOCAB.region[RS.region[i]],
+        store:VOCAB.store[RS.store[i]], product:VOCAB.product[RS.product[i]],
+        scoreband:VOCAB.scoreband[RS.scoreband[i]], dbr:VOCAB.dbr[RS.dbr[i]], simah:VOCAB.simah[RS.simah[i]]
+      });
+    }
+    return out;
+  }
   function getStagingId(i){
     const b=RS.stagingId; if(!b)return '';
     let s='';
@@ -1623,7 +1865,7 @@ const RAWSTORE = {"n":1153,"dates":["2026-06-02","2026-06-04","2026-06-07","2026
     const prev=windowMetricsFull(prevFrom,prevTo);
     return {cur:{...cur,from:RANGE.from,to:RANGE.to},prev:{...prev,from:prevFrom,to:prevTo}};
   }
-  window.__engine={aggFromRaw,DAILY_FULL,setFilter:toggleFilter,clear:clearFilters,N:N,FILTERS:()=>FILTERS,VOCAB,dimDailyTrend,rateDailyTrend,dimBreakdown,initFinalDailyTrend,sameMonthBookingTrend,notesAggregate,sourceEmployerCorrelation,summaryDailyExtremes,topSegments,dropoffAnalysis,momComparison,uniqueApplicantStats,incomeSplitTrend,duplicateCustomerAnalysis,topCompanies,approvedNotBooked,approvedNotBookedDetail};
+  window.__engine={aggFromRaw,DAILY_FULL,setFilter:toggleFilter,clear:clearFilters,N:N,FILTERS:()=>FILTERS,VOCAB,dimDailyTrend,rateDailyTrend,dimBreakdown,initFinalDailyTrend,sameMonthBookingTrend,notesAggregate,sourceEmployerCorrelation,summaryDailyExtremes,topSegments,dropoffAnalysis,momComparison,uniqueApplicantStats,incomeSplitTrend,duplicateCustomerAnalysis,topCompanies,approvedNotBooked,approvedNotBookedDetail,customerInfoRows};
   console.log('[interactive engine] ready · '+fmt(N)+' rows decoded');
   // The very first computeCUR()/renderKPI() call (page bootstrap) can run
   // before this engine is ready, leaving engine-dependent bits (unique
