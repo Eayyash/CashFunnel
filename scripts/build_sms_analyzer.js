@@ -22,7 +22,15 @@
  *
  * Output: SMS_Analyzer.html (embeds SMS_DATA, all analysis client-side).
  *
- * Usage: node scripts/build_sms_analyzer.js "<path to SMS_Campaign_*.xlsx>"
+ * Each export is a fresh FULL snapshot (Raw Data + Summary both cover
+ * everything to date, same convention as the Acquisition/SIMAH daily
+ * files) -- so processing is "last file wins", not additive. With no
+ * argument, auto-discovers the newest SMS_Campaign_*.xlsx in
+ * `downloadsDir` (pipeline.config.json) and archives it to
+ * `smsArchiveDir` after a successful build, same pattern as
+ * update_funnel.js / update_simah_from_qarar_csv.js.
+ *
+ * Usage: node scripts/build_sms_analyzer.js ["<path to SMS_Campaign_*.xlsx>"]
  */
 const fs = require('fs');
 const path = require('path');
@@ -31,10 +39,48 @@ const XLSX = require('xlsx');
 const ROOT = path.resolve(__dirname, '..');
 const HTML_FILE = path.join(ROOT, 'SMS_Analyzer.html');
 const BOOKED_SET = new Set(['Completed [C]', 'Pending Final Approval']);
+const NAME_PATTERN = /^SMS_Campaign_\d{4}-\d{2}-\d{2}\.xlsx$/i;
 
-const filePath = process.argv[2];
-if (!filePath || !fs.existsSync(filePath)) {
-  console.error('Usage: node scripts/build_sms_analyzer.js "<path to SMS_Campaign_*.xlsx>"');
+function findLatestInDownloads(downloadsDir) {
+  if (!downloadsDir || !fs.existsSync(downloadsDir)) return null;
+  const files = fs.readdirSync(downloadsDir).filter(f => NAME_PATTERN.test(f)).sort();
+  return files.length ? path.join(downloadsDir, files[files.length - 1]) : null;
+}
+
+function archiveProcessedFile(processedPath) {
+  let cfg;
+  try { cfg = require('./pipeline_config.js').loadConfig(); }
+  catch (e) { console.warn(`  (skipping archive -- ${e.message})`); return; }
+  if (!cfg.smsArchiveDir) { console.warn('  (skipping archive -- smsArchiveDir not set in pipeline.config.json)'); return; }
+  if (!fs.existsSync(cfg.smsArchiveDir)) fs.mkdirSync(cfg.smsArchiveDir, { recursive: true });
+  const dest = path.join(cfg.smsArchiveDir, path.basename(processedPath));
+  if (path.resolve(processedPath) === path.resolve(dest)) return; // already archived, re-run for testing
+  try {
+    fs.renameSync(processedPath, dest);
+  } catch (e) {
+    fs.copyFileSync(processedPath, dest);
+    fs.unlinkSync(processedPath);
+  }
+  console.log(`Archived: ${path.basename(processedPath)} → ${path.basename(cfg.smsArchiveDir)}/`);
+}
+
+let filePath = process.argv[2];
+if (!filePath) {
+  let cfg;
+  try { cfg = require('./pipeline_config.js').loadConfig(); }
+  catch (e) {
+    console.error('No file given and pipeline.config.json could not be loaded.');
+    console.error('Either pass a file explicitly: node scripts/build_sms_analyzer.js "<path to SMS_Campaign_*.xlsx>"');
+    console.error('or run: node scripts/setup_config.js');
+    process.exit(1);
+  }
+  filePath = findLatestInDownloads(cfg.downloadsDir);
+  if (!filePath) {
+    console.log(`No SMS_Campaign_*.xlsx file found in ${cfg.downloadsDir}. Nothing to do.`);
+    process.exit(0);
+  }
+} else if (!fs.existsSync(filePath)) {
+  console.error(`File not found: ${filePath}`);
   process.exit(1);
 }
 const fileName = path.basename(filePath);
@@ -132,6 +178,7 @@ const SMS_DATA = {
 const html = buildHtml(SMS_DATA);
 fs.writeFileSync(HTML_FILE, html, 'utf-8');
 console.log(`✅ SMS_Analyzer.html written — ${Object.keys(campaigns).length} campaigns, ${raw.length.toLocaleString()} rows.`);
+archiveProcessedFile(filePath);
 
 function buildHtml(data) {
   const dataJson = JSON.stringify(data);

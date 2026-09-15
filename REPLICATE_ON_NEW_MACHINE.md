@@ -139,6 +139,7 @@ the new machine.
 | **FunnelBA** | New `Acquisition_for_Loans_*.csv`/`.xlsx` | `Acquisition_Command_Dashboard.html`, `Application_Cost.html`, `SNB_Overview.html` (step 3b — see FunnelBA.md), `Business_Performance_View.html` |
 | **DailyBA** | New `Tawarruq_Funnel_*.xlsx` | `Funnel_Analysis.html`, `Business_Performance_View.html` |
 | **SIMAHDaily** | New `SIMAH_Qarar_JSON_*.csv` | `SIMAH_Intelligence.html`, per-date chunk files in `simah_data/`, `Business_Performance_View.html` |
+| **SMSDaily** | New `SMS_Campaign_*.xlsx` | `SMS_Analyzer.html` |
 
 Read each `.claude/agents/*.md` file in full before running anything by
 hand — they document real incidents (OOM thresholds, silent data-loss bugs
