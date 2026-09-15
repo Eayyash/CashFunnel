@@ -99,34 +99,98 @@ function excelSerialToYMD(serial) {
   const d = new Date(Math.round((serial - 25569) * 86400 * 1000));
   return isNaN(d) ? null : d.toISOString().slice(0, 10);
 }
+function toYMD(v) {
+  if (v == null || v === '') return null;
+  const s = String(v);
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  const d = new Date(s);
+  return isNaN(d) ? null : d.toISOString().slice(0, 10);
+}
 
-// --- Per-campaign breakdown ---
+// --- Cross-reference against the live Acquisition dataset by StagingID
+// (the `id` column here IS the Acquisition StagingID) -- per explicit
+// request, to answer "did we send an SMS to this person, and what
+// actually happened to their application" using the freshest available
+// outcome, not just the snapshot frozen into this SMS export at pull
+// time. Confirmed 2026-09-15: only ~65% of SMS rows match a StagingID in
+// Acquisition (the rest never reached master, consistent with a blank
+// SubmittedToMaster), and the live-matched booked count can come out
+// LOWER than the export's own Status_In_Master count -- some
+// applications that were booked when this SMS file was pulled have
+// since reversed to Cancelled (see Acquisition_Command_Dashboard.html's
+// "Booked, then Cancelled" KPI for the same phenomenon). Both the
+// export's own snapshot status and the live cross-referenced status are
+// kept per row so neither is silently discarded.
+function loadAcquisitionStagingMap() {
+  const acqPath = path.join(ROOT, 'Acquisition_for_Loans_all_merged.csv');
+  if (!fs.existsSync(acqPath)) {
+    console.warn('  Acquisition_for_Loans_all_merged.csv not found -- skipping live cross-reference (submitted/booked will use only this SMS export\'s own snapshot fields).');
+    return null;
+  }
+  console.log('Reading Acquisition_for_Loans_all_merged.csv for cross-reference…');
+  const { readCsv } = require('./update_acquisition_dashboard.js');
+  const acqRows = readCsv(acqPath);
+  const map = new Map();
+  acqRows.forEach(r => {
+    const sid = String(r['StagingID'] || '').trim();
+    if (!sid) return;
+    map.set(sid, r);
+  });
+  console.log(`  ${acqRows.length.toLocaleString()} Acquisition rows -> ${map.size.toLocaleString()} unique StagingIDs`);
+  return map;
+}
+const stagingMap = loadAcquisitionStagingMap();
+
+// --- Per-row enrichment + per-campaign breakdown ---
 const campaigns = {};
 const overall = { submitted: 0, submittedToMaster: 0, approved: 0, booked: 0, bookedAmount: 0, cancelled: 0, declined: 0 };
+let matchedCount = 0;
+const rowsOut = [];
 raw.forEach(r => {
   const c = String(r.CampaignName || 'Unknown').trim() || 'Unknown';
   if (!campaigns[c]) campaigns[c] = { submitted: 0, submittedToMaster: 0, approved: 0, booked: 0, bookedAmount: 0, cancelled: 0, declined: 0, byDate: {}, statusBreakdown: {} };
   const b = campaigns[c];
-  const status = String(r.Status_In_Master || '').trim();
-  const amount = parseFloat(r.Amount) || 0;
+  const staleStatus = String(r.Status_In_Master || '').trim();
+  const staleAmount = parseFloat(r.Amount) || 0;
+  const stagingId = String(r.id || '').trim();
+  const civilId = String(r.CivilId || '').trim();
+  const smsDate = excelSerialToYMD(r.SMS_Delivered_Date);
+
+  const acq = stagingMap ? stagingMap.get(stagingId) : null;
+  const matched = !!acq;
+  if (matched) matchedCount++;
+  // Live status wins when a match exists; fall back to this export's own
+  // snapshot otherwise (e.g. still Sales Vetting, never reached master).
+  const status = matched ? String(acq['Altitudestatus'] || '').trim() : staleStatus;
+  const booked = BOOKED_SET.has(status);
+  const amount = matched ? (parseFloat(acq['ItemValue']) || 0) : staleAmount;
+  const submittedDate = matched ? toYMD(acq['submitted']) : (r.SubmittedToMaster ? excelSerialToYMD(r.SubmittedToMaster) : null);
+  const bookedDate = booked ? (matched ? toYMD(acq['SalesCompletedDate']) : null) : null;
 
   b.submitted++; overall.submitted++;
   if (r.SubmittedToMaster) { b.submittedToMaster++; overall.submittedToMaster++; }
   if (r.FinalApprovalFlag === 'Y') { b.approved++; overall.approved++; }
-  if (BOOKED_SET.has(status)) { b.booked++; b.bookedAmount += amount; overall.booked++; overall.bookedAmount += amount; }
+  if (booked) { b.booked++; b.bookedAmount += amount; overall.booked++; overall.bookedAmount += amount; }
   if (status === 'Cancelled [X]') { b.cancelled++; overall.cancelled++; }
   if (status === 'Declined [D]') { b.declined++; overall.declined++; }
 
-  const dd = excelSerialToYMD(r.SMS_Delivered_Date);
-  if (dd) b.byDate[dd] = (b.byDate[dd] || 0) + 1;
+  if (smsDate) b.byDate[smsDate] = (b.byDate[smsDate] || 0) + 1;
   const stKey = status || '(not submitted to master)';
   b.statusBreakdown[stKey] = (b.statusBreakdown[stKey] || 0) + 1;
+
+  rowsOut.push({
+    civilId, stagingId, campaign: c, smsDate,
+    matched, status, booked,
+    submittedDate, bookedDate, amount,
+  });
 });
 
-console.log('Per-campaign breakdown:');
+console.log('Per-campaign breakdown (live cross-referenced where matched):');
 Object.entries(campaigns).forEach(([name, b]) => {
   console.log(`  ${name}: submitted=${b.submitted} toMaster=${b.submittedToMaster} approved=${b.approved} booked=${b.booked} (SAR ${Math.round(b.bookedAmount).toLocaleString()})`);
 });
+console.log(`Matched against live Acquisition data: ${matchedCount.toLocaleString()} / ${raw.length.toLocaleString()}`);
 
 // --- Summary sheet (vendor monthly rollup, reproduced as-is) ---
 let summaryTrend = [];
@@ -168,15 +232,33 @@ const SMS_DATA = {
     totalRows: raw.length,
     deliveredMin: dateRange.min,
     deliveredMax: dateRange.max,
+    matchedInAcquisition: matchedCount,
+    hasLiveCrossReference: !!stagingMap,
   },
   overall,
   campaigns,
   summaryTrend,
+  rows: rowsOut,
 };
 
 // --- Render page ---
 const html = buildHtml(SMS_DATA);
-fs.writeFileSync(HTML_FILE, html, 'utf-8');
+// Write via temp-file + rename, not an in-place writeFileSync -- this
+// OneDrive-synced folder has repeatedly (confirmed across multiple scripts,
+// e.g. build_simah_datechunks.js) intermittently failed an in-place
+// truncate with UNKNOWN/EPERM. A fresh temp file is a plain create, never
+// a truncate of a synced file, so renaming over the target sidesteps it.
+const tmpHtml = `${HTML_FILE}.tmp`;
+fs.writeFileSync(tmpHtml, html, 'utf-8');
+for (let attempt = 1; ; attempt++) {
+  try { fs.renameSync(tmpHtml, HTML_FILE); break; }
+  catch (e) {
+    if (attempt >= 5) throw e;
+    console.warn(`  rename attempt ${attempt} failed (${e.code}), retrying…`);
+    const until = Date.now() + attempt * 500;
+    while (Date.now() < until) { /* busy-wait: this script has no async loop */ }
+  }
+}
 console.log(`✅ SMS_Analyzer.html written — ${Object.keys(campaigns).length} campaigns, ${raw.length.toLocaleString()} rows.`);
 archiveProcessedFile(filePath);
 
@@ -233,6 +315,21 @@ td.num,th.num{text-align:right;font-family:'JetBrains Mono'}
 .camp-block:last-child{margin-bottom:0}
 .camp-block h3{font-size:13px;margin:0 0 10px;font-family:'Space Grotesk';display:flex;align-items:center;gap:8px}
 .camp-block h3 .n{font-size:10px;color:var(--faint);font-weight:400;font-family:'JetBrains Mono'}
+.filters{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:18px}
+.filter-row{display:flex;flex-wrap:wrap;gap:14px;align-items:end}
+.filter-item{display:flex;flex-direction:column;gap:5px}
+.filter-item label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700}
+.filter-item select,.filter-item input{padding:7px 10px;border:1px solid var(--line2);border-radius:8px;background:var(--panel2);color:var(--ink);font-family:'Inter',sans-serif;font-size:12.5px}
+.filter-item input[type="date"]{font-family:'JetBrains Mono'}
+.filter-reset{padding:7px 14px;border:1px solid var(--line2);border-radius:8px;background:var(--panel2);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif}
+.filter-reset:hover{color:var(--ink);border-color:var(--line)}
+.search-box{display:flex;flex-direction:column;gap:5px;flex:1;min-width:220px}
+.results-row{display:flex;gap:14px;margin:16px 0}
+.results-row .card{flex:1}
+.match-badge{display:inline-block;font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:5px;letter-spacing:.03em}
+.match-badge.live{background:rgba(28,125,80,.12);color:var(--green)}
+.match-badge.stale{background:rgba(189,125,18,.12);color:var(--gold-d)}
+.row-limit-note{font-size:11px;color:var(--faint);margin-top:8px}
 </style></head>
 <body>
 <header>
@@ -259,6 +356,36 @@ td.num,th.num{text-align:right;font-family:'JetBrains Mono'}
   <div class="sec-h"><h2>Historical trend</h2><span class="n">vendor monthly rollup · reproduced as-is, own figures</span></div>
   <div class="hint">Note: this table's "Bookings" figure is the campaign vendor's own monthly count and does not match the "Booked" count above — bookings mature over weeks after an SMS send, and this rollup reflects more elapsed maturation time than the fresh Raw Data export above has had. Both are shown side by side rather than forced to reconcile.</div>
   <div class="tablewrap"><table id="trend-table"></table></div>
+</div>
+
+<div class="section">
+  <div class="sec-h"><h2>Lookup &amp; filter</h2><span class="n">Submitted → Booked, sliced by campaign / SMS date / submitted date / booked date</span></div>
+  <div class="hint" id="crossref-hint"></div>
+  <div class="filters">
+    <div class="filter-row">
+      <div class="search-box">
+        <label for="f-search">Civil ID lookup</label>
+        <input type="text" id="f-search" placeholder="Type a full or partial Civil ID…">
+      </div>
+      <div class="filter-item">
+        <label for="f-campaign">Campaign</label>
+        <select id="f-campaign"><option value="">All campaigns</option></select>
+      </div>
+      <div class="filter-item">
+        <label for="f-smsdate">SMS sent date</label>
+        <select id="f-smsdate"><option value="">All dates</option></select>
+      </div>
+      <div class="filter-item"><label for="f-sub-from">Submitted from</label><input type="date" id="f-sub-from"></div>
+      <div class="filter-item"><label for="f-sub-to">Submitted to</label><input type="date" id="f-sub-to"></div>
+      <div class="filter-item"><label for="f-book-from">Booked from</label><input type="date" id="f-book-from"></div>
+      <div class="filter-item"><label for="f-book-to">Booked to</label><input type="date" id="f-book-to"></div>
+      <button class="filter-reset" id="f-reset">Reset filters</button>
+    </div>
+  </div>
+  <div class="results-row" id="filter-kpis"></div>
+  <div class="hint">Note: "Submitted" here counts a Staging ID as submitted the moment it's found in the live Acquisition dataset (which only contains applications that reached master) — this can be higher than the "Submitted to Master" figure in the Overview section above, which relies only on this export's own snapshot flag and can be stale for applications that reached master after the SMS file was pulled.</div>
+  <div class="tablewrap"><table id="filter-table"></table></div>
+  <div class="row-limit-note" id="filter-row-note"></div>
 </div>
 
 </main>
@@ -336,7 +463,96 @@ function render(){
   } else {
     document.getElementById('trend-section').style.display = 'none';
   }
+
+  initLookup(d);
 }
+
+// --- Lookup & filter: Civil ID search + Campaign/SMS date/Submitted date/
+// Booked date filters over the per-application row data. "Submitted" here
+// means the row reached the master Acquisition system at all (has a
+// submittedDate); "Booked" uses the live cross-referenced status where a
+// StagingID match exists, falling back to this export's own snapshot
+// status otherwise -- each row carries a "matched" flag so the table can
+// show which one it's using. ---
+function initLookup(d){
+  const rows = d.rows || [];
+  document.getElementById('crossref-hint').textContent = d.meta.hasLiveCrossReference
+    ? \`\${fmt(d.meta.matchedInAcquisition)} of \${fmt(d.meta.totalRows)} applications matched against the live Acquisition dataset by Staging ID -- those use the current status/date; unmatched rows (never reached master, or ID not found) fall back to this export's own snapshot fields.\`
+    : \`Acquisition_for_Loans_all_merged.csv wasn't found at build time -- every row below uses only this export's own snapshot fields (no live cross-reference). Phone number lookup isn't available -- the source file has no phone column, only Civil ID.\`;
+
+  const campSel = document.getElementById('f-campaign');
+  [...new Set(rows.map(r=>r.campaign))].sort().forEach(c=>{
+    const o=document.createElement('option'); o.value=c; o.textContent=c; campSel.appendChild(o);
+  });
+  const smsSel = document.getElementById('f-smsdate');
+  [...new Set(rows.map(r=>r.smsDate).filter(Boolean))].sort().forEach(dt=>{
+    const o=document.createElement('option'); o.value=dt; o.textContent=dt; smsSel.appendChild(o);
+  });
+
+  const els = {
+    search: document.getElementById('f-search'),
+    campaign: document.getElementById('f-campaign'),
+    smsdate: document.getElementById('f-smsdate'),
+    subFrom: document.getElementById('f-sub-from'),
+    subTo: document.getElementById('f-sub-to'),
+    bookFrom: document.getElementById('f-book-from'),
+    bookTo: document.getElementById('f-book-to'),
+  };
+  const ROW_CAP = 300;
+
+  function apply(){
+    const q = els.search.value.trim();
+    const camp = els.campaign.value;
+    const sms = els.smsdate.value;
+    const subFrom = els.subFrom.value, subTo = els.subTo.value;
+    const bookFrom = els.bookFrom.value, bookTo = els.bookTo.value;
+
+    const filtered = rows.filter(r=>{
+      if (q && !(r.civilId && r.civilId.includes(q))) return false;
+      if (camp && r.campaign !== camp) return false;
+      if (sms && r.smsDate !== sms) return false;
+      if (subFrom && (!r.submittedDate || r.submittedDate < subFrom)) return false;
+      if (subTo && (!r.submittedDate || r.submittedDate > subTo)) return false;
+      if (bookFrom && (!r.bookedDate || r.bookedDate < bookFrom)) return false;
+      if (bookTo && (!r.bookedDate || r.bookedDate > bookTo)) return false;
+      return true;
+    });
+
+    const submittedCount = filtered.filter(r=>r.submittedDate).length;
+    const bookedCount = filtered.filter(r=>r.booked).length;
+    const bookedAmount = filtered.filter(r=>r.booked).reduce((s,r)=>s+(r.amount||0),0);
+    const rate = submittedCount ? (bookedCount/submittedCount*100) : 0;
+    document.getElementById('filter-kpis').innerHTML = [
+      ['Matching applications', fmt(filtered.length)],
+      ['Submitted', fmt(submittedCount)],
+      ['Booked', fmt(bookedCount)+' ('+pct(rate)+')'],
+      ['Booked value', money(bookedAmount)],
+    ].map(([lab,big])=>\`<div class="card"><div class="lab">\${lab}</div><div class="big">\${big}</div></div>\`).join('');
+
+    const th = '<tr><th>Civil ID</th><th>Staging ID</th><th>Campaign</th><th>SMS Date</th><th>Submitted</th><th>Booked</th><th>Status</th></tr>';
+    const bodyRows = filtered.slice(0, ROW_CAP).map(r=>\`<tr>
+      <td>\${r.civilId||'—'}</td>
+      <td>\${r.stagingId||'—'}</td>
+      <td class="campname">\${r.campaign}</td>
+      <td>\${r.smsDate||'—'}</td>
+      <td>\${r.submittedDate||'—'}</td>
+      <td>\${r.bookedDate||(r.booked?'yes':'—')}</td>
+      <td>\${r.status||'—'} <span class="match-badge \${r.matched?'live':'stale'}">\${r.matched?'LIVE':'SNAPSHOT'}</span></td>
+    </tr>\`).join('');
+    document.getElementById('filter-table').innerHTML = filtered.length ? (th + bodyRows) : '<tr><td style="text-align:center;color:var(--faint)">No matching applications</td></tr>';
+    document.getElementById('filter-row-note').textContent = filtered.length > ROW_CAP
+      ? \`Showing first \${ROW_CAP} of \${fmt(filtered.length)} matching rows -- narrow the filters to see more specific results.\`
+      : '';
+  }
+
+  Object.values(els).forEach(el => el.addEventListener('input', apply));
+  document.getElementById('f-reset').addEventListener('click', ()=>{
+    Object.values(els).forEach(el => el.value = '');
+    apply();
+  });
+  apply();
+}
+
 render();
 </script>
 </body></html>

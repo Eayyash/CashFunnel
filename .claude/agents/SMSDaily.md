@@ -33,17 +33,24 @@ If no xlsx is found, report that no new file was detected and stop.
 
 ### 2. Rebuild the dashboard
 ```bash
-node scripts/build_sms_analyzer.js "PATH_TO_FILE"
+node --max-old-space-size=16384 scripts/build_sms_analyzer.js "PATH_TO_FILE"
 ```
-(Or with no argument — `node scripts/build_sms_analyzer.js` — to auto-discover the newest `SMS_Campaign_*.xlsx` in `downloadsDir`; only do this if you've already confirmed there's exactly one genuine new file there, per the sanity check above.)
+(Or with no argument — `node --max-old-space-size=16384 scripts/build_sms_analyzer.js` — to auto-discover the newest `SMS_Campaign_*.xlsx` in `downloadsDir`; only do this if you've already confirmed there's exactly one genuine new file there, per the sanity check above.)
+
+The 16GB heap is required — this script also reads the full `Acquisition_for_Loans_all_merged.csv` (850K+ rows) for the cross-reference step below, same requirement as `update_acquisition_dashboard.js`.
 
 This script:
 - Reads the "Raw Data" sheet (one row per application created via an SMS campaign link) and the "Summary" sheet (vendor's own monthly rollup)
-- Computes per-campaign stats: applications created, submitted to master, final approved, booked (`Completed [C]` / `Pending Final Approval`), booked value, cancelled, declined
-- Renders `SMS_Analyzer.html` with: an Overall section broken out per campaign (All Campaigns combined, then each named campaign), a campaign-performance comparison table, and the vendor's own historical monthly trend table reproduced as-is
+- **Cross-references every row against the live `Acquisition_for_Loans_all_merged.csv` by Staging ID** (added 2026-09-15, per explicit request to "match the Civil ID... and check if we sent an SMS to them"). Where a Staging ID match exists, the row's status/submitted-date/booked-date use the CURRENT Acquisition data (fresher than this export's own frozen snapshot); unmatched rows fall back to the export's own `Status_In_Master`/`SubmittedToMaster` fields. If `Acquisition_for_Loans_all_merged.csv` isn't present in the project root, the script skips this step gracefully and uses only the export's own snapshot fields for every row (logs a warning, doesn't fail)
+- Computes per-campaign stats: applications created, submitted to master, final approved, booked (`Completed [C]` / `Pending Final Approval`, live-cross-referenced where matched), booked value, cancelled, declined
+- Renders `SMS_Analyzer.html` with: an Overall section broken out per campaign, a campaign-performance comparison table, the vendor's own historical monthly trend table reproduced as-is, and a **Lookup & filter** section — a Civil ID search box plus filters by Campaign, SMS sent date, submitted date, and booked date, computing Submitted/Booked counts live client-side over the per-application row data
 - **Archives the source file** to `smsArchiveDir` (see below) automatically — no separate step needed
 
-**Expected result:** a `✅ SMS_Analyzer.html written — N campaigns, M rows.` line, followed by `Archived: FILENAME → SMS Campaigns/`.
+**No phone number lookup** — the source file has no phone column, only Civil ID. Don't imply otherwise if asked.
+
+**Expected result:** a `Matched against live Acquisition data: N / M` line, then `✅ SMS_Analyzer.html written — N campaigns, M rows.`, followed by `Archived: FILENAME → SMS Campaigns/`.
+
+**Known quirk (2026-09-15):** the live-cross-referenced booked count can come out LOWER than the export's own snapshot count for some individual applications — a handful of applications booked at export time have since reversed to Cancelled (see Acquisition_Command_Dashboard.html's "Booked, then Cancelled" KPI for the same phenomenon elsewhere). This is expected, not a bug — each row in the Lookup & filter table is tagged LIVE or SNAPSHOT so it's clear which source its status came from.
 
 ### 3. Verify
 ```bash
@@ -89,18 +96,20 @@ Tell the user:
 - **Target:** `SMS_Analyzer.html` in the project root — embedded `const SMS_DATA = {...};`
 - **Merge logic:** last file wins, NOT additive — each export is a full fresh snapshot (same convention as Acquisition_for_Loans/SIMAH_Qarar_JSON daily files, unlike Funnel_Analysis's per-date accumulation)
 - **"Submitted" vs "Submitted to Master":** every row has a StagingID (`id`) the moment an application is created from an SMS click-through — that's "Applications Created" / submitted. Many never reach the master Acquisition system at all (`SubmittedToMaster` stays blank, `Status_In_Master` stays blank) — those are excluded from "Submitted to Master" and everything downstream (approved/booked/cancelled), which all key off `Status_In_Master`
-- **Booking detection:** `Status_In_Master` ∈ `{'Completed [C]', 'Pending Final Approval'}` — same `BOOKED_SET` convention as `update_acquisition_dashboard.js`
+- **Booking detection:** `Status_In_Master` ∈ `{'Completed [C]', 'Pending Final Approval'}` — same `BOOKED_SET` convention as `update_acquisition_dashboard.js`. Cross-referenced rows use the live Acquisition `Altitudestatus` instead of this export's own `Status_In_Master`
 - **Archive folder:** `smsArchiveDir` in `pipeline.config.json` (see `scripts/setup_config.js`) — `build_sms_analyzer.js` auto-moves the processed file here after a successful build
-- **The Summary sheet's own Total_bookings does NOT match this script's own `Status_In_Master`-based booked count** (confirmed 2026-09-15: 1,299 vs 432 for ABNB in August) — almost certainly because bookings mature over weeks after an SMS send and the vendor's Summary rollup reflects more elapsed time than a fresh Raw Data export has had. Both are shown on the page side by side, with an explicit note — never try to reconcile them into one number
+- **The Summary sheet's own Total_bookings does NOT match this script's own booked count** (confirmed 2026-09-15: 1,299 vs 432 for ABNB in August, even before the live cross-reference was added) — almost certainly because bookings mature over weeks after an SMS send and the vendor's Summary rollup reflects more elapsed time than a fresh Raw Data export has had. Both are shown on the page side by side, with an explicit note — never try to reconcile them into one number
 - No login/email gate on this dashboard (removed from all scorecards 2026-09-15, per explicit request)
 - Do NOT add SMS_Campaign xlsx files to git — they are in `.gitignore`
 - GitHub Pages URL: `https://eayyash.github.io/CashFunnel/`
-- **Data source integrity:** SMS_Analyzer.html uses ONLY SMS_Campaign xlsx data. Never pull data from Acquisition, Funnel, or SIMAH sources into this dashboard.
+- **Data source integrity:** the SMS Campaign xlsx is the only source of *which applications came from which SMS campaign and when*. The one deliberate exception (added 2026-09-15, explicit request): each application's live status/submitted-date/booked-date is cross-referenced against `Acquisition_for_Loans_all_merged.csv` by Staging ID, since that's the only way to know whether someone who received an SMS actually went on to submit and book — the export's own snapshot fields go stale within days. Still never pull Funnel or SIMAH data into this dashboard.
 
 ## Error handling
 
 - If the xlsx is missing the "Raw Data" sheet: the script exits with an error — check the file isn't corrupted or a different export format
 - If a new file's row count is dramatically smaller than the currently-live dashboard's `totalRows`: stop before processing, report it, and confirm with the user rather than silently overwriting good data with a stale/partial file
 - If `xlsx` package isn't installed: run `npm install xlsx` first (it's normally already present, shared with the Acquisition/Funnel pipelines)
+- If `Acquisition_for_Loans_all_merged.csv` isn't found: the script still runs, just without the live cross-reference (every row falls back to its own snapshot fields) — this is a warning, not a failure; report it if the user seems to expect fresher numbers
+- If the final HTML write fails with `UNKNOWN`/`EPERM` on this OneDrive-synced folder: the script already retries the rename step automatically (confirmed 2026-09-15, same intermittent lock seen in `build_simah_datechunks.js`) — if it still fails after 5 attempts, just re-run the whole command, it's safe (the script has no partial-write state to worry about, unlike SIMAH's per-date chunks)
 - If git is not in sync with `origin/master`: stop, do not force-push, report the divergence
 - If the archive move fails (e.g. permissions): the dashboard rebuild itself already succeeded and is safe — report the archive failure clearly so the file can be moved out of Downloads manually before the next run
