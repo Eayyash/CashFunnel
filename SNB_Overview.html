@@ -530,6 +530,7 @@ body.gate-locked>*:not(#login-gate){display:none!important}
   <div class="grid k7" id="ci-booked-kpis" style="margin-bottom:12px"></div>
   <div class="controls">
     <input type="text" id="ci-booked-search" placeholder="Search Staging ID, employer, nationality, city…" style="border:1px solid var(--line2);background:var(--panel);color:var(--ink2);font-family:'Space Grotesk',sans-serif;font-size:12px;padding:6px 10px;border-radius:8px;min-width:260px">
+    <select id="ci-booked-status" class="dd-filter"><option value="">All statuses</option></select>
     <button id="ci-booked-reset" class="btn" style="padding:6px 12px;font-size:12px">Reset</button>
     <span class="hint" id="ci-booked-count"></span>
   </div>
@@ -539,6 +540,7 @@ body.gate-locked>*:not(#login-gate){display:none!important}
   <div class="grid k7" id="ci-pfa-kpis" style="margin-bottom:12px"></div>
   <div class="controls">
     <input type="text" id="ci-pfa-search" placeholder="Search Staging ID, employer, nationality, city…" style="border:1px solid var(--line2);background:var(--panel);color:var(--ink2);font-family:'Space Grotesk',sans-serif;font-size:12px;padding:6px 10px;border-radius:8px;min-width:260px">
+    <select id="ci-pfa-status" class="dd-filter"><option value="">All statuses</option></select>
     <button id="ci-pfa-reset" class="btn" style="padding:6px 12px;font-size:12px">Reset</button>
     <span class="hint" id="ci-pfa-count"></span>
   </div>
@@ -1027,9 +1029,21 @@ function ciMatchesSearch(r,q){
   return [r.stagingId,r.employer,r.nationality,r.city,r.region,r.store,r.product,r.status]
     .some(v=>String(v||'').toLowerCase().includes(q));
 }
+// Status dropdown is repopulated from whatever statuses are actually
+// present in the current row set (booked/PFA are each queried against a
+// single status today, so this shows one option in practice -- but stays
+// correct automatically if that query ever widens).
+function ciPopulateStatusSelect(selId,rows){
+  const sel=document.getElementById(selId);
+  const cur=sel.value;
+  sel.innerHTML='<option value="">All statuses</option>';
+  [...new Set(rows.map(r=>r.status))].sort().forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;sel.appendChild(o);});
+  sel.value=[...sel.options].some(o=>o.value===cur)?cur:'';
+}
 function ciApplyBookedFilter(){
   const q=(document.getElementById('ci-booked-search').value||'').trim().toLowerCase();
-  const rows=CI_BOOKED_ROWS.filter(r=>ciMatchesSearch(r,q));
+  const st=document.getElementById('ci-booked-status').value;
+  const rows=CI_BOOKED_ROWS.filter(r=>ciMatchesSearch(r,q)&&(!st||r.status===st));
   const total=rows.reduce((s,r)=>s+(r.amount||0),0);
   document.getElementById('ci-booked-kpis').innerHTML=ciKpis(rows.length,total,'in selected range','SAR');
   document.getElementById('ci-booked-table').innerHTML=ciTable(rows,true);
@@ -1037,16 +1051,19 @@ function ciApplyBookedFilter(){
 }
 function ciApplyPfaFilter(){
   const q=(document.getElementById('ci-pfa-search').value||'').trim().toLowerCase();
-  const rows=CI_PFA_ROWS.filter(r=>ciMatchesSearch(r,q));
+  const st=document.getElementById('ci-pfa-status').value;
+  const rows=CI_PFA_ROWS.filter(r=>ciMatchesSearch(r,q)&&(!st||r.status===st));
   const total=rows.reduce((s,r)=>s+(r.amount||0),0);
   document.getElementById('ci-pfa-kpis').innerHTML=ciKpis(rows.length,total,'live snapshot','SAR');
   document.getElementById('ci-pfa-table').innerHTML=ciTable(rows,false);
   document.getElementById('ci-pfa-count').textContent=fmt(rows.length)+' of '+fmt(CI_PFA_ROWS.length)+' shown'+(rows.length>CI_CAP?' · table capped at '+fmt(CI_CAP):'');
 }
 document.getElementById('ci-booked-search').addEventListener('input',ciApplyBookedFilter);
-document.getElementById('ci-booked-reset').addEventListener('click',()=>{document.getElementById('ci-booked-search').value='';ciApplyBookedFilter();});
+document.getElementById('ci-booked-status').addEventListener('change',ciApplyBookedFilter);
+document.getElementById('ci-booked-reset').addEventListener('click',()=>{document.getElementById('ci-booked-search').value='';document.getElementById('ci-booked-status').value='';ciApplyBookedFilter();});
 document.getElementById('ci-pfa-search').addEventListener('input',ciApplyPfaFilter);
-document.getElementById('ci-pfa-reset').addEventListener('click',()=>{document.getElementById('ci-pfa-search').value='';ciApplyPfaFilter();});
+document.getElementById('ci-pfa-status').addEventListener('change',ciApplyPfaFilter);
+document.getElementById('ci-pfa-reset').addEventListener('click',()=>{document.getElementById('ci-pfa-search').value='';document.getElementById('ci-pfa-status').value='';ciApplyPfaFilter();});
 
 function renderCustomerInfo(){
   if(!window.__engine||!window.__engine.customerInfoRows)return;
@@ -1055,9 +1072,11 @@ function renderCustomerInfo(){
 
   document.getElementById('ci-booked-hint').textContent=prettyD(CI_BOOKED_RANGE.from)+'–'+prettyD(CI_BOOKED_RANGE.to)+' · own date range, independent of the filter above'+(CI_BOOKED_ROWS.length>CI_CAP?' · showing first '+fmt(CI_CAP)+' of '+fmt(CI_BOOKED_ROWS.length):'');
   document.getElementById('ci-booked-search').value='';
+  ciPopulateStatusSelect('ci-booked-status',CI_BOOKED_ROWS);
   ciApplyBookedFilter();
 
   document.getElementById('ci-pfa-search').value='';
+  ciPopulateStatusSelect('ci-pfa-status',CI_PFA_ROWS);
   ciApplyPfaFilter();
 }
 
