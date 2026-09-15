@@ -122,25 +122,52 @@ function toYMD(v) {
 // "Booked, then Cancelled" KPI for the same phenomenon). Both the
 // export's own snapshot status and the live cross-referenced status are
 // kept per row so neither is silently discarded.
-function loadAcquisitionStagingMap() {
+// Also builds a CivilID -> [applications] map in the same pass (sorted by
+// submitted date), used by the bulk "SMS Sent" list files below -- those
+// only carry CivilID + phone + send date, no StagingID, so they can only
+// be cross-referenced by CivilID. A CivilID can have multiple
+// applications over time, so each SMS-sent record is matched to the
+// earliest application submitted ON OR AFTER that SMS's send date (the
+// one plausibly caused by it), not just "any" application for that person.
+function loadAcquisitionData() {
   const acqPath = path.join(ROOT, 'Acquisition_for_Loans_all_merged.csv');
   if (!fs.existsSync(acqPath)) {
-    console.warn('  Acquisition_for_Loans_all_merged.csv not found -- skipping live cross-reference (submitted/booked will use only this SMS export\'s own snapshot fields).');
-    return null;
+    console.warn('  Acquisition_for_Loans_all_merged.csv not found -- skipping live cross-reference (submitted/booked will use only this SMS export\'s own snapshot fields; bulk SMS-sent files will show 0 matches).');
+    return { stagingMap: null, civilIdMap: null };
   }
   console.log('Reading Acquisition_for_Loans_all_merged.csv for cross-reference…');
   const { readCsv } = require('./update_acquisition_dashboard.js');
   const acqRows = readCsv(acqPath);
-  const map = new Map();
+  const stagingMap = new Map();
+  const civilIdMap = new Map();
   acqRows.forEach(r => {
     const sid = String(r['StagingID'] || '').trim();
-    if (!sid) return;
-    map.set(sid, r);
+    if (sid) stagingMap.set(sid, r);
+    const cid = String(r['CivilID'] || '').trim();
+    if (!cid) return;
+    if (!civilIdMap.has(cid)) civilIdMap.set(cid, []);
+    civilIdMap.get(cid).push(r);
   });
-  console.log(`  ${acqRows.length.toLocaleString()} Acquisition rows -> ${map.size.toLocaleString()} unique StagingIDs`);
-  return map;
+  civilIdMap.forEach(list => list.sort((a, b) => (toYMD(a['submitted']) || '').localeCompare(toYMD(b['submitted']) || '')));
+  console.log(`  ${acqRows.length.toLocaleString()} Acquisition rows -> ${stagingMap.size.toLocaleString()} unique StagingIDs, ${civilIdMap.size.toLocaleString()} unique CivilIDs`);
+  return { stagingMap, civilIdMap };
 }
-const stagingMap = loadAcquisitionStagingMap();
+const { stagingMap, civilIdMap } = loadAcquisitionData();
+
+// For a CivilID + a reference date (e.g. SMS send date), find the best
+// matching Acquisition application: the earliest one submitted on or
+// after that date; if none qualify, fall back to the most recent
+// application overall (still useful context, just not attributable to
+// this specific SMS).
+function bestAcqMatch(civilId, sinceDate) {
+  const list = civilIdMap ? civilIdMap.get(civilId) : null;
+  if (!list || !list.length) return { row: null, afterSms: false };
+  if (sinceDate) {
+    const after = list.find(r => (toYMD(r['submitted']) || '') >= sinceDate);
+    if (after) return { row: after, afterSms: true };
+  }
+  return { row: list[list.length - 1], afterSms: false };
+}
 
 // --- Per-row enrichment + per-campaign breakdown ---
 const campaigns = {};
@@ -225,6 +252,99 @@ const dateRange = (() => {
   return { min, max };
 })();
 
+// --- Bulk "SMS Sent" recipient-list files -- CivilID + phone + send date
+// only, no application outcome (unlike the row-per-application file above,
+// these are row-per-RECIPIENT, i.e. the true denominator: everyone an SMS
+// actually went to, not just the ones who went on to apply). Kept as a
+// SEPARATE section rather than merged into `campaigns` above, since the
+// two have fundamentally different denominators and merging them under
+// the same campaign name would misrepresent the smaller, application-level
+// numbers as if they were rates over the full send list. Auto-discovers
+// every xlsx in `smsSentListsDir` (pipeline.config.json) each run -- these
+// files are a standing reference library, not consumed/archived like the
+// daily application-level export, so they're always reprocessed fresh
+// rather than moved. Given the volume (500K+ rows in a single file,
+// confirmed 2026-09-15), only aggregate stats are embedded -- raw
+// per-recipient rows (with real phone numbers) are never shipped to the
+// client, unlike the smaller `rows` array above.
+const CIVIL_ID_COLS = ['CivilID', 'CivilId', 'civilID', 'Civil ID'];
+const PHONE_COLS = ['Mobile Phone', 'Mobile number', 'MobilePhone', 'Phone'];
+const DATE_COLS = ['Date of SMS', 'Date'];
+function firstPresentCol(row, candidates) {
+  for (const c of candidates) if (row[c] !== undefined) return c;
+  return null;
+}
+function campaignNameFromFilename(fname) {
+  return fname.replace(/\.xlsx$/i, '').replace(/[_]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+function processSmsSentFile(filePath) {
+  const fname = path.basename(filePath);
+  console.log(`Reading SMS-sent list ${fname}…`);
+  const fwb = XLSX.readFile(filePath);
+  const sheetName = fwb.SheetNames[0];
+  const frows = XLSX.utils.sheet_to_json(fwb.Sheets[sheetName], { defval: '' });
+  if (!frows.length) { console.warn(`  ${fname}: empty, skipping`); return null; }
+
+  const cidCol = firstPresentCol(frows[0], CIVIL_ID_COLS);
+  const dateCol = firstPresentCol(frows[0], DATE_COLS);
+  if (!cidCol || !dateCol) {
+    console.warn(`  ${fname}: couldn't find a CivilID/date column (columns: ${Object.keys(frows[0]).join(', ')}) -- skipping`);
+    return null;
+  }
+
+  const stat = { smsSent: 0, uniqueRecipients: new Set(), matchedAny: 0, submitted: 0, booked: 0, bookedAmount: 0, byDate: {} };
+  frows.forEach(r => {
+    const civilId = String(r[cidCol] || '').trim();
+    if (!civilId) return;
+    const smsDate = excelSerialToYMD(r[dateCol]);
+    stat.smsSent++;
+    stat.uniqueRecipients.add(civilId);
+    if (smsDate) stat.byDate[smsDate] = (stat.byDate[smsDate] || 0) + 1;
+
+    const { row: acq, afterSms } = bestAcqMatch(civilId, smsDate);
+    if (acq) stat.matchedAny++;
+    if (acq && afterSms) {
+      stat.submitted++;
+      const status = String(acq['Altitudestatus'] || '').trim();
+      if (BOOKED_SET.has(status)) {
+        stat.booked++;
+        stat.bookedAmount += parseFloat(acq['ItemValue']) || 0;
+      }
+    }
+  });
+
+  const dates = Object.keys(stat.byDate).sort();
+  console.log(`  ${fname}: ${stat.smsSent.toLocaleString()} sent, ${stat.matchedAny.toLocaleString()} matched any app, ${stat.submitted.toLocaleString()} submitted after SMS, ${stat.booked.toLocaleString()} booked (SAR ${Math.round(stat.bookedAmount).toLocaleString()})`);
+
+  return {
+    name: campaignNameFromFilename(fname),
+    sourceFile: fname,
+    smsSent: stat.smsSent,
+    uniqueRecipients: stat.uniqueRecipients.size,
+    matchedAny: stat.matchedAny,
+    submitted: stat.submitted,
+    booked: stat.booked,
+    bookedAmount: stat.bookedAmount,
+    dateMin: dates[0] || null,
+    dateMax: dates[dates.length - 1] || null,
+  };
+}
+
+let smsSentCampaigns = [];
+try {
+  const cfg = require('./pipeline_config.js').loadConfig();
+  if (cfg.smsSentListsDir && fs.existsSync(cfg.smsSentListsDir)) {
+    const files = fs.readdirSync(cfg.smsSentListsDir).filter(f => /\.xlsx$/i.test(f));
+    console.log(`Scanning smsSentListsDir (${files.length} xlsx file(s))…`);
+    files.forEach(f => {
+      const result = processSmsSentFile(path.join(cfg.smsSentListsDir, f));
+      if (result) smsSentCampaigns.push(result);
+    });
+  }
+} catch (e) {
+  console.warn(`  (skipping SMS-sent list scan -- ${e.message})`);
+}
+
 const SMS_DATA = {
   meta: {
     sourceFile: fileName,
@@ -239,6 +359,7 @@ const SMS_DATA = {
   campaigns,
   summaryTrend,
   rows: rowsOut,
+  smsSentCampaigns,
 };
 
 // --- Render page ---
@@ -358,6 +479,12 @@ td.num,th.num{text-align:right;font-family:'JetBrains Mono'}
   <div class="tablewrap"><table id="trend-table"></table></div>
 </div>
 
+<div class="section" id="sent-section">
+  <div class="sec-h"><h2>SMS Sent Campaigns</h2><span class="n">true send lists · cross-referenced by Civil ID</span></div>
+  <div class="hint">These campaigns cover every person an SMS actually went to (not just the ones who went on to apply) — a different, larger denominator than "Campaign performance" above. "Submitted" and "Booked" here require an Acquisition application matched by Civil ID and submitted on or after the SMS send date, so a coincidental unrelated earlier application doesn't get credited to the SMS. Aggregate only — with send lists this size, individual recipient rows (real phone numbers) aren't shipped to this page.</div>
+  <div class="tablewrap"><table id="sent-campaign-table"></table></div>
+</div>
+
 <div class="section">
   <div class="sec-h"><h2>Lookup &amp; filter</h2><span class="n">Submitted → Booked, sliced by campaign / SMS date / submitted date / booked date</span></div>
   <div class="hint" id="crossref-hint"></div>
@@ -460,6 +587,30 @@ function render(){
     document.getElementById('trend-table').innerHTML = th2 + rows2;
   } else {
     document.getElementById('trend-section').style.display = 'none';
+  }
+
+  // SMS Sent Campaigns (bulk send lists, aggregate only)
+  if (d.smsSentCampaigns && d.smsSentCampaigns.length) {
+    let th3 = '<tr><th>Campaign</th><th>Source file</th><th class="num">SMS Sent</th><th class="num">Unique Recipients</th><th class="num">Matched Any App</th><th class="num">Submitted</th><th class="num">Booked</th><th class="num">Booking Rate</th><th class="num">Booked Value</th><th>Date Range</th></tr>';
+    let rows3 = d.smsSentCampaigns.map(c=>{
+      const r = c.smsSent ? (c.booked/c.smsSent*100) : 0;
+      const rateCls = r>=0.5?'rate-good':(r<0.1?'rate-bad':'');
+      return \`<tr>
+        <td class="campname">\${c.name}</td>
+        <td>\${c.sourceFile}</td>
+        <td class="num">\${fmt(c.smsSent)}</td>
+        <td class="num">\${fmt(c.uniqueRecipients)}</td>
+        <td class="num">\${fmt(c.matchedAny)}</td>
+        <td class="num">\${fmt(c.submitted)}</td>
+        <td class="num">\${fmt(c.booked)}</td>
+        <td class="num \${rateCls}">\${pct(r)}</td>
+        <td class="num">\${money(c.bookedAmount)}</td>
+        <td>\${c.dateMin||'—'}\${c.dateMax && c.dateMax!==c.dateMin ? ' → '+c.dateMax : ''}</td>
+      </tr>\`;
+    }).join('');
+    document.getElementById('sent-campaign-table').innerHTML = th3 + rows3;
+  } else {
+    document.getElementById('sent-section').style.display = 'none';
   }
 
   initLookup(d);
