@@ -629,10 +629,20 @@ function initLookup(d){
     ? \`\${fmt(d.meta.matchedInAcquisition)} of \${fmt(d.meta.totalRows)} applications matched against the live Acquisition dataset by Staging ID -- those use the current status/date; unmatched rows (never reached master, or ID not found) fall back to this export's own snapshot fields.\`
     : \`Acquisition_for_Loans_all_merged.csv wasn't found at build time -- every row below uses only this export's own snapshot fields (no live cross-reference). Phone number lookup isn't available -- the source file has no phone column, only Civil ID.\`;
 
+  const sentCampaigns = d.smsSentCampaigns || [];
   const campSel = document.getElementById('f-campaign');
+  const appGroup = document.createElement('optgroup'); appGroup.label = 'Campaign performance (per-application)';
   [...new Set(rows.map(r=>r.campaign))].sort().forEach(c=>{
-    const o=document.createElement('option'); o.value=c; o.textContent=c; campSel.appendChild(o);
+    const o=document.createElement('option'); o.value='app:'+c; o.textContent=c; appGroup.appendChild(o);
   });
+  campSel.appendChild(appGroup);
+  if (sentCampaigns.length) {
+    const sentGroup = document.createElement('optgroup'); sentGroup.label = 'SMS Sent Campaigns (aggregate only)';
+    sentCampaigns.forEach(c=>{
+      const o=document.createElement('option'); o.value='sent:'+c.name; o.textContent=c.name; sentGroup.appendChild(o);
+    });
+    campSel.appendChild(sentGroup);
+  }
   const smsSel = document.getElementById('f-smsdate');
   [...new Set(rows.map(r=>r.smsDate).filter(Boolean))].sort().forEach(dt=>{
     const o=document.createElement('option'); o.value=dt; o.textContent=dt; smsSel.appendChild(o);
@@ -649,10 +659,31 @@ function initLookup(d){
 
   function apply(){
     const q = els.search.value.trim();
-    const camp = els.campaign.value;
+    const campRaw = els.campaign.value;
     const sms = els.smsdate.value;
     const subFrom = els.subFrom.value;
     const bookFrom = els.bookFrom.value;
+
+    // A "sent:" campaign has no per-recipient rows embedded (privacy/size,
+    // see the SMS Sent Campaigns section) -- show its aggregate instead of
+    // trying to filter non-existent rows.
+    if (campRaw.startsWith('sent:')) {
+      const name = campRaw.slice(5);
+      const c = sentCampaigns.find(x => x.name === name);
+      const rate = c && c.smsSent ? (c.booked/c.smsSent*100) : 0;
+      document.getElementById('filter-kpis').innerHTML = c ? [
+        ['SMS Sent', fmt(c.smsSent)],
+        ['Matched Any App', fmt(c.matchedAny)],
+        ['Submitted', fmt(c.submitted)],
+        ['Booked', fmt(c.booked)+' ('+pct(rate)+')'],
+        ['Booked value', money(c.bookedAmount)],
+      ].map(([lab,big])=>\`<div class="card"><div class="lab">\${lab}</div><div class="big">\${big}</div></div>\`).join('') : '';
+      document.getElementById('filter-table').innerHTML =
+        '<tr><td style="text-align:center;color:var(--faint)">Row-level lookup is not available for SMS Sent Campaigns (500K+ recipients in some files -- aggregate only, see the SMS Sent Campaigns section above). Civil ID search and the date/submitted/booked filters only apply to Campaign performance campaigns.</td></tr>';
+      document.getElementById('filter-row-note').textContent = '';
+      return;
+    }
+    const camp = campRaw.startsWith('app:') ? campRaw.slice(4) : campRaw;
 
     const filtered = rows.filter(r=>{
       if (q && !(r.civilId && r.civilId.includes(q))) return false;
