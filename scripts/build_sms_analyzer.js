@@ -293,22 +293,26 @@ function processSmsSentFile(filePath) {
   }
 
   const stat = { smsSent: 0, uniqueRecipients: new Set(), matchedAny: 0, submitted: 0, booked: 0, bookedAmount: 0, byDate: {} };
+  const bucket = d => stat.byDate[d] || (stat.byDate[d] = { smsSent: 0, matchedAny: 0, submitted: 0, booked: 0, bookedAmount: 0 });
   frows.forEach(r => {
     const civilId = String(r[cidCol] || '').trim();
     if (!civilId) return;
     const smsDate = excelSerialToYMD(r[dateCol]);
     stat.smsSent++;
     stat.uniqueRecipients.add(civilId);
-    if (smsDate) stat.byDate[smsDate] = (stat.byDate[smsDate] || 0) + 1;
+    const db = smsDate ? bucket(smsDate) : null;
+    if (db) db.smsSent++;
 
     const { row: acq, afterSms } = bestAcqMatch(civilId, smsDate);
-    if (acq) stat.matchedAny++;
+    if (acq) { stat.matchedAny++; if (db) db.matchedAny++; }
     if (acq && afterSms) {
       stat.submitted++;
+      if (db) db.submitted++;
       const status = String(acq['Altitudestatus'] || '').trim();
       if (BOOKED_SET.has(status)) {
         stat.booked++;
         stat.bookedAmount += parseFloat(acq['ItemValue']) || 0;
+        if (db) { db.booked++; db.bookedAmount += parseFloat(acq['ItemValue']) || 0; }
       }
     }
   });
@@ -327,6 +331,7 @@ function processSmsSentFile(filePath) {
     bookedAmount: stat.bookedAmount,
     dateMin: dates[0] || null,
     dateMax: dates[dates.length - 1] || null,
+    byDate: stat.byDate,
   };
 }
 
@@ -593,8 +598,12 @@ function render(){
   if (d.smsSentCampaigns && d.smsSentCampaigns.length) {
     let th3 = '<tr><th>Campaign</th><th>Source file</th><th class="num">SMS Sent</th><th class="num">Unique Recipients</th><th class="num">Matched Any App</th><th class="num">Submitted</th><th class="num">Booked</th><th class="num">Booking Rate</th><th class="num">Booked Value</th><th>Date Range</th></tr>';
     let rows3 = d.smsSentCampaigns.map(c=>{
-      const r = c.smsSent ? (c.booked/c.smsSent*100) : 0;
-      const rateCls = r>=0.5?'rate-good':(r<0.1?'rate-bad':'');
+      // Rate is Booked / Submitted (conversion of people who actually
+      // applied), matching the Campaign performance table's convention --
+      // NOT Booked / SMS Sent, which rounds to ~0.0% for every mass send
+      // list regardless of how well it's actually converting.
+      const r = c.submitted ? (c.booked/c.submitted*100) : 0;
+      const rateCls = r>=10?'rate-good':(r<3?'rate-bad':'');
       return \`<tr>
         <td class="campname">\${c.name}</td>
         <td>\${c.sourceFile}</td>
@@ -644,9 +653,28 @@ function initLookup(d){
     campSel.appendChild(sentGroup);
   }
   const smsSel = document.getElementById('f-smsdate');
-  [...new Set(rows.map(r=>r.smsDate).filter(Boolean))].sort().forEach(dt=>{
-    const o=document.createElement('option'); o.value=dt; o.textContent=dt; smsSel.appendChild(o);
-  });
+  const appDates = [...new Set(rows.map(r=>r.smsDate).filter(Boolean))].sort();
+  // The SMS Sent Date dropdown's available dates depend on which campaign
+  // is selected -- the per-application campaigns and each SMS Sent
+  // Campaign each have their own send date(s), so the option list is
+  // rebuilt every time the campaign selection changes (see the 'change'
+  // listener below), not just populated once at load.
+  function refreshSmsDateOptions(campRaw){
+    const prev = smsSel.value;
+    smsSel.innerHTML = '<option value="">All dates</option>';
+    let dates;
+    if (campRaw.startsWith('sent:')) {
+      const c = sentCampaigns.find(x => 'sent:'+x.name === campRaw);
+      dates = c && c.byDate ? Object.keys(c.byDate).sort() : [];
+    } else {
+      dates = appDates;
+    }
+    dates.forEach(dt=>{
+      const o=document.createElement('option'); o.value=dt; o.textContent=dt; smsSel.appendChild(o);
+    });
+    smsSel.value = dates.includes(prev) ? prev : '';
+  }
+  refreshSmsDateOptions('');
 
   const els = {
     search: document.getElementById('f-search'),
@@ -655,6 +683,7 @@ function initLookup(d){
     subFrom: document.getElementById('f-sub-from'),
     bookFrom: document.getElementById('f-book-from'),
   };
+  els.campaign.addEventListener('change', () => { refreshSmsDateOptions(els.campaign.value); apply(); });
   const ROW_CAP = 300;
 
   function apply(){
@@ -670,16 +699,23 @@ function initLookup(d){
     if (campRaw.startsWith('sent:')) {
       const name = campRaw.slice(5);
       const c = sentCampaigns.find(x => x.name === name);
-      const rate = c && c.smsSent ? (c.booked/c.smsSent*100) : 0;
-      document.getElementById('filter-kpis').innerHTML = c ? [
-        ['SMS Sent', fmt(c.smsSent)],
-        ['Matched Any App', fmt(c.matchedAny)],
-        ['Submitted', fmt(c.submitted)],
-        ['Booked', fmt(c.booked)+' ('+pct(rate)+')'],
-        ['Booked value', money(c.bookedAmount)],
+      // If a specific SMS Sent Date is picked, show that date's own
+      // breakdown (tracked per-date in build_sms_analyzer.js) instead of
+      // the campaign's all-time totals -- this is what actually makes the
+      // date dropdown affect the numbers for these campaigns.
+      const stats = (c && sms && c.byDate && c.byDate[sms]) ? c.byDate[sms] : c;
+      // Rate is Booked / Submitted, same convention as the SMS Sent
+      // Campaigns table -- Booked / SMS-Sent would round to ~0.0% here.
+      const rate = stats && stats.submitted ? (stats.booked/stats.submitted*100) : 0;
+      document.getElementById('filter-kpis').innerHTML = stats ? [
+        ['SMS Sent', fmt(stats.smsSent)],
+        ['Matched Any App', fmt(stats.matchedAny)],
+        ['Submitted', fmt(stats.submitted)],
+        ['Booked', fmt(stats.booked)+' ('+pct(rate)+')'],
+        ['Booked value', money(stats.bookedAmount)],
       ].map(([lab,big])=>\`<div class="card"><div class="lab">\${lab}</div><div class="big">\${big}</div></div>\`).join('') : '';
       document.getElementById('filter-table').innerHTML =
-        '<tr><td style="text-align:center;color:var(--faint)">Row-level lookup is not available for SMS Sent Campaigns (500K+ recipients in some files -- aggregate only, see the SMS Sent Campaigns section above). Civil ID search and the date/submitted/booked filters only apply to Campaign performance campaigns.</td></tr>';
+        '<tr><td style="text-align:center;color:var(--faint)">Row-level lookup is not available for SMS Sent Campaigns (500K+ recipients in some files -- aggregate only, see the SMS Sent Campaigns section above). Civil ID search and the submitted/booked date filters only apply to Campaign performance campaigns -- the SMS Sent Date filter above does apply here.</td></tr>';
       document.getElementById('filter-row-note').textContent = '';
       return;
     }
