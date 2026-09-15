@@ -375,10 +375,8 @@ td.num,th.num{text-align:right;font-family:'JetBrains Mono'}
         <label for="f-smsdate">SMS sent date</label>
         <select id="f-smsdate"><option value="">All dates</option></select>
       </div>
-      <div class="filter-item"><label for="f-sub-from">Submitted from</label><input type="date" id="f-sub-from"></div>
-      <div class="filter-item"><label for="f-sub-to">Submitted to</label><input type="date" id="f-sub-to"></div>
-      <div class="filter-item"><label for="f-book-from">Booked from</label><input type="date" id="f-book-from"></div>
-      <div class="filter-item"><label for="f-book-to">Booked to</label><input type="date" id="f-book-to"></div>
+      <div class="filter-item"><label for="f-sub-from">Submitted date</label><input type="date" id="f-sub-from"></div>
+      <div class="filter-item"><label for="f-book-from">Booked date</label><input type="date" id="f-book-from"></div>
       <button class="filter-reset" id="f-reset">Reset filters</button>
     </div>
   </div>
@@ -494,9 +492,7 @@ function initLookup(d){
     campaign: document.getElementById('f-campaign'),
     smsdate: document.getElementById('f-smsdate'),
     subFrom: document.getElementById('f-sub-from'),
-    subTo: document.getElementById('f-sub-to'),
     bookFrom: document.getElementById('f-book-from'),
-    bookTo: document.getElementById('f-book-to'),
   };
   const ROW_CAP = 300;
 
@@ -504,17 +500,15 @@ function initLookup(d){
     const q = els.search.value.trim();
     const camp = els.campaign.value;
     const sms = els.smsdate.value;
-    const subFrom = els.subFrom.value, subTo = els.subTo.value;
-    const bookFrom = els.bookFrom.value, bookTo = els.bookTo.value;
+    const subFrom = els.subFrom.value;
+    const bookFrom = els.bookFrom.value;
 
     const filtered = rows.filter(r=>{
       if (q && !(r.civilId && r.civilId.includes(q))) return false;
       if (camp && r.campaign !== camp) return false;
       if (sms && r.smsDate !== sms) return false;
       if (subFrom && (!r.submittedDate || r.submittedDate < subFrom)) return false;
-      if (subTo && (!r.submittedDate || r.submittedDate > subTo)) return false;
       if (bookFrom && (!r.bookedDate || r.bookedDate < bookFrom)) return false;
-      if (bookTo && (!r.bookedDate || r.bookedDate > bookTo)) return false;
       return true;
     });
 
