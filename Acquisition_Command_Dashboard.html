@@ -595,14 +595,17 @@ function renderKPI(){
     if(UNIQ_KEYS.has(key)){const u=c.uniq&&c.uniq[key];if(u!=null)uniqLine=`<div class="mom-note" style="opacity:.75;font-size:10px;margin-top:2px">${fmt(u)} unique applicants</div>`;}
     h+=`<div class="card kpi ${cls}"><div class="lab">${lab}</div><div class="big">${big}</div>${momBadge(mom)}<div class="mom-note">${avgline}</div>${uniqLine}</div>`;
   });
-  // Pending Final Approval: a live snapshot, not range-filtered like the
-  // cards above — same "not affected by date filter" convention used in
-  // the Summary tab. Computed at build time in update_acquisition_dashboard.js
-  // as a straight count of Altitudestatus === 'Pending Final Approval'.
-  const pfa=cD.meta.pendingFinalApproval,pfaAmt=cD.meta.pendingFinalApprovalAmount;
-  if(pfa!=null){
-    const amtLine=pfaAmt!=null?`<div class="mom-note" style="opacity:.75;font-size:10px;margin-top:2px">${money(pfaAmt)} total</div>`:'';
-    h+=`<div class="card kpi"><div class="lab">Pending Final Approval</div><div class="big">${fmt(pfa)}</div><div class="mom-note">Altitudestatus = "Pending Final Approval" · not affected by the range filter</div>${amtLine}</div>`;
+  // Pending Final Approval: now dynamic, filtered to the selected date
+  // range by submitted date (same basis as the KPI cards above) -- changed
+  // 2026-09-16 per explicit request; was previously a fixed live-snapshot
+  // count regardless of the range filter. Computed client-side from RAWSTORE
+  // via window.__engine.pendingFinalApprovalInRange() (see that IIFE for
+  // why it can't just read cD.meta any more -- meta is a static build-time
+  // snapshot, this needs to re-scan per range change).
+  const pfaLive=(window.__engine&&window.__engine.pendingFinalApprovalInRange)?window.__engine.pendingFinalApprovalInRange(c.from,c.to):null;
+  if(pfaLive){
+    const amtLine=`<div class="mom-note" style="opacity:.75;font-size:10px;margin-top:2px">${money(pfaLive.amount)} total</div>`;
+    h+=`<div class="card kpi"><div class="lab">Pending Final Approval</div><div class="big">${fmt(pfaLive.count)}</div><div class="mom-note">Altitudestatus = "Pending Final Approval" · submitted ${prettyD(c.from)}–${prettyD(c.to)}</div>${amtLine}</div>`;
   }
   // Booked, then Cancelled (yesterday): another live snapshot, not
   // range-filtered -- same convention as Pending Final Approval above.
@@ -1509,6 +1512,27 @@ const RAWSTORE = {"n":853725,"dates":["2025-10-06","2025-10-07","2025-10-08","20
     arr.sort((a,b)=>b.count-a.count);
     return {top:arr.slice(0,10),totals:{count:totalCount,avgAge:totalCount?Math.round(totalAge/totalCount):0,paid:totalPaid,notPaid:totalCount-totalPaid},companyCount:arr.length,asOf};
   }
+  // Pending Final Approval, filtered to the selected date range (by
+  // submitted date, same basis as the sub/init/final/book KPI cards) --
+  // added 2026-09-16 per explicit request to make this dynamic instead of
+  // a fixed live-snapshot count. bval is indexed by a separate incrementing
+  // pointer that only advances for booked rows (flags bit 2), same
+  // convention as every other RS.bval consumer in this file/SNB_Overview.
+  function pendingFinalApprovalInRange(fromA,toA){
+    const sd=RS.sday,flags=RS.flags,bval=RS.bval,st=RS.status;
+    const VSt2=VOCAB.status;
+    let count=0,amount=0,bptr=0;
+    for(let i=0;i<N;i++){
+      const isBooked=(flags[i]>>2)&1;
+      if(!isBooked)continue;
+      const v=bval[bptr]; bptr++;
+      if(VSt2[st[i]]!=='Pending Final Approval')continue;
+      const ds=DTS[sd[i]];
+      if(!ds||ds<fromA||ds>toA)continue;
+      count++; amount+=v;
+    }
+    return {count,amount};
+  }
   const STAGING_ID_LEN=8;
   function getStagingId(i){
     const b=RS.stagingId; if(!b)return '';
@@ -1623,7 +1647,7 @@ const RAWSTORE = {"n":853725,"dates":["2025-10-06","2025-10-07","2025-10-08","20
     const prev=windowMetricsFull(prevFrom,prevTo);
     return {cur:{...cur,from:RANGE.from,to:RANGE.to},prev:{...prev,from:prevFrom,to:prevTo}};
   }
-  window.__engine={aggFromRaw,DAILY_FULL,setFilter:toggleFilter,clear:clearFilters,N:N,FILTERS:()=>FILTERS,VOCAB,dimDailyTrend,rateDailyTrend,dimBreakdown,initFinalDailyTrend,sameMonthBookingTrend,notesAggregate,sourceEmployerCorrelation,summaryDailyExtremes,topSegments,dropoffAnalysis,momComparison,uniqueApplicantStats,incomeSplitTrend,duplicateCustomerAnalysis,topCompanies,approvedNotBooked,approvedNotBookedDetail};
+  window.__engine={aggFromRaw,DAILY_FULL,setFilter:toggleFilter,clear:clearFilters,N:N,FILTERS:()=>FILTERS,VOCAB,dimDailyTrend,rateDailyTrend,dimBreakdown,initFinalDailyTrend,sameMonthBookingTrend,notesAggregate,sourceEmployerCorrelation,summaryDailyExtremes,topSegments,dropoffAnalysis,momComparison,uniqueApplicantStats,incomeSplitTrend,duplicateCustomerAnalysis,topCompanies,approvedNotBooked,approvedNotBookedDetail,pendingFinalApprovalInRange};
   console.log('[interactive engine] ready · '+fmt(N)+' rows decoded');
   // The very first computeCUR()/renderKPI() call (page bootstrap) can run
   // before this engine is ready, leaving engine-dependent bits (unique
