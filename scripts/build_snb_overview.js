@@ -88,13 +88,13 @@ shell = shell.replace(
 // client, per established convention) -- Staging ID stands in as the
 // per-application identifier.
 shell = shell.replace(
-  '<button class="tab" data-tab="appr"><span class="n">07</span>Approved Criteria</button>',
-  '<button class="tab" data-tab="appr"><span class="n">07</span>Approved Criteria</button>\n  <button class="tab" data-tab="custinfo"><span class="n">08</span>Customer Info</button>'
+  '<button class="tab" data-tab="newchange"><span class="n">08</span>New change</button>',
+  '<button class="tab" data-tab="newchange"><span class="n">08</span>New change</button>\n  <button class="tab" data-tab="custinfo"><span class="n">09</span>Customer Info</button>'
 );
 shell = shell.replace(
   '<div class="foot" id="foot"></div>',
   `<section class="panel-tab" id="custinfo">
-  <div class="sec-h"><span class="k">08</span><h2>Customer Info</h2><span class="hint">Booked Applications has its own date range below (defaults to All, independent of the filter above) · Pending Final Approval is a live snapshot, not affected by any date filter</span></div>
+  <div class="sec-h"><span class="k">09</span><h2>Customer Info</h2><span class="hint">Booked Applications has its own date range below (defaults to All, independent of the filter above) · Pending Final Approval is a live snapshot, not affected by any date filter</span></div>
 
   <div class="sec-h" style="margin-top:8px"><span class="k">BOOKED</span><h2>Booked Applications — Customer Info</h2><span class="hint" id="ci-booked-hint"></span></div>
   <div class="datebar" style="margin-bottom:10px">

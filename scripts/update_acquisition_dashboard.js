@@ -186,6 +186,76 @@ function toYMD(v) {
 // stat (never throws) if yesterday's archived file or pipeline.config.json
 // isn't found -- this is a bonus KPI, never worth failing the whole
 // dashboard build over.
+// --- "New change" tab (journey change of 2026-09-10): per-day journey metrics.
+// Window = 30+ complete days ending the day BEFORE the latest data date (the
+// latest day is always partial), every day seeded so charts have no gaps.
+// incomeDaily is a longer Jan-1-onward series for the AltitudeIncome cards.
+const JOURNEY_CHANGE_DATE = '2026-09-10';
+function ymdAdd(ymd, n) {
+  const d = new Date(ymd + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10);
+}
+function medianOf(a) {
+  if (!a.length) return 0;
+  const s = a.slice().sort((x, y) => x - y), m = s.length >> 1;
+  return Math.round(s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2);
+}
+function buildJourneyTrends(rows, dataMax) {
+  const end = ymdAdd(dataMax, -1);
+  const start30 = ymdAdd(end, -29) < '2026-08-14' ? ymdAdd(end, -29) : '2026-08-14';
+  const startInc = '2026-01-01';
+  const flag = v => { const s = String(v == null ? '' : v).trim().toUpperCase(); return s === 'Y' || s === '1' || s === 'TRUE'; };
+  const days = {}, inc = {};
+  for (let d = start30; d <= end; d = ymdAdd(d, 1)) {
+    days[d] = { date: d, wd: new Date(d + 'T00:00:00Z').getUTCDay(), subs: 0, init: 0, fin: 0, bk: 0, amt: 0, saudi: 0, expats: 0,
+      emp_private: 0, emp_unlisted: 0, emp_govt: 0, emp_pension: 0, emp_military: 0, gosi_called: 0, mof_called: 0, simah_called: 0,
+      dr_dbr: 0, dr_loansize: 0, dr_inactive: 0, dr_minincome: 0, dr_simah: 0, unl_tagged: 0, unl_wrong: 0,
+      rg_l: 0, rg_m: 0, rg_h: 0, rg_unknown: 0, _si: [], _sa: [], _ei: [], _ea: [] };
+  }
+  for (let d = startInc; d <= end; d = ymdAdd(d, 1)) inc[d] = { date: d, _s: [], _e: [] };
+  const EMP = { 'Private Company': 'emp_private', 'Unlisted': 'emp_unlisted', 'Government Entity': 'emp_govt', 'Pension': 'emp_pension', 'Military with Grades': 'emp_military' };
+  const DR = { 'DBR': 'dr_dbr', 'Loan Size Rule': 'dr_loansize', 'Inactive Company': 'dr_inactive', 'Minimum Income Rule': 'dr_minincome', 'SIMAH Rules': 'dr_simah' };
+  const pos = v => { const n = parseFloat(v); return n > 0 ? n : null; };
+  for (const r of rows) {
+    const sd = toYMD(r['submitted']);
+    const d = sd && days[sd];
+    const saudi = String(r['Nationality_Flag'] || '').trim() === 'Saudi';
+    const expat = String(r['Nationality_Flag'] || '').trim() === 'Expats';
+    if (d) {
+      d.subs++;
+      if (r['Approvalflag'] === 'Y') d.init++;
+      if (r['FinalApprovalFlag'] === 'Y') d.fin++;
+      if (saudi) d.saudi++; else if (expat) d.expats++;
+      const ek = EMP[String(r['FinalEmployerType'] || '').trim()]; if (ek) d[ek]++;
+      if (flag(r['Is_GOSI_Called'])) d.gosi_called++;
+      if (flag(r['Is_MOF_Called'])) d.mof_called++;
+      if (String(r['SMH_Score'] == null ? '' : r['SMH_Score']).trim() !== '') d.simah_called++;
+      const dk = DR[String(r['SimplifiedDeclinedReason'] || '').trim()]; if (dk) d[dk]++;
+      if (/unlisted company/i.test(String(r['referreasons'] || ''))) {
+        d.unl_tagged++;
+        if (String(r['FinalEmployerType'] || '').trim() !== 'Unlisted') d.unl_wrong++;
+      }
+      const g = String(r['SC_RiskGrade'] || '').trim().toUpperCase();
+      if (g === 'L') d.rg_l++; else if (g === 'M') d.rg_m++; else if (g === 'H') d.rg_h++; else d.rg_unknown++;
+      const iv = pos(r['Income']), av = pos(r['AltitudeIncome']);
+      if (saudi) { if (iv) d._si.push(iv); if (av) d._sa.push(av); }
+      else if (expat) { if (iv) d._ei.push(iv); if (av) d._ea.push(av); }
+    }
+    const ii = sd && inc[sd];
+    if (ii) { const av = pos(r['AltitudeIncome']); if (av) { if (saudi) ii._s.push(av); else if (expat) ii._e.push(av); } }
+    if (BOOKED_SET.has(String(r['Altitudestatus'] || '').trim())) {
+      const bd = days[toYMD(r[CONFIG.bookCol])];
+      if (bd) { bd.bk++; bd.amt += parseFloat(r['ItemValue']) || 0; }
+    }
+  }
+  const avgUnder = a => { const f = a.filter(x => x <= 500000); return f.length ? Math.round(f.reduce((s, x) => s + x, 0) / f.length) : 0; };
+  const trends30 = Object.values(days).map(d => {
+    const o = Object.assign({}, d, { amt: Math.round(d.amt), sau_inc: medianOf(d._si), sau_alt: medianOf(d._sa), exp_inc: medianOf(d._ei), exp_alt: medianOf(d._ea) });
+    delete o._si; delete o._sa; delete o._ei; delete o._ea; return o;
+  });
+  const incomeDaily = Object.values(inc).map(d => ({ date: d.date, sau_med: medianOf(d._s), sau_avg: avgUnder(d._s), exp_med: medianOf(d._e), exp_avg: avgUnder(d._e), sau_n: d._s.length, exp_n: d._e.length }));
+  return { changeDate: JOURNEY_CHANGE_DATE, windowStart: start30, windowEnd: end, dataMax, trends30, incomeDaily };
+}
+
 function computeBookedThenCancelledYesterday(dashboardRows) {
   const empty = { count: 0, amount: 0, yesterday: null };
   let maxDate = null;
@@ -389,6 +459,9 @@ result.meta.bookedThenCancelledYesterday = btc.count;
 result.meta.bookedThenCancelledYesterdayAmount = btc.amount;
 result.meta.bookedThenCancelledYesterdayDate = btc.yesterday;
 console.log(`Booked then Cancelled (yesterday ${btc.yesterday}): ${btc.count} (SAR ${Math.round(btc.amount).toLocaleString()})`);
+
+result.journey = buildJourneyTrends(dashboardRows, result.meta.max);
+console.log(`Journey trends: ${result.journey.trends30.length} days (${result.journey.windowStart} → ${result.journey.windowEnd}), income series ${result.journey.incomeDaily.length} days`);
 
 const newLine = `const DAILY_DEFAULT = ${JSON.stringify(result)};`;
 
