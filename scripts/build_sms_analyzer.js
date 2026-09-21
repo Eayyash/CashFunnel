@@ -206,10 +206,22 @@ raw.forEach(r => {
   const stKey = status || '(not submitted to master)';
   b.statusBreakdown[stKey] = (b.statusBreakdown[stKey] || 0) + 1;
 
+  // Deep-dive fields (added 2026-09-21): product, credit decision, staging stage,
+  // final-approval flag, created date/hour and days from SMS delivery to creation.
+  const cSerial = parseFloat(r.Created);
+  const createdDate = cSerial ? excelSerialToYMD(Math.floor(cSerial)) : null;
+  const createdHour = cSerial ? Math.floor((cSerial - Math.floor(cSerial)) * 24) : null;
+  const lagDays = (createdDate && smsDate) ? Math.round((Date.parse(createdDate) - Date.parse(smsDate)) / 86400000) : null;
   rowsOut.push({
     civilId, stagingId, campaign: c, smsDate,
     matched, status, booked,
     submittedDate, bookedDate, amount,
+    prod: String(r.LoanTypeDesc || '').trim(),
+    dec: String(r.DE_Decision || '').trim(),
+    stg: String(r.StagingStatus || '').trim(),
+    fa: r.FinalApprovalFlag === 'Y',
+    tm: !!r.SubmittedToMaster,
+    created: createdDate, hr: createdHour, lag: lagDays,
   });
 });
 
@@ -456,40 +468,137 @@ td.num,th.num{text-align:right;font-family:'JetBrains Mono'}
 .match-badge.live{background:rgba(28,125,80,.12);color:var(--green)}
 .match-badge.stale{background:rgba(189,125,18,.12);color:var(--gold-d)}
 .row-limit-note{font-size:11px;color:var(--faint);margin-top:8px}
+
+/* ===== v2 structure (2026-09-21): sticky bar, tabs, outcome hero ===== */
+.top{position:sticky;top:0;z-index:30;background:rgba(238,241,247,.94);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top-in{max-width:1180px;margin:0 auto;padding:12px 26px 8px;display:flex;align-items:center;gap:14px 22px;flex-wrap:wrap}
+.top-in .hleft{flex:0 0 auto}
+.top-src{flex:1 1 260px;font-size:11.5px;color:var(--muted);font-family:'JetBrains Mono';line-height:1.5}
+.top-ctl{display:flex;align-items:center;gap:10px;margin-left:auto}
+.top-ctl label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+.top-ctl select{padding:7px 12px;border:1px solid var(--line2);border-radius:9px;background:var(--panel);color:var(--ink);font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:13px;min-width:170px}
+.top-ctl select:focus-visible,.tabs button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+.tabs{max-width:1180px;margin:0 auto;padding:0 26px;display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{appearance:none;border:0;background:none;cursor:pointer;padding:10px 16px 11px;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:13.5px;color:var(--muted);border-bottom:2.5px solid transparent;white-space:nowrap}
+.tabs button:hover{color:var(--ink)}
+.tabs button.on{color:var(--ink);border-bottom-color:var(--cyan)}
+.tabs button .cnt{font-family:'JetBrains Mono';font-size:10px;color:var(--faint);margin-left:6px}
+.panel{display:none}.panel.on{display:block;animation:pfade .25s ease}
+@keyframes pfade{from{opacity:.4;transform:translateY(3px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.panel.on{animation:none}}
+.hero{padding:22px 24px 20px;margin-bottom:22px;border-radius:16px}
+.eyebrow{font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:700}
+.hero-h{font-family:'Space Grotesk',sans-serif;font-size:27px;line-height:1.25;font-weight:600;margin:6px 0 16px;letter-spacing:-.01em}
+.hero-h b{color:var(--cyan-d);font-weight:700}
+.obar{display:flex;height:46px;border-radius:10px;overflow:hidden;background:var(--panel2);box-shadow:inset 0 0 0 1px var(--line)}
+.oseg{display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono';font-size:11.5px;font-weight:700;color:#fff;min-width:2px;transition:filter .15s}
+.oseg:hover{filter:brightness(1.08)}
+.oseg.lt{color:var(--ink2)}
+.olegend{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:12px}
+.oleg{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink2)}
+.oleg i{width:11px;height:11px;border-radius:3px;flex:0 0 auto}
+.oleg b{font-family:'JetBrains Mono';font-weight:700;color:var(--ink)}
+.oleg span{color:var(--faint);font-family:'JetBrains Mono';font-size:11.5px}
+.onote{margin:14px 0 0;font-size:12.5px;color:var(--muted);line-height:1.6}
+.insights{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.insights li{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--cyan);border-radius:10px;padding:12px 16px;font-size:13.5px;line-height:1.6;color:var(--ink2)}
+.insights li b{color:var(--ink)}
+.insights li.warn{border-left-color:var(--gold)}
+.panel .sec-h{margin-top:4px}
+.vchart svg{width:100%;height:auto;display:block;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px}
+.vleg{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12px;color:var(--ink2);margin:8px 2px 16px}
+.vleg i{display:inline-block;width:18px;border-top:3px solid;vertical-align:middle;margin-right:6px}
+main{padding-top:22px}
+#ov-kpis{grid-template-columns:repeat(6,minmax(0,1fr))}
+@media (max-width:1020px){#ov-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:560px){#ov-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+#ov-kpis .card .big{font-size:21px}
+.hist-why{border:1px dashed var(--line2);border-radius:12px;padding:14px 18px;background:var(--panel2);font-size:13.5px;line-height:1.65;margin:0 0 18px;color:var(--ink2)}
+.hist-why b{color:var(--ink)}
+@media (max-width:640px){.hero-h{font-size:21px}.top-ctl{margin-left:0;width:100%}.top-ctl select{flex:1}.obar{height:40px}}
 </style></head>
 <body>
-<header>
-  <div class="hleft">
-    <div class="logo"></div>
-    <div class="brand"><div class="t">SMS Analyzer</div><div class="s">Tasheel Finance · Campaign Performance</div></div>
+<div class="top">
+  <div class="top-in">
+    <div class="hleft">
+      <div class="logo"></div>
+      <div class="brand"><div class="t">SMS Analyzer</div><div class="s">Tasheel Finance · Campaign Performance</div></div>
+    </div>
+    <div class="top-src" id="source-hint"></div>
+    <div class="top-ctl">
+      <label for="dd-campaign">Campaign</label>
+      <select id="dd-campaign"><option value="">All campaigns</option></select>
+      <a class="home-link" href="index.html">← Home</a>
+    </div>
   </div>
-  <a class="home-link" href="index.html">← Home</a>
-</header>
+  <nav class="tabs" id="tabs" aria-label="Sections">
+    <button type="button" data-tab="overview" class="on">Overview</button>
+    <button type="button" data-tab="conversion">Conversion</button>
+    <button type="button" data-tab="timing">Timing &amp; size</button>
+    <button type="button" data-tab="sendlists" id="tab-btn-sendlists">Send lists</button>
+    <button type="button" data-tab="history" id="tab-btn-history">Campaign history</button>
+    <button type="button" data-tab="find">Find applications</button>
+  </nav>
+</div>
 <main>
-<div class="hint" id="source-hint"></div>
 
-<div class="section">
-  <div class="sec-h"><h2>Overall</h2><span class="n">this export · by campaign</span></div>
-  <div id="overall-kpis"></div>
-</div>
+<section class="panel on" id="tab-overview">
+  <div class="card hero">
+    <div class="eyebrow">What happened to every application</div>
+    <div class="hero-h" id="hero-h"></div>
+    <div class="obar" id="outcome-bar" role="img" aria-label="Outcome of every application"></div>
+    <div class="olegend" id="outcome-legend"></div>
+    <p class="onote" id="outcome-note"></p>
+  </div>
+  <div class="kpis" id="ov-kpis" style="margin-bottom:26px"></div>
+  <div class="section">
+    <div class="sec-h"><h2>What stands out</h2><span class="n">worked out from the selected campaign</span></div>
+    <ul class="insights" id="ov-insights"></ul>
+  </div>
+  <div class="section">
+    <div class="sec-h"><h2>Campaigns side by side</h2><span class="n">applications created from SMS links · this export</span></div>
+    <div class="tablewrap"><table id="campaign-table"></table></div>
+  </div>
+</section>
 
-<div class="section">
-  <div class="sec-h"><h2>Campaign performance</h2><span class="n">by CampaignName · this export</span></div>
-  <div class="tablewrap"><table id="campaign-table"></table></div>
-</div>
+<section class="panel" id="tab-conversion">
+  <div class="camp-block"><h3>Conversion funnel <span class="n">created → master → final approved → booked</span></h3><div id="dd-funnel"></div></div>
+  <div class="camp-block"><h3>Product mix <span class="n">which loan type people apply for, and which one converts</span></h3><div id="dd-product"></div></div>
+  <div class="camp-block"><h3>Credit decision <span class="n">the decision engine's verdict on each application</span></h3><div id="dd-decision"></div></div>
+  <div class="camp-block"><h3>Where applications sit in staging <span class="n">StagingStatus</span></h3><div id="dd-stage"></div></div>
+  <div class="camp-block"><h3>Final status <span class="n">live master status where matched, otherwise this export's snapshot</span></h3><div id="dd-status"></div></div>
+</section>
 
-<div class="section" id="trend-section">
-  <div class="sec-h"><h2>Historical trend</h2><span class="n">vendor monthly rollup · reproduced as-is, own figures</span></div>
-  <div class="hint">Note: this table's "Bookings" figure is the campaign vendor's own monthly count and does not match the "Booked" count above — bookings mature over weeks after an SMS send, and this rollup reflects more elapsed maturation time than the fresh Raw Data export above has had. Both are shown side by side rather than forced to reconcile.</div>
-  <div class="tablewrap"><table id="trend-table"></table></div>
-</div>
+<section class="panel" id="tab-timing">
+  <div class="kpis" id="dd-kpis" style="margin-bottom:22px"></div>
+  <div class="camp-block"><h3>Time to apply <span class="n">days from SMS delivery to application created</span></h3><div id="dd-lag"></div></div>
+  <div class="camp-block"><h3>Time of day <span class="n">hour the application was created</span></h3><div id="dd-hour"></div></div>
+  <div class="camp-block"><h3>Daily trend <span class="n">by application created date</span></h3><div id="dd-trend"></div></div>
+  <div class="camp-block"><h3>Ticket size of booked loans <span class="n">amount is only recorded once a loan is allocated, so this covers booked loans only</span></h3><div id="dd-amount"></div></div>
+</section>
 
+<section class="panel" id="tab-sendlists">
 <div class="section" id="sent-section">
   <div class="sec-h"><h2>SMS Sent Campaigns</h2><span class="n">true send lists · cross-referenced by Civil ID</span></div>
   <div class="hint">These campaigns cover every person an SMS actually went to (not just the ones who went on to apply) — a different, larger denominator than "Campaign performance" above. "Submitted" and "Booked" here require an Acquisition application matched by Civil ID and submitted on or after the SMS send date, so a coincidental unrelated earlier application doesn't get credited to the SMS. Aggregate only — with send lists this size, individual recipient rows (real phone numbers) aren't shipped to this page.</div>
   <div class="tablewrap"><table id="sent-campaign-table"></table></div>
 </div>
 
+</section>
+
+<section class="panel" id="tab-history">
+<div class="section" id="trend-section">
+  <div class="sec-h"><h2>Campaign history by month</h2><span class="n">the vendor’s own monthly report · every wave, not just the latest</span></div>
+  <p class="hist-why"><b>Why this tab exists.</b> Everything else on this page comes from the latest export, which holds only the current campaign wave. The SMS vendor also reports every earlier wave, month by month. This tab keeps that history so you can compare waves over time, and it checks the vendor’s numbers against this export.</p>
+  <ul class="insights" id="hist-insights"></ul>
+  <div class="camp-block"><h3>Volume by month <span class="n">vendor counts, all campaigns combined</span></h3><div id="vendor-chart"></div></div>
+  <div class="camp-block"><h3>Vendor report vs this export <span class="n">latest wave, same campaign and month</span></h3><div class="tablewrap"><table id="hist-recon"></table></div></div>
+  <div class="camp-block"><h3>Full monthly report <span class="n">as reported by the vendor, with the approval rate worked out</span></h3><div class="tablewrap"><table id="trend-table"></table></div></div>
+</div>
+</section>
+
+<section class="panel" id="tab-find">
 <div class="section">
   <div class="sec-h"><h2>Lookup &amp; filter</h2><span class="n">Submitted → Booked, sliced by campaign / SMS date / submitted date / booked date</span></div>
   <div class="hint" id="crossref-hint"></div>
@@ -518,6 +627,8 @@ td.num,th.num{text-align:right;font-family:'JetBrains Mono'}
   <div class="row-limit-note" id="filter-row-note"></div>
 </div>
 
+</section>
+
 </main>
 <div class="foot">Built for <a href="https://www.linkedin.com/in/emadayyash" target="_blank">Emad Ayyash</a> · Tasheel Finance</div>
 <script>
@@ -533,33 +644,94 @@ function prettyMonth(m){
   return names[mo-1]+' '+y;
 }
 
+// ===== Deep dive (added 2026-09-21): product, decision, stage, timing, ticket, trend =====
+// Everything below is computed client-side from SMS_DATA.rows (the export's own
+// columns: LoanTypeDesc, DE_Decision, StagingStatus, Created, Amount) plus the
+// live/snapshot status already resolved per row. Booking rate = Booked / Created.
+var DD_LAG=[['Same day',0,0],['1–3 days',1,3],['4–7 days',4,7],['8–14 days',8,14],['15–30 days',15,30],['Over 30 days',31,99999]];
+var DD_AMT=[['No amount recorded',0,0],['Under SAR 10K',0.01,9999.99],['SAR 10K–25K',10000,24999.99],['SAR 25K–50K',25000,49999.99],['SAR 50K–100K',50000,99999.99],['SAR 100K and above',100000,1e12]];
+function ddRows(){var c=document.getElementById('dd-campaign').value;return SMS_DATA.rows.filter(function(r){return !c||r.campaign===c;});}
+function ddAgg(list){var o={n:list.length,tm:0,fa:0,bk:0,val:0};list.forEach(function(r){if(r.tm)o.tm++;if(r.fa)o.fa++;if(r.booked){o.bk++;o.val+=r.amount||0;}});return o;}
+function ddBar(p,color){return '<div class="bar-wrap"><div class="bar" style="width:'+Math.max(0,Math.min(100,p)).toFixed(1)+'%'+(color?';background:'+color:'')+'"></div></div>';}
+function ddBreakdown(rows,keyFn,label,order){
+  var m={};rows.forEach(function(r){var k=keyFn(r);if(k==null)return;(m[k]||(m[k]=[])).push(r);});
+  var keys=order||Object.keys(m).sort(function(a,b){return m[b].length-m[a].length;});
+  keys=keys.filter(function(k){return m[k];});
+  var tot=rows.length||1;
+  var h='<tr><th>'+label+'</th><th class="num">Applications</th><th>Share</th><th class="num">To master</th><th class="num">Final approved</th><th class="num">Booked</th><th class="num">Booking rate</th><th class="num">Booked value</th><th class="num">Avg ticket</th></tr>';
+  var b=keys.map(function(k){var a=ddAgg(m[k]);var rate=a.n?a.bk/a.n*100:0;
+    return '<tr><td class="campname">'+k+'</td><td class="num">'+fmt(a.n)+'</td><td style="min-width:120px">'+pct(a.n/tot*100)+ddBar(a.n/tot*100)+'</td><td class="num">'+fmt(a.tm)+'</td><td class="num">'+fmt(a.fa)+'</td><td class="num">'+fmt(a.bk)+'</td><td class="num '+(rate>=10?'rate-good':(rate<3?'rate-bad':''))+'">'+pct(rate)+'</td><td class="num">'+money(a.val)+'</td><td class="num">'+(a.bk?money(a.val/a.bk):'—')+'</td></tr>';}).join('');
+  return '<div class="tablewrap"><table>'+h+b+'</table></div>';
+}
+function ddFunnel(rows){
+  var a=ddAgg(rows);var steps=[['Applications created',a.n],['Submitted to master',a.tm],['Final approved',a.fa],['Booked',a.bk]];
+  return '<div class="tablewrap"><table><tr><th>Step</th><th class="num">Count</th><th class="num">% of created</th><th class="num">% of previous step</th><th>Drop-off</th></tr>'+
+  steps.map(function(s,i){var pc=a.n?s[1]/a.n*100:0;var pp=i?(steps[i-1][1]?s[1]/steps[i-1][1]*100:0):100;
+    return '<tr><td class="campname">'+s[0]+'</td><td class="num">'+fmt(s[1])+'</td><td class="num">'+pct(pc)+'</td><td class="num">'+(i?pct(pp):'—')+'</td><td style="min-width:200px">'+ddBar(pc)+'</td></tr>';}).join('')+'</table></div>';
+}
+function ddHourChart(rows){
+  var c=[],b=[],h;for(h=0;h<24;h++){c.push(0);b.push(0);}
+  rows.forEach(function(r){if(r.hr!=null){c[r.hr]++;if(r.booked)b[r.hr]++;}});
+  var W=760,H=210,L=42,B=26,T=14,mx=Math.max.apply(null,c)||1,bw=(W-L-10)/24;
+  var s='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto" role="img" aria-label="Applications by hour of day">';
+  for(var k=0;k<=4;k++){var y=T+(H-T-B)*(1-k/4);s+='<line x1="'+L+'" x2="'+(W-10)+'" y1="'+y+'" y2="'+y+'" stroke="rgba(30,45,75,.10)"/><text x="'+(L-6)+'" y="'+(y+4)+'" text-anchor="end" font-size="10" fill="#8493a8">'+Math.round(mx*k/4)+'</text>';}
+  for(h=0;h<24;h++){var x=L+h*bw+2,ha=(H-T-B)*c[h]/mx,hb=(H-T-B)*b[h]/mx;
+    s+='<rect x="'+x.toFixed(1)+'" y="'+(H-B-ha).toFixed(1)+'" width="'+(bw-4).toFixed(1)+'" height="'+ha.toFixed(1)+'" fill="#0e9e90" opacity=".85"><title>'+h+':00 · '+c[h]+' applications · '+b[h]+' booked</title></rect>';
+    s+='<rect x="'+x.toFixed(1)+'" y="'+(H-B-hb).toFixed(1)+'" width="'+(bw-4).toFixed(1)+'" height="'+hb.toFixed(1)+'" fill="#bd7d12"/>';
+    if(h%3===0)s+='<text x="'+(x+(bw-4)/2).toFixed(1)+'" y="'+(H-8)+'" text-anchor="middle" font-size="10" fill="#8493a8">'+h+'h</text>';}
+  return s+'</svg><div class="hint" style="margin:4px 0 0"><span style="color:#0e9e90">■</span> applications created · <span style="color:#bd7d12">■</span> of which booked · hour as recorded in the export (no timezone conversion)</div>';
+}
+function ddTrendChart(rows){
+  var m={};rows.forEach(function(r){if(!r.created)return;var o=m[r.created]||(m[r.created]={n:0,b:0});o.n++;if(r.booked)o.b++;});
+  var days=Object.keys(m).sort();if(!days.length)return '<p class="hint">No dated applications.</p>';
+  var W=760,H=220,L=42,R=14,T=14,B=28,mx=1;days.forEach(function(d){if(m[d].n>mx)mx=m[d].n;});
+  var X=function(i){return L+(days.length>1?i*(W-L-R)/(days.length-1):(W-L-R)/2);},Y=function(v){return T+(H-T-B)*(1-v/mx);};
+  var s='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto" role="img" aria-label="Applications and bookings by created date">';
+  for(var k=0;k<=4;k++){var y=Y(mx*k/4);s+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y+'" y2="'+y+'" stroke="rgba(30,45,75,.10)"/><text x="'+(L-6)+'" y="'+(y+4)+'" text-anchor="end" font-size="10" fill="#8493a8">'+Math.round(mx*k/4)+'</text>';}
+  var step=Math.max(1,Math.ceil(days.length/8));
+  days.forEach(function(d,i){if(i%step===0||i===days.length-1)s+='<text x="'+X(i).toFixed(1)+'" y="'+(H-9)+'" text-anchor="middle" font-size="10" fill="#8493a8">'+d.slice(5)+'</text>';});
+  var p1='',p2='';days.forEach(function(d,i){p1+=(i?'L':'M')+X(i).toFixed(1)+' '+Y(m[d].n).toFixed(1)+' ';p2+=(i?'L':'M')+X(i).toFixed(1)+' '+Y(m[d].b).toFixed(1)+' ';});
+  s+='<path d="'+p1+'" fill="none" stroke="#0e9e90" stroke-width="2.2"/><path d="'+p2+'" fill="none" stroke="#bd7d12" stroke-width="2.2" stroke-dasharray="6 4"/>';
+  days.forEach(function(d,i){s+='<circle cx="'+X(i).toFixed(1)+'" cy="'+Y(m[d].n).toFixed(1)+'" r="2.6" fill="#0e9e90"><title>'+d+' · '+m[d].n+' created · '+m[d].b+' booked</title></circle>';});
+  return s+'</svg><div class="hint" style="margin:4px 0 0"><span style="color:#0e9e90">━</span> applications created per day · <span style="color:#bd7d12">┅</span> of which booked (by created date, so recent days are still maturing)</div>';
+}
+// Ticket size is shown for BOOKED loans only: the amount field is only populated once
+// a loan is allocated (live ItemValue is 0 for everything else), so a booking rate per
+// amount band would be circular.
+function ddTicket(rows){
+  var bk=rows.filter(function(r){return r.booked&&r.amount>0;});
+  var totV=bk.reduce(function(s,r){return s+r.amount;},0)||1,totN=bk.length||1;
+  var bands=DD_AMT.slice(1);
+  var body=bands.map(function(b){var l=bk.filter(function(r){return r.amount>=b[1]&&r.amount<=b[2];});var v=l.reduce(function(s,r){return s+r.amount;},0);
+    return '<tr><td class="campname">'+b[0]+'</td><td class="num">'+fmt(l.length)+'</td><td style="min-width:120px">'+pct(l.length/totN*100)+ddBar(l.length/totN*100)+'</td><td class="num">'+money(v)+'</td><td style="min-width:120px">'+pct(v/totV*100)+ddBar(v/totV*100,'#bd7d12')+'</td><td class="num">'+(l.length?money(v/l.length):'—')+'</td></tr>';}).join('');
+  return '<div class="tablewrap"><table><tr><th>Ticket size</th><th class="num">Booked loans</th><th>Share of loans</th><th class="num">Booked value</th><th>Share of value</th><th class="num">Avg ticket</th></tr>'+body+'</table></div>';
+}
+function ddBand(bands,v){if(v==null||isNaN(v))return null;for(var i=0;i<bands.length;i++){if(v>=bands[i][1]&&v<=bands[i][2])return bands[i][0];}return null;}
+function renderDeepDive(){
+  var rows=ddRows(),a=ddAgg(rows);
+  var lags=rows.map(function(r){return r.lag;}).filter(function(x){return x!=null&&x>=0;}).sort(function(x,y){return x-y;});
+  var med=lags.length?lags[Math.floor(lags.length/2)]:null;
+  var w7=lags.length?lags.filter(function(x){return x<=7;}).length/lags.length*100:null;
+  var hrs=[];for(var h=0;h<24;h++)hrs.push(0);rows.forEach(function(r){if(r.hr!=null)hrs[r.hr]++;});
+  var peak=hrs.indexOf(Math.max.apply(null,hrs));
+  var kp=[['Applications',fmt(a.n),'in this selection'],['Median time to apply',med==null?'—':med+' days','SMS delivery → application'],['Applied within 7 days',pct(w7),'of applications'],['Avg booked ticket',a.bk?money(a.val/a.bk):'—','booked value ÷ booked'],['Peak hour',hrs[peak]?peak+':00':'—','most applications created']];
+  document.getElementById('dd-kpis').innerHTML=kp.map(function(x){return '<div class="card"><div class="lab">'+x[0]+'</div><div class="big">'+x[1]+'</div><div class="sub">'+x[2]+'</div></div>';}).join('');
+  document.getElementById('dd-funnel').innerHTML=ddFunnel(rows);
+  document.getElementById('dd-product').innerHTML=ddBreakdown(rows,function(r){return r.prod||'(blank)';},'Product');
+  document.getElementById('dd-decision').innerHTML=ddBreakdown(rows,function(r){return r.dec||'(blank)';},'Credit decision');
+  document.getElementById('dd-stage').innerHTML=ddBreakdown(rows,function(r){return r.stg||'(blank)';},'Pipeline stage');
+  document.getElementById('dd-status').innerHTML=ddBreakdown(rows,function(r){return r.status||'(not submitted to master)';},'Final status');
+  document.getElementById('dd-lag').innerHTML=ddBreakdown(rows,function(r){return ddBand(DD_LAG,r.lag);},'Time to apply',DD_LAG.map(function(x){return x[0];}));
+  document.getElementById('dd-hour').innerHTML=ddHourChart(rows);
+  document.getElementById('dd-amount').innerHTML=ddTicket(rows);
+  document.getElementById('dd-trend').innerHTML=ddTrendChart(rows);
+}
+(function(){var sel=document.getElementById('dd-campaign');Object.keys(SMS_DATA.campaigns).sort().forEach(function(c){var o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o);});sel.addEventListener('change',renderAll);})();
+
 function render(){
   const d = SMS_DATA;
   document.getElementById('source-hint').textContent =
     \`Source: \${d.meta.sourceFile} · \${fmt(d.meta.totalRows)} applications · SMS delivered \${d.meta.deliveredMin} → \${d.meta.deliveredMax}\`;
-
-  // Overall KPIs
-  function kpiBlock(b, total){
-    const rate = b.submitted ? (b.booked/b.submitted*100) : 0;
-    const toMasterRate = b.submitted ? (b.submittedToMaster/b.submitted*100) : 0;
-    const kpis = [
-      ['Applications Created', fmt(b.submitted), 'from SMS click-through'],
-      ['Submitted to Master', fmt(b.submittedToMaster), pct(toMasterRate)+' of created'],
-      ['Final Approved', fmt(b.approved), 'FinalApprovalFlag = Y'],
-      ['Booked', fmt(b.booked), pct(rate)+' of created'],
-      ['Booked Value', money(b.bookedAmount), 'total ItemValue'],
-      ['Cancelled', fmt(b.cancelled), ''],
-    ];
-    return \`<div class="kpis">\${kpis.map(([lab,big,sub])=>
-      \`<div class="card"><div class="lab">\${lab}</div><div class="big">\${big}</div><div class="sub">\${sub}</div></div>\`
-    ).join('')}</div>\`;
-  }
-  const campNamesForKpi = Object.keys(d.campaigns).sort((a,b)=>d.campaigns[b].submitted-d.campaigns[a].submitted);
-  let overallHtml = \`<div class="camp-block"><h3>All Campaigns <span class="n">combined</span></h3>\${kpiBlock(d.overall)}</div>\`;
-  overallHtml += campNamesForKpi.map(name =>
-    \`<div class="camp-block"><h3>\${name}</h3>\${kpiBlock(d.campaigns[name])}</div>\`
-  ).join('');
-  document.getElementById('overall-kpis').innerHTML = overallHtml;
 
   // Campaign table
   const campNames = Object.keys(d.campaigns).sort((a,b)=>d.campaigns[b].submitted-d.campaigns[a].submitted);
@@ -583,12 +755,13 @@ function render(){
   }).join('');
   document.getElementById('campaign-table').innerHTML = th + rows;
 
-  // Historical trend table (vendor Summary sheet, as-is)
+  // Campaign history table (vendor Summary sheet) with the approval rate worked out
   if (d.summaryTrend && d.summaryTrend.length) {
-    let th2 = '<tr><th>Month</th><th>Campaign</th><th>Duration</th><th class="num">Submissions</th><th class="num">Final Approvals</th><th class="num">Bookings</th></tr>';
-    let rows2 = d.summaryTrend.map(r=>
-      \`<tr><td>\${prettyMonth(r.month)}</td><td class="campname">\${r.campaign}</td><td>\${r.duration}</td><td class="num">\${fmt(r.submissions)}</td><td class="num">\${fmt(r.approvals)}</td><td class="num">\${fmt(r.bookings)}</td></tr>\`
-    ).join('');
+    let th2 = '<tr><th>Month</th><th>Campaign</th><th>Wave dates</th><th class="num">Submissions</th><th class="num">Final approvals</th><th class="num">Approval rate</th><th class="num">Vendor bookings</th></tr>';
+    let rows2 = d.summaryTrend.map(function(r){
+      var ar = (+r.submissions) ? (+r.approvals)/(+r.submissions)*100 : null;
+      return '<tr><td>'+prettyMonth(r.month)+'</td><td class="campname">'+r.campaign+'</td><td>'+r.duration+'</td><td class="num">'+fmt(r.submissions)+'</td><td class="num">'+fmt(r.approvals)+'</td><td class="num">'+(ar==null?'—':pct(ar))+'</td><td class="num">'+fmt(r.bookings)+'</td></tr>';
+    }).join('');
     document.getElementById('trend-table').innerHTML = th2 + rows2;
   } else {
     document.getElementById('trend-section').style.display = 'none';
@@ -766,6 +939,129 @@ function initLookup(d){
 }
 
 render();
+// ===== v2 structure (2026-09-21): overview, outcome bar, insights, vendor chart, tabs =====
+var OUT_DEF=[['Booked','#0e9e90',0],['In progress','#6f5be0',0],['Declined','#c0392b',0],['Cancelled','#bd7d12',0],['Abandoned / lapsed','#8493a8',0],['Never reached master','#d3dae6',1]];
+function ddLow(k){return String(k).toLowerCase().replace('simah','SIMAH');}
+function ddOutcome(r){
+  if(r.booked)return 'Booked';
+  var s=r.status||'';
+  if(!s)return 'Never reached master';
+  if(s==='Declined [D]')return 'Declined';
+  if(s==='Cancelled [X]'||s==='Withdrawn [W]')return 'Cancelled';
+  if(s==='Abandoned [B]'||s==='Lapsed [L]'||s==='Incomplete [I]')return 'Abandoned / lapsed';
+  return 'In progress';
+}
+function ddSel(){var c=document.getElementById('dd-campaign').value;return c||'all campaigns';}
+function renderOutcome(rows){
+  var n=rows.length,cnt={};OUT_DEF.forEach(function(o){cnt[o[0]]=0;});
+  rows.forEach(function(r){cnt[ddOutcome(r)]++;});
+  var bk=cnt['Booked'];
+  document.getElementById('hero-h').innerHTML=n?'<b>'+fmt(bk)+' booked</b> out of '+fmt(n)+' applications from '+ddSel()+' ('+pct(bk/n*100)+')':'No applications in this selection.';
+  var bar='',leg='';
+  OUT_DEF.forEach(function(o){var c=cnt[o[0]];if(!c)return;var w=c/n*100;
+    bar+='<div class="oseg'+(o[2]?' lt':'')+'" style="width:'+w.toFixed(2)+'%;background:'+o[1]+'" title="'+o[0]+': '+fmt(c)+' ('+pct(w)+')">'+(w>=7?fmt(c):'')+'</div>';
+    leg+='<div class="oleg"><i style="background:'+o[1]+'"></i>'+o[0]+' <b>'+fmt(c)+'</b><span>'+pct(w)+'</span></div>';});
+  document.getElementById('outcome-bar').innerHTML=bar;
+  document.getElementById('outcome-legend').innerHTML=leg;
+  var nr=rows.filter(function(r){return ddOutcome(r)==='Never reached master';});
+  var note='';
+  if(nr.length){var m={};nr.forEach(function(r){var k=r.dec||'no decision recorded';m[k]=(m[k]||0)+1;});
+    var top=Object.keys(m).sort(function(a,b){return m[b]-m[a];}).slice(0,3).map(function(k){return fmt(m[k])+' '+ddLow(k);});
+    note='<b>'+fmt(nr.length)+'</b> applications ('+pct(nr.length/n*100)+') never reached the master system. By credit decision: '+top.join(', ')+'.';}
+  document.getElementById('outcome-note').innerHTML=note;
+}
+function renderOverviewKpis(rows){
+  var a=ddAgg(rows),n=a.n||1;
+  var k=[['Applications',fmt(a.n),'created from SMS links'],['Reached master',fmt(a.tm),pct(a.tm/n*100)+' of applications'],['Final approved',fmt(a.fa),pct(a.fa/n*100)+' of applications'],['Booked',fmt(a.bk),pct(a.bk/n*100)+' of applications'],['Booked value',money(a.val),'live value where matched'],['Average ticket',a.bk?money(a.val/a.bk):'—','per booked loan']];
+  document.getElementById('ov-kpis').innerHTML=k.map(function(x){return '<div class="card"><div class="lab">'+x[0]+'</div><div class="big">'+x[1]+'</div><div class="sub">'+x[2]+'</div></div>';}).join('');
+}
+function ddGroupBy(rows,keyFn){var m={};rows.forEach(function(r){var k=keyFn(r);if(k==null||k==='')return;(m[k]||(m[k]=[])).push(r);});return m;}
+function renderInsights(rows){
+  var out=[],n=rows.length;
+  if(n<30){document.getElementById('ov-insights').innerHTML='<li>Not enough applications in this selection to draw conclusions.</li>';return;}
+  var byP=ddGroupBy(rows,function(r){return r.prod;});
+  var ps=Object.keys(byP).filter(function(k){return byP[k].length>=30;}).map(function(k){var a=ddAgg(byP[k]);return {k:k,n:a.n,rate:a.bk/a.n*100};});
+  if(ps.length>1){var big=ps.slice().sort(function(a,b){return b.n-a.n;})[0],best=ps.slice().sort(function(a,b){return b.rate-a.rate;})[0];
+    if(big.k!==best.k&&big.rate<best.rate/2)out.push('<li class="warn"><b>'+big.k+'</b> is the biggest product at '+pct(big.n/n*100)+' of applications but books only <b>'+pct(big.rate)+'</b>, while <b>'+best.k+'</b> books <b>'+pct(best.rate)+'</b>.</li>');
+    else out.push('<li><b>'+best.k+'</b> converts best at <b>'+pct(best.rate)+'</b> of its applications; '+big.k+' is the largest product at '+pct(big.n/n*100)+' of volume.</li>');}
+  var nr=rows.filter(function(r){return ddOutcome(r)==='Never reached master';});
+  if(nr.length){var m={};nr.forEach(function(r){var k=r.dec||'no decision recorded';m[k]=(m[k]||0)+1;});var ks=Object.keys(m).sort(function(a,b){return m[b]-m[a];});
+    out.push('<li class="warn"><b>'+pct(nr.length/n*100)+'</b> of applications ('+fmt(nr.length)+') never reach master. The largest groups are <b>'+ddLow(ks[0])+'</b> ('+fmt(m[ks[0]])+')'+(ks[1]?' and <b>'+ddLow(ks[1])+'</b> ('+fmt(m[ks[1]])+')':'')+'.</li>');}
+  var ap=rows.filter(function(r){return r.dec==='Approved';});
+  if(ap.length>=30){var ab=ap.filter(function(r){return r.booked;}).length;
+    out.push('<li>Only <b>'+pct(ab/ap.length*100)+'</b> of the '+fmt(ap.length)+' applications approved by the decision engine end up booked, so <b>'+fmt(ap.length-ab)+'</b> approved applications did not convert.</li>');}
+  var lags=rows.map(function(r){return r.lag;}).filter(function(x){return x!=null&&x>=0;}).sort(function(x,y){return x-y;});
+  if(lags.length>=30){var med=lags[Math.floor(lags.length/2)],w7=lags.filter(function(x){return x<=7;}).length/lags.length*100;
+    out.push('<li>People take a median of <b>'+med+' days</b> from SMS delivery to application, and only <b>'+pct(w7)+'</b> apply within a week, so bookings keep maturing for weeks after a send.</li>');}
+  var bk=rows.filter(function(r){return r.booked&&r.amount>0;});
+  if(bk.length>=30){var tv=bk.reduce(function(s,r){return s+r.amount;},0),hi=bk.filter(function(r){return r.amount>=25000;}),hv=hi.reduce(function(s,r){return s+r.amount;},0);
+    out.push('<li>Booked loans average <b>'+money(tv/bk.length)+'</b>. Loans of SAR 25K and above are <b>'+pct(hi.length/bk.length*100)+'</b> of booked loans but <b>'+pct(hv/tv*100)+'</b> of booked value.</li>');}
+  document.getElementById('ov-insights').innerHTML=out.join('');
+}
+function renderVendorChart(){
+  var t=SMS_DATA.summaryTrend||[];var el=document.getElementById('vendor-chart');if(!el)return;
+  if(!t.length){el.innerHTML='';return;}
+  var m={};t.forEach(function(r){var o=m[r.month]||(m[r.month]={s:0,a:0,b:0});o.s+=+r.submissions||0;o.a+=+r.approvals||0;o.b+=+r.bookings||0;});
+  var ms=Object.keys(m).sort();var W=760,H=230,L=48,R=16,T=16,B=30,mx=1;
+  ms.forEach(function(k){mx=Math.max(mx,m[k].s,m[k].a,m[k].b);});
+  var X=function(i){return L+(ms.length>1?i*(W-L-R)/(ms.length-1):(W-L-R)/2);},Y=function(v){return T+(H-T-B)*(1-v/mx);};
+  var s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Vendor monthly rollup">';
+  for(var g=0;g<=4;g++){var y=Y(mx*g/4);s+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y+'" y2="'+y+'" stroke="rgba(30,45,75,.10)"/><text x="'+(L-7)+'" y="'+(y+4)+'" text-anchor="end" font-size="10" fill="#8493a8">'+fmt(mx*g/4)+'</text>';}
+  ms.forEach(function(k,i){s+='<text x="'+X(i).toFixed(1)+'" y="'+(H-9)+'" text-anchor="middle" font-size="10" fill="#8493a8">'+prettyMonth(k)+'</text>';});
+  var defs=[['s','Submissions','#0e9e90',''],['a','Final approvals','#6f5be0',''],['b','Bookings (vendor count)','#bd7d12','6 4']];
+  defs.forEach(function(d){var p='';ms.forEach(function(k,i){p+=(i?'L':'M')+X(i).toFixed(1)+' '+Y(m[k][d[0]]).toFixed(1)+' ';});
+    s+='<path d="'+p+'" fill="none" stroke="'+d[2]+'" stroke-width="2.3"'+(d[3]?' stroke-dasharray="'+d[3]+'"':'')+'/>';
+    ms.forEach(function(k,i){s+='<circle cx="'+X(i).toFixed(1)+'" cy="'+Y(m[k][d[0]]).toFixed(1)+'" r="3" fill="'+d[2]+'"><title>'+d[1]+' · '+prettyMonth(k)+' · '+fmt(m[k][d[0]])+'</title></circle>';});});
+  s+='</svg><div class="vleg">'+defs.map(function(d){return '<span><i style="border-color:'+d[2]+(d[3]?';border-top-style:dashed':'')+'"></i>'+d[1]+'</span>';}).join('')+'</div>';
+  el.innerHTML='<div class="vchart">'+s+'</div>';
+}
+function ddYm(s){return String(s||'').split('-').join('').slice(0,6);}
+function renderHistory(){
+  var t=SMS_DATA.summaryTrend||[],box=document.getElementById('hist-insights');if(!box)return;
+  var camps=SMS_DATA.campaigns,ym=ddYm(SMS_DATA.meta.deliveredMax),rec=[],ins=[];
+  Object.keys(camps).forEach(function(c){var v=t.filter(function(r){return String(r.month)===ym&&r.campaign===c;})[0];if(!v)return;var e=camps[c];rec.push({c:c,wave:v.duration,vs:+v.submissions,va:+v.approvals,vb:+v.bookings,es:e.submitted,ea:e.approved,eb:e.booked});});
+  var tbl=document.getElementById('hist-recon');
+  if(rec.length){
+    tbl.innerHTML='<tr><th>Campaign</th><th>Wave</th><th class="num">Submissions (vendor / export)</th><th class="num">Final approvals (vendor / export)</th><th class="num">Bookings (vendor / export)</th><th class="num">Vendor bookings ÷ export</th></tr>'+
+      rec.map(function(x){return '<tr><td class="campname">'+x.c+'</td><td>'+x.wave+'</td><td class="num">'+fmt(x.vs)+' / '+fmt(x.es)+'</td><td class="num">'+fmt(x.va)+' / '+fmt(x.ea)+'</td><td class="num">'+fmt(x.vb)+' / '+fmt(x.eb)+'</td><td class="num '+(x.eb&&x.vb/x.eb>1.5?'rate-bad':'')+'">'+(x.eb?(x.vb/x.eb).toFixed(1)+'x':'—')+'</td></tr>';}).join('');
+    var big=rec.slice().sort(function(a,b){return b.es-a.es;})[0];
+    var sClose=Math.abs(big.vs-big.es)<=Math.max(5,big.es*0.02),aClose=Math.abs(big.va-big.ea)<=Math.max(3,big.ea*0.05);
+    var ratio=big.eb?big.vb/big.eb:null;
+    ins.push('<li'+(ratio&&ratio>1.5?' class="warn"':'')+'><b>Vendor report vs this export.</b> For the latest wave ('+big.c+', '+big.wave+') the vendor’s submissions and final approvals '+((sClose&&aClose)?'line up with this export':'differ from this export')+' ('+fmt(big.vs)+' vs '+fmt(big.es)+' submissions, '+fmt(big.va)+' vs '+fmt(big.ea)+' approvals). Bookings '+(ratio&&ratio>1.5?'do not: the vendor reports <b>'+fmt(big.vb)+'</b> against <b>'+fmt(big.eb)+'</b> booked in this export ('+ratio.toFixed(1)+'x).':'are close: '+fmt(big.vb)+' vs '+fmt(big.eb)+'.')+'</li>');
+  }else{tbl.parentElement.parentElement.style.display='none';}
+  var withA=t.filter(function(r){return +r.approvals>0;}),exc=withA.filter(function(r){return +r.bookings>+r.approvals;});
+  if(exc.length){ins.push('<li class="warn"><b>Vendor bookings are a broader measure than ours.</b> In '+exc.length+' of '+withA.length+' vendor rows, bookings exceed final approvals. One funnel cannot book more loans than it approved, so the vendor is counting something wider than the Booked figure on the other tabs (for example, any booking by the same customers in the period). Confirm the definition with the vendor before quoting vendor booking rates. Use this tab for submission and approval trends.</li>');}
+  Object.keys(camps).forEach(function(c){
+    var rs=t.filter(function(r){return r.campaign===c&&+r.submissions>=100;}).sort(function(a,b){return String(a.month).localeCompare(String(b.month));});
+    if(rs.length>=2){var a=rs[0],b=rs[rs.length-1],ra=a.approvals/a.submissions*100,rb=b.approvals/b.submissions*100,dv=(b.submissions-a.submissions)/a.submissions*100;
+      ins.push('<li><b>'+c+'</b>, '+prettyMonth(a.month)+' to '+prettyMonth(b.month)+': submissions '+fmt(+a.submissions)+' → '+fmt(+b.submissions)+' ('+(dv>=0?'+':'')+dv.toFixed(1)+'%), final-approval rate '+pct(ra)+' → '+pct(rb)+'.</li>');}
+  });
+  var months={};t.forEach(function(r){if(+r.submissions>=100)months[r.month]=1;});
+  var ks=Object.keys(months).sort();
+  if(ks.length>=2){var miss=[],y=+ks[0].slice(0,4),m=+ks[0].slice(4),last=ks[ks.length-1];
+    for(var i=0;i<24;i++){var key=String(y*100+m);if(key>last)break;if(!months[key])miss.push(prettyMonth(key));m++;if(m>12){m=1;y++;}}
+    ins.push('<li>Waves of 100+ submissions ran in '+ks.map(prettyMonth).join(', ')+'.'+(miss.length?' No wave of that size appears for '+miss.join(', ')+'.':'')+'</li>');}
+  box.innerHTML=ins.join('');
+}
+function renderAll(){var rows=ddRows();renderOutcome(rows);renderOverviewKpis(rows);renderInsights(rows);renderDeepDive();}
+function ddShowTab(name){
+  var ok=false;document.querySelectorAll('#tabs button').forEach(function(b){var on=b.dataset.tab===name&&b.style.display!=='none';if(on)ok=true;});
+  if(!ok)name='overview';
+  document.querySelectorAll('#tabs button').forEach(function(b){b.classList.toggle('on',b.dataset.tab===name);});
+  document.querySelectorAll('.panel').forEach(function(p){p.classList.toggle('on',p.id==='tab-'+name);});
+  if(location.hash!=='#'+name)history.replaceState(null,'','#'+name);
+  window.scrollTo(0,0);
+}
+(function(){
+  document.querySelectorAll('#tabs button').forEach(function(b){b.addEventListener('click',function(){ddShowTab(b.dataset.tab);});});
+  var st=document.getElementById('sent-section');if(st&&st.style.display==='none'){var bb=document.getElementById('tab-btn-sendlists');if(bb)bb.style.display='none';}
+  var tr=document.getElementById('trend-section');if(tr&&tr.style.display==='none'){var bv=document.getElementById('tab-btn-history');if(bv)bv.style.display='none';}
+  ddShowTab((location.hash||'').replace('#','')||'overview');
+  renderVendorChart();
+  renderHistory();
+  renderAll();
+})();
+
 </script>
 </body></html>
 `;
