@@ -209,10 +209,17 @@ function buildJourneyTrends(rows, dataMax) {
     days[d] = { date: d, wd: new Date(d + 'T00:00:00Z').getUTCDay(), subs: 0, init: 0, fin: 0, bk: 0, amt: 0, saudi: 0, expats: 0,
       emp_private: 0, emp_unlisted: 0, emp_govt: 0, emp_pension: 0, emp_military: 0, gosi_called: 0, mof_called: 0, simah_called: 0,
       dr_dbr: 0, dr_loansize: 0, dr_inactive: 0, dr_minincome: 0, dr_simah: 0, unl_tagged: 0, unl_wrong: 0,
-      rg_l: 0, rg_m: 0, rg_h: 0, rg_unknown: 0, _si: [], _sa: [], _ei: [], _ea: [] };
+      rg_l: 0, rg_m: 0, rg_h: 0, rg_unknown: 0,
+      // Bookings by employer type, bucketed by BOOKING date (same convention as
+      // bk/amt above), for the listed-vs-unlisted booking analysis -- added
+      // 2026-09-22 per explicit request. Distinct from emp_* above, which are
+      // SUBMISSION counts bucketed by submitted date.
+      bk_private: 0, bk_unlisted: 0, bk_govt: 0, bk_pension: 0, bk_military: 0,
+      _si: [], _sa: [], _ei: [], _ea: [] };
   }
   for (let d = startInc; d <= end; d = ymdAdd(d, 1)) inc[d] = { date: d, _s: [], _e: [] };
   const EMP = { 'Private Company': 'emp_private', 'Unlisted': 'emp_unlisted', 'Government Entity': 'emp_govt', 'Pension': 'emp_pension', 'Military with Grades': 'emp_military' };
+  const BK_EMP = { 'Private Company': 'bk_private', 'Unlisted': 'bk_unlisted', 'Government Entity': 'bk_govt', 'Pension': 'bk_pension', 'Military with Grades': 'bk_military' };
   const DR = { 'DBR': 'dr_dbr', 'Loan Size Rule': 'dr_loansize', 'Inactive Company': 'dr_inactive', 'Minimum Income Rule': 'dr_minincome', 'SIMAH Rules': 'dr_simah' };
   const pos = v => { const n = parseFloat(v); return n > 0 ? n : null; };
   for (const r of rows) {
@@ -244,7 +251,10 @@ function buildJourneyTrends(rows, dataMax) {
     if (ii) { const av = pos(r['AltitudeIncome']); if (av) { if (saudi) ii._s.push(av); else if (expat) ii._e.push(av); } }
     if (BOOKED_SET.has(String(r['Altitudestatus'] || '').trim())) {
       const bd = days[toYMD(r[CONFIG.bookCol])];
-      if (bd) { bd.bk++; bd.amt += parseFloat(r['ItemValue']) || 0; }
+      if (bd) {
+        bd.bk++; bd.amt += parseFloat(r['ItemValue']) || 0;
+        const bek = BK_EMP[String(r['FinalEmployerType'] || '').trim()]; if (bek) bd[bek]++;
+      }
     }
   }
   const avgUnder = a => { const f = a.filter(x => x <= 500000); return f.length ? Math.round(f.reduce((s, x) => s + x, 0) / f.length) : 0; };
@@ -462,6 +472,23 @@ console.log(`Booked then Cancelled (yesterday ${btc.yesterday}): ${btc.count} (S
 
 result.journey = buildJourneyTrends(dashboardRows, result.meta.max);
 console.log(`Journey trends: ${result.journey.trends30.length} days (${result.journey.windowStart} → ${result.journey.windowEnd}), income series ${result.journey.incomeDaily.length} days`);
+
+// Approved-companies reference stat (added 2026-09-22, per explicit request) --
+// reference/context only, NOT joined to individual applications: a probe found
+// the Acquisition CSV's Company field only name-matches ~20% of recent rows
+// against this list (many Arabic company names are already replaced with
+// literal '?' in the raw source file, upstream of this pipeline -- not
+// recoverable here), so a per-application listed/unlisted join would be
+// unreliable. FinalEmployerType stays the sole basis for listed/unlisted
+// throughout the New change tab. This file is a one-off snapshot, not part of
+// the regular daily pipeline -- read if present, skipped gracefully if not.
+const APPROVED_COMPANIES_CSV = path.join(ROOT, 'approvedCompanies-21-09-2026-16-11.csv');
+if (fs.existsSync(APPROVED_COMPANIES_CSV)) {
+  const approvedRows = readCsv(APPROVED_COMPANIES_CSV);
+  const active = approvedRows.filter(r => String(r['Active'] || '').trim() === '1').length;
+  result.journey.approvedCompanies = { total: approvedRows.length, active, asOf: '2026-09-21' };
+  console.log(`Approved companies reference: ${approvedRows.length.toLocaleString()} total, ${active.toLocaleString()} Active=1`);
+}
 
 const newLine = `const DAILY_DEFAULT = ${JSON.stringify(result)};`;
 
