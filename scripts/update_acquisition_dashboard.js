@@ -228,6 +228,15 @@ function buildJourneyTrends(rows, dataMax, companyStatusMap, normCompany) {
       // 2026-09-22 per explicit request. Distinct from emp_* above, which are
       // SUBMISSION counts bucketed by submitted date.
       bk_private: 0, bk_unlisted: 0, bk_govt: 0, bk_pension: 0, bk_military: 0,
+      // Submission-source mix, bucketed by submitted date -- added 2026-09-27
+      // per explicit request for a trend chart of SubmitSource. Real distinct
+      // values confirmed against the full merged file: 'UI' (~53%),
+      // 'backoffice' (~46%), 'Android' (3 rows) and 'Android-S' (1,814 rows)
+      // -- collapsed into one ss_android bucket since 'Android' alone is too
+      // rare to be a separate channel and is almost certainly a legacy label
+      // variant of the same app -- and 'IOS-S' (1,536 rows) as ss_ios. Blank
+      // or any unrecognized value falls into ss_unknown.
+      ss_ui: 0, ss_backoffice: 0, ss_android: 0, ss_ios: 0, ss_unknown: 0,
       _si: [], _sa: [], _ei: [], _ea: [] };
     CS_KEYS.forEach(k => { days[d]['cs_' + k] = 0; days[d]['bk_cs_' + k] = 0; });
   }
@@ -235,6 +244,7 @@ function buildJourneyTrends(rows, dataMax, companyStatusMap, normCompany) {
   const EMP = { 'Private Company': 'emp_private', 'Unlisted': 'emp_unlisted', 'Government Entity': 'emp_govt', 'Pension': 'emp_pension', 'Military with Grades': 'emp_military' };
   const BK_EMP = { 'Private Company': 'bk_private', 'Unlisted': 'bk_unlisted', 'Government Entity': 'bk_govt', 'Pension': 'bk_pension', 'Military with Grades': 'bk_military' };
   const DR = { 'DBR': 'dr_dbr', 'Loan Size Rule': 'dr_loansize', 'Inactive Company': 'dr_inactive', 'Minimum Income Rule': 'dr_minincome', 'SIMAH Rules': 'dr_simah' };
+  const SS = { 'UI': 'ss_ui', 'backoffice': 'ss_backoffice', 'Android': 'ss_android', 'Android-S': 'ss_android', 'IOS-S': 'ss_ios' };
   const pos = v => { const n = parseFloat(v); return n > 0 ? n : null; };
   for (const r of rows) {
     const sd = toYMD(r['submitted']);
@@ -270,6 +280,7 @@ function buildJourneyTrends(rows, dataMax, companyStatusMap, normCompany) {
       if (hasSmhScore || deDec === 'X') d.qarar_called++;
       if (hasSmhScore) d.simah_called++;
       const dk = DR[String(r['SimplifiedDeclinedReason'] || '').trim()]; if (dk) d[dk]++;
+      d[SS[String(r['SubmitSource'] || '').trim()] || 'ss_unknown']++;
       if (/unlisted company/i.test(String(r['referreasons'] || ''))) {
         d.unl_tagged++;
         if (String(r['FinalEmployerType'] || '').trim() !== 'Unlisted') d.unl_wrong++;
