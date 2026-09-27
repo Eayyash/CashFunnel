@@ -70,6 +70,10 @@ async function main() {
     'Folder holding bulk "SMS sent" recipient-list xlsx files (CivilID/phone/send-date only, no application outcome)',
     existing.smsSentListsDir || path.join(path.dirname(ROOT), 'SMS Analyz')
   );
+  const snbReferralArchiveDir = await ask(
+    'Archive folder for processed SNB_Referral files',
+    existing.snbReferralArchiveDir || path.join(path.dirname(ROOT), 'SNB Referral')
+  );
 
   console.log('\nHistorical/seed data: merge_csv.js needs at least one starting');
   console.log('Acquisition_for_Loans CSV to merge new daily files into. List the');
@@ -94,12 +98,13 @@ async function main() {
     simahArchiveDir,
     smsArchiveDir,
     smsSentListsDir,
+    snbReferralArchiveDir,
     acquisitionHistoricalFiles,
   };
 
   // Create archive folders if they don't exist yet -- nothing downstream
   // should have to guess whether that's the setup script's job or not.
-  [acquisitionArchiveDir, funnelArchiveDir, simahArchiveDir, smsArchiveDir, smsSentListsDir].forEach(dir => {
+  [acquisitionArchiveDir, funnelArchiveDir, simahArchiveDir, smsArchiveDir, smsSentListsDir, snbReferralArchiveDir].forEach(dir => {
     if (!fs.existsSync(dir)) {
       try {
         fs.mkdirSync(dir, { recursive: true });
