@@ -67,13 +67,23 @@ if (fs.existsSync(ACQ_CSV)) {
     let stage = 1;
     if (String(r['Altitudestatus'] || '').trim() !== '') stage = 2;
     if (String(r['FinalApprovalFlag'] || '').trim() === 'Y') stage = 3;
-    if (String(r['booked'] || '').trim() === '1') stage = 4;
+    const isBooked = String(r['booked'] || '').trim() === '1';
+    if (isBooked) stage = 4;
     const declined = String(r['Altitudestatus'] || '').trim() === 'Declined [D]';
+    // ItemValue is the established booked-loan-amount field (same one
+    // buildJourneyTrends() sums for the Acquisition dashboard's own booking
+    // totals) -- confirmed populated for 54,277 of 54,278 booked rows.
+    // Summed across every booked row for this CivilID, not just the one
+    // that set the max stage, in case the same person has more than one
+    // booked loan on record.
+    const bookedAmount = isBooked ? (parseFloat(r['ItemValue']) || 0) : 0;
     const prev = civilToStage.get(civ);
-    if (!prev || stage > prev.stage) {
-      civilToStage.set(civ, { stage, declined });
-    } else if (declined && !prev.declined) {
-      prev.declined = true; // remember a decline even if a later/other row went further
+    if (!prev) {
+      civilToStage.set(civ, { stage, declined, bookedAmount });
+    } else {
+      if (stage > prev.stage) prev.stage = stage;
+      if (declined) prev.declined = true;
+      prev.bookedAmount += bookedAmount;
     }
   });
   acqMeta = { total: acqRows.length, distinctCivilIds: civilToStage.size };
@@ -113,10 +123,16 @@ const rows = raw.map(r => {
     product: productObj ? productObj.En : (r['ProductType'] || ''),
     appStage: acq ? acq.stage : 0,
     appDeclined: acq ? !!acq.declined : false,
+    bookedAmount: acq ? (acq.bookedAmount || 0) : 0,
   };
 }).filter(r => r.id);
 
 const dates = rows.map(r => r.created).filter(Boolean).sort();
+// Full date+time (not just date) of the newest referral, for a precise
+// "pending >24h" calculation client-side -- added 2026-09-27 per explicit
+// request. String comparison works since every timestamp is the same
+// 'YYYY-MM-DD HH:MM' shape.
+const maxDateTime = rows.map(r => r.created && r.createdTime ? `${r.created} ${r.createdTime}` : null).filter(Boolean).sort().slice(-1)[0] || null;
 const statusTally = {};
 rows.forEach(r => { statusTally[r.status] = (statusTally[r.status] || 0) + 1; });
 console.log('Status breakdown:', statusTally);
@@ -133,6 +149,7 @@ const data = {
     total: rows.length,
     min: dates[0] || null,
     max: dates[dates.length - 1] || null,
+    maxDateTime,
     generatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
     sourceFile: path.basename(filePath),
     acq: acqMeta ? { ...acqMeta, matched: matchedCount, stageLabels: STAGE_LABEL } : null,
@@ -344,6 +361,26 @@ document.getElementById('f-from').addEventListener('change',()=>{FROM=document.g
 document.getElementById('f-to').addEventListener('change',()=>{TO=document.getElementById('f-to').value||null;document.querySelectorAll('#presets button').forEach(x=>x.classList.remove('on'));renderAll();});
 document.getElementById('f-reset').addEventListener('click',()=>applyPreset('all'));
 
+const MS_24H=24*3600*1000;
+function totalBookedLoanAmount(rows){
+  // Dedupe by CivilID -- bookedAmount is a property of the person/application,
+  // not the referral event, so a re-referred customer (multiple referral rows,
+  // same CivilID) must only be counted once, or their loan value would be
+  // double-counted for every extra referral record they have.
+  const seen=new Map();
+  rows.forEach(r=>{ if(r.civilId && !seen.has(r.civilId)) seen.set(r.civilId,r.bookedAmount||0); });
+  let total=0; seen.forEach(v=>total+=v);
+  return total;
+}
+function pendingOver24h(rows){
+  if(!SNB_DATA.meta.maxDateTime) return null;
+  const now=new Date(SNB_DATA.meta.maxDateTime.replace(' ','T')+'Z').getTime();
+  return rows.filter(r=>{
+    if(r.status!=='Processing'||!r.created||!r.createdTime) return false;
+    const t=new Date((r.created+' '+r.createdTime).replace(' ','T')+'Z').getTime();
+    return (now-t)>=MS_24H;
+  }).length;
+}
 function renderKpis(rows){
   const n=rows.length;
   const byStatus={};STATUS_ORDER.forEach(s=>byStatus[s]=0);
@@ -356,6 +393,13 @@ function renderKpis(rows){
     ['Processing',fmt(byStatus.Processing||0),pct(n?byStatus.Processing/n*100:0)+' of total'],
     ['Lapsed',fmt(byStatus.Lapsed||0),pct(n?byStatus.Lapsed/n*100:0)+' of total'],
   ];
+  if(SNB_DATA.meta.acq){
+    cards.push(['Total booked loan amount',money(totalBookedLoanAmount(rows)),'from referrals whose application was booked (Acquisition cross-reference)']);
+  }
+  const p24=pendingOver24h(rows);
+  if(p24!=null){
+    cards.push(['Pending >24h',fmt(p24),(byStatus.Processing?pct(p24/byStatus.Processing*100)+' of Processing':'—')+' still waiting a day on']);
+  }
   document.getElementById('kpis').innerHTML=cards.map(x=>'<div class="card"><div class="lab">'+x[0]+'</div><div class="big">'+x[1]+'</div><div class="sub">'+x[2]+'</div></div>').join('');
 }
 
