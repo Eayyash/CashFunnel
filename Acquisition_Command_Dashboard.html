@@ -1014,8 +1014,8 @@ function ncConfigs(J){
    series:()=>[ncV('Saudi verified (median)',C.g,d=>d.sau_med),ncV('Expat verified (median)',C.b,d=>d.exp_med)],
    callout:'<p><b>Read:</b> a close-up of card 10 for the last two calendar months.</p>'},
   {id:'nc12',num:'12',title:'Submission Source Trend',sub:'Daily share of submissions by SubmitSource (UI, backoffice, Android, iOS).',rows:T,kind:'pct',
-   series:()=>[['UI','ss_ui',C.g],['Backoffice','ss_backoffice',C.b],['Android','ss_android',C.v],['iOS','ss_ios',C.a],['Unknown','ss_unknown',C.n]].map(x=>ncS(x[0],x[2],d=>d[x[1]],d=>d.subs)),
-   callout:'<p><b>Read:</b> share of daily submissions coming from each channel. UI (the online journey) and backoffice (branch/agent-entered) make up almost all volume; Android and iOS are the native mobile apps and are a small, recent slice of it. \'Android\' (3 rows total) and \'Android-S\' are combined into one Android line since the bare \'Android\' label is too rare to be its own channel and is almost certainly a legacy variant of the same app.</p>'}
+   series:()=>[['UI','ss_ui',C.g],['Backoffice','ss_backoffice',C.b],['Android','ss_android',C.v],['iOS','ss_ios',C.a]].map(x=>ncS(x[0],x[2],d=>d[x[1]],d=>d.subs)),
+   callout:'<p><b>Read:</b> share of daily submissions coming from each channel. UI (the online journey) and backoffice (branch/agent-entered) make up almost all volume; Android and iOS are the native mobile apps and are a small, recent slice of it. \'Android\' (3 rows total) and \'Android-S\' are combined into one Android line since the bare \'Android\' label is too rare to be its own channel and is almost certainly a legacy variant of the same app. (A handful of rows elsewhere in the full history have a blank SubmitSource -- none fall in this window, so no separate line is drawn for it.)</p>'}
   ];
 }
 // Before/after comparisons use a fixed, EQUAL-length window on each side of
