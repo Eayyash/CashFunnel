@@ -1,3 +1,11 @@
+> **⚠️ DEPRECATED (2026-09-27).** This doc describes an older, more manual
+> version of the pipeline (a hardcoded-path era, before `pipeline.config.json`
+> and before it was confirmed that most pipelines self-seed from git). Use
+> **[`NEW_MACHINE_SETUP.md`](NEW_MACHINE_SETUP.md)** instead — it's a fully
+> automated, zero-intervention script, tested end-to-end, that needs far less
+> manual work than what's described below. Kept here for historical context
+> only.
+
 # Replicating the Tasheel Dashboard Pipeline on a New Machine
 
 This project is a set of self-contained HTML dashboards (Acquisition, Funnel,
