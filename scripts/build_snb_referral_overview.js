@@ -10,6 +10,21 @@
  * pipeline's 850K+ rows, so the whole row-level dataset is embedded
  * directly -- no RAWSTORE columnar compression needed here.
  *
+ * Added 2026-09-27: cross-references every referral against
+ * Acquisition_for_Loans_all_merged.csv by CivilID, to answer "did this
+ * referral actually turn into a loan application, and how far did it get."
+ * Since a CivilID can have several Acquisition rows (35% do, confirmed
+ * 2026-09-27) and there's no direct foreign key tying a specific
+ * application back to a specific referral, this takes the FURTHEST stage
+ * reached across ANY of that CivilID's applications -- simple, defensible,
+ * and avoids a fragile date-proximity guess. This does mean an unrelated
+ * older/newer application by the same person could be credited to a
+ * referral it had nothing to do with; the dashboard discloses this
+ * plainly rather than overclaiming precision. Requires
+ * --max-old-space-size=16384 (same as update_acquisition_dashboard.js)
+ * to load the 850K+ row Acquisition file; degrades gracefully (skips the
+ * funnel section) if that file isn't present in the project root.
+ *
  * Usage: node scripts/build_snb_referral_overview.js [path-to-merged-csv]
  */
 const fs = require('fs');
@@ -19,6 +34,7 @@ const { readCsv } = require('./update_acquisition_dashboard.js');
 const ROOT = path.resolve(__dirname, '..');
 const OUT_HTML = path.join(ROOT, 'SNB_Overview.html');
 const DEFAULT_CSV = path.join(ROOT, 'SNB_Referral_all_merged.csv');
+const ACQ_CSV = path.join(ROOT, 'Acquisition_for_Loans_all_merged.csv');
 const filePath = process.argv[2] || DEFAULT_CSV;
 
 if (!fs.existsSync(filePath)) {
@@ -29,6 +45,42 @@ if (!fs.existsSync(filePath)) {
 console.log(`Reading ${path.basename(filePath)}…`);
 const raw = readCsv(filePath);
 console.log(`Parsed ${raw.length.toLocaleString()} rows`);
+
+// ---- Cross-reference by CivilID against the Acquisition pipeline --------
+// Stage ladder (furthest reached wins): 0 none · 1 Applied (any row) ·
+// 2 Submitted to Master (Altitudestatus populated) · 3 Approved
+// (FinalApprovalFlag='Y') · 4 Booked (booked='1'). All three flags were
+// checked against real distinct-value tallies before use (2026-09-27):
+// booked is a clean 0/1 (54,278 of 878,853), FinalApprovalFlag Y=62,012 is
+// a superset of booked as expected, Altitudestatus is blank for the 73%
+// of rows that never reached the master system at all.
+const STAGE_LABEL = ['Not applied', 'Applied', 'Submitted to master', 'Approved', 'Booked'];
+let civilToStage = null;
+let acqMeta = null;
+if (fs.existsSync(ACQ_CSV)) {
+  console.log(`Cross-referencing against ${path.basename(ACQ_CSV)}…`);
+  const acqRows = readCsv(ACQ_CSV);
+  civilToStage = new Map();
+  acqRows.forEach(r => {
+    const civ = String(r['CivilID'] || '').trim();
+    if (!civ) return;
+    let stage = 1;
+    if (String(r['Altitudestatus'] || '').trim() !== '') stage = 2;
+    if (String(r['FinalApprovalFlag'] || '').trim() === 'Y') stage = 3;
+    if (String(r['booked'] || '').trim() === '1') stage = 4;
+    const declined = String(r['Altitudestatus'] || '').trim() === 'Declined [D]';
+    const prev = civilToStage.get(civ);
+    if (!prev || stage > prev.stage) {
+      civilToStage.set(civ, { stage, declined });
+    } else if (declined && !prev.declined) {
+      prev.declined = true; // remember a decline even if a later/other row went further
+    }
+  });
+  acqMeta = { total: acqRows.length, distinctCivilIds: civilToStage.size };
+  console.log(`  ${acqRows.length.toLocaleString()} acquisition rows → ${civilToStage.size.toLocaleString()} distinct Civil IDs`);
+} else {
+  console.warn(`WARN: ${path.basename(ACQ_CSV)} not found -- building without the application-funnel cross-reference.`);
+}
 
 function parseJsonish(s) {
   if (!s) return null;
@@ -45,10 +97,12 @@ const rows = raw.map(r => {
   const branchObj = parseJsonish(r['SnbBranch']);
   const productObj = parseJsonish(r['ProductType']);
   const amt = parseFloat(r['Amount']);
+  const civilId = r['CivilId'] || '';
+  const acq = civilToStage ? civilToStage.get(String(civilId).trim()) : null;
   return {
     id: r['ReferralId'] || '',
     ref: r['ReferenceNumber'] || '',
-    civilId: r['CivilId'] || '',
+    civilId,
     mobile: r['MobileNumber'] || '',
     amount: isNaN(amt) ? null : amt,
     status: r['Status'] || '',
@@ -57,6 +111,8 @@ const rows = raw.map(r => {
     name: (r['CustomerName_en'] || '').trim() || (r['CustomerName_ar'] || '').trim(),
     branch: branchObj ? branchObj.En : (r['SnbBranch'] || ''),
     product: productObj ? productObj.En : (r['ProductType'] || ''),
+    appStage: acq ? acq.stage : 0,
+    appDeclined: acq ? !!acq.declined : false,
   };
 }).filter(r => r.id);
 
@@ -69,6 +125,9 @@ const productSet = new Set(rows.map(r => r.product).filter(Boolean));
 const branchSet = new Set(rows.map(r => r.branch).filter(Boolean));
 console.log(`Date range: ${dates[0]} → ${dates[dates.length - 1]} | ${branchSet.size} branches | products: ${[...productSet].join(', ')}`);
 
+const matchedCount = rows.filter(r => r.appStage > 0).length;
+console.log(`Matched to an Acquisition application: ${matchedCount.toLocaleString()} / ${rows.length.toLocaleString()}`);
+
 const data = {
   meta: {
     total: rows.length,
@@ -76,6 +135,7 @@ const data = {
     max: dates[dates.length - 1] || null,
     generatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
     sourceFile: path.basename(filePath),
+    acq: acqMeta ? { ...acqMeta, matched: matchedCount, stageLabels: STAGE_LABEL } : null,
   },
   rows,
 };
@@ -155,6 +215,21 @@ td.num,th.num{text-align:right;font-family:'JetBrains Mono'}
 .vleg{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12px;color:var(--ink2);margin:8px 2px 4px}
 .vleg i{display:inline-block;width:18px;border-top:3px solid;vertical-align:middle;margin-right:6px}
 .row-limit-note{font-size:11px;color:var(--faint);margin-top:8px}
+.caveat{background:rgba(189,125,18,.08);border:1px solid rgba(189,125,18,.28);border-radius:12px;padding:12px 16px;font-size:12px;color:var(--ink2);margin-bottom:16px;line-height:1.55}
+.caveat b{color:var(--gold-d)}
+.funnel-wrap{display:flex;flex-direction:column;padding:6px 4px;max-width:640px;margin:0 auto}
+.fstage-row{display:flex;align-items:center;gap:14px;height:40px}
+.fstage-bar{flex:0 1 auto;height:34px;min-width:18px;max-width:42%;border-radius:8px;transition:width .4s ease}
+.fstage-info{display:flex;align-items:baseline;gap:9px;white-space:nowrap;overflow:hidden;min-width:0}
+.fstage-info .fname{font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:var(--ink)}
+.fstage-info .fcount{font-family:'JetBrains Mono';font-weight:700;font-size:15px;color:var(--ink2)}
+.fconn{height:22px;display:flex;align-items:center;gap:8px;color:var(--muted);font-size:11.5px;font-family:'JetBrains Mono';padding-left:2px}
+.fconn .pct{color:var(--ink);font-weight:700}
+.fconn .drop-bad{color:var(--red)}
+.funnel-side{display:flex;justify-content:center;gap:26px;margin-top:14px;flex-wrap:wrap}
+.funnel-side .fs-item{text-align:center}
+.funnel-side .fs-n{font-family:'Space Grotesk';font-weight:700;font-size:19px}
+.funnel-side .fs-l{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
 @media (max-width:640px){.kpis{grid-template-columns:repeat(2,1fr)}}
 </style></head>
 <body>
@@ -202,6 +277,20 @@ td.num,th.num{text-align:right;font-family:'JetBrains Mono'}
   <div class="sec-h"><h2>Branches</h2><span class="n" id="branch-count"></span></div>
   <div class="hint">Sorted by referral volume by default — click a column header to re-sort.</div>
   <div class="tablewrap"><table id="branch-table"></table></div>
+</div>
+
+<div class="section" id="funnel-section">
+  <div class="sec-h"><h2>Application funnel</h2><span class="n">cross-checked against Acquisition data by Civil ID</span></div>
+  <div class="caveat" id="funnel-caveat"></div>
+  <div class="funnel-wrap" id="funnel-viz"></div>
+  <div class="funnel-side" id="funnel-side"></div>
+</div>
+
+<div class="section" id="funnel-trend-section">
+  <div class="sec-h"><h2>Funnel trend</h2><span class="n">weekly referral cohorts · conversion rate at each stage</span></div>
+  <div class="hint">Recent weeks will look weaker than they really are — an application takes time to move through the funnel, so the newest cohorts haven't had a chance to mature yet.</div>
+  <div class="vchart" id="funnel-trend-chart"></div>
+  <div class="vleg" id="funnel-trend-legend"></div>
 </div>
 
 <div class="section">
@@ -321,12 +410,94 @@ function renderBranches(rows){
   const table=document.getElementById('branch-table');
   table.innerHTML=h;
   table.querySelectorAll('th').forEach(th=>{
-    if(th.dataset.col===BRANCH_SORT.col)th.classList.add('sorted',BRANCH_SORT.dir===1?'asc':'');
+    if(th.dataset.col===BRANCH_SORT.col){th.classList.add('sorted');if(BRANCH_SORT.dir===1)th.classList.add('asc');}
     th.addEventListener('click',()=>{
       if(BRANCH_SORT.col===th.dataset.col)BRANCH_SORT.dir*=-1; else {BRANCH_SORT.col=th.dataset.col;BRANCH_SORT.dir=-1;}
       renderBranches(filteredRows());
     });
   });
+}
+
+const STAGE_COLOR=['#8493a8','#6f5be0','#0e9e90','#0b7d72','#1c7d50'];
+function stageLabel(n){ const L=(SNB_DATA.meta.acq&&SNB_DATA.meta.acq.stageLabels)||['Not applied','Applied','Submitted to master','Approved','Booked']; return L[n]||L[0]; }
+
+function renderFunnel(rows){
+  const acq=SNB_DATA.meta.acq;
+  const cav=document.getElementById('funnel-caveat');
+  if(!acq){
+    cav.innerHTML='<b>Application funnel unavailable.</b> This build did not have Acquisition_for_Loans_all_merged.csv available to cross-reference against, so referral outcomes past "Referred" cannot be shown. Re-run the build script with that file present in the project root.';
+    document.getElementById('funnel-viz').innerHTML='';
+    document.getElementById('funnel-side').innerHTML='';
+    document.getElementById('funnel-trend-chart').innerHTML='';
+    document.getElementById('funnel-trend-legend').innerHTML='';
+    return;
+  }
+  cav.innerHTML='<b>How this is built:</b> each referral is matched to Acquisition applications by Civil ID, and credited with the FURTHEST stage reached by ANY application under that Civil ID. There is no direct link between a specific referral and a specific application in the source data, so an unrelated application by the same person (before or after this referral) can be credited here — treat this as "did this person go on to apply and how far did they get," not a strict causal attribution. Cross-referenced against '+fmt(acq.total)+' Acquisition rows ('+fmt(acq.distinctCivilIds)+' distinct Civil IDs).';
+
+  const n=rows.length;
+  const counts=[0,0,0,0,0]; // count reaching AT LEAST stage i
+  let declined=0;
+  rows.forEach(r=>{
+    for(let s=0;s<=r.appStage;s++) counts[s]++;
+    if(r.appDeclined) declined++;
+  });
+  counts[0]=n; // "Referred" stage = everyone
+  const labels=['Referred','Applied','Submitted to master','Approved','Booked'];
+  const max=Math.max(counts[0],1);
+  let h='';
+  labels.forEach((lab,i)=>{
+    const w=Math.max(5,counts[i]/max*42);
+    h+='<div class="fstage-row"><div class="fstage-bar" style="width:'+w.toFixed(1)+'%;background:linear-gradient(90deg,'+STAGE_COLOR[i]+','+STAGE_COLOR[i]+'cc)"></div><div class="fstage-info"><span class="fname">'+lab+'</span><span class="fcount">'+fmt(counts[i])+'</span></div></div>';
+    if(i<labels.length-1){
+      const conv=counts[i]?(100*counts[i+1]/counts[i]):0;
+      const bad=conv<10;
+      h+='<div class="fconn"><span>↓</span><span class="pct'+(bad?' drop-bad':'')+'">'+conv.toFixed(1)+'%</span><span>of previous stage</span></div>';
+    }
+  });
+  document.getElementById('funnel-viz').innerHTML=h;
+  document.getElementById('funnel-side').innerHTML=
+    '<div class="fs-item"><div class="fs-n">'+pct(n?counts[1]/n*100:0)+'</div><div class="fs-l">Applied, overall</div></div>'+
+    '<div class="fs-item"><div class="fs-n">'+pct(counts[1]?counts[4]/counts[1]*100:0)+'</div><div class="fs-l">Applied → Booked</div></div>'+
+    '<div class="fs-item"><div class="fs-n">'+fmt(declined)+'</div><div class="fs-l">Declined outright</div></div>'+
+    '<div class="fs-item"><div class="fs-n">'+pct(n?declined/n*100:0)+'</div><div class="fs-l">Of all referrals</div></div>';
+}
+
+function isoWeekStart(ymd){
+  const d=new Date(ymd+'T00:00:00Z');
+  const day=(d.getUTCDay()+6)%7; // Mon=0
+  d.setUTCDate(d.getUTCDate()-day);
+  return d.toISOString().slice(0,10);
+}
+function renderFunnelTrend(rows){
+  if(!SNB_DATA.meta.acq){ return; }
+  const byWeek={};
+  rows.forEach(r=>{
+    if(!r.created) return;
+    const wk=isoWeekStart(r.created);
+    const o=byWeek[wk]||(byWeek[wk]={n:0,applied:0,submitted:0,approved:0,booked:0});
+    o.n++;
+    if(r.appStage>=1)o.applied++;
+    if(r.appStage>=2)o.submitted++;
+    if(r.appStage>=3)o.approved++;
+    if(r.appStage>=4)o.booked++;
+  });
+  const weeks=Object.keys(byWeek).sort();
+  if(!weeks.length){document.getElementById('funnel-trend-chart').innerHTML='<p class="hint">No data in this range.</p>';document.getElementById('funnel-trend-legend').innerHTML='';return;}
+  const SERIES=[['applied','#6f5be0'],['submitted','#0e9e90'],['approved','#0b7d72'],['booked','#1c7d50']];
+  const W=940,H=260,L=42,R=16,T=16,B=28;
+  const X=i=>L+(weeks.length>1?i*(W-L-R)/(weeks.length-1):(W-L-R)/2), Y=v=>T+(H-T-B)*(1-v/100);
+  let g='';
+  for(let k=0;k<=4;k++){const v=25*k,y=Y(v);g+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y+'" y2="'+y+'" stroke="rgba(30,45,75,.10)"/><text x="'+(L-6)+'" y="'+(y+4)+'" text-anchor="end" font-size="10" fill="#8493a8">'+v+'%</text>';}
+  const step=Math.max(1,Math.ceil(weeks.length/10));
+  weeks.forEach((w,i)=>{if(i%step===0||i===weeks.length-1)g+='<text x="'+X(i)+'" y="'+(H-9)+'" text-anchor="middle" font-size="10" fill="#8493a8">'+w.slice(5)+'</text>';});
+  SERIES.forEach(([key,col])=>{
+    let p='';
+    weeks.forEach((w,i)=>{ const o=byWeek[w]; const rate=o.n?o[key]/o.n*100:0; p+=(i?'L':'M')+X(i).toFixed(1)+' '+Y(rate).toFixed(1)+' '; });
+    g+='<path d="'+p+'" fill="none" stroke="'+col+'" stroke-width="2.2"/>';
+    weeks.forEach((w,i)=>{ const o=byWeek[w]; const rate=o.n?o[key]/o.n*100:0; g+='<circle cx="'+X(i).toFixed(1)+'" cy="'+Y(rate).toFixed(1)+'" r="2.4" fill="'+col+'"><title>'+w+' · '+key+' '+rate.toFixed(1)+'% ('+o[key]+'/'+o.n+')</title></circle>'; });
+  });
+  document.getElementById('funnel-trend-chart').innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Funnel trend by weekly cohort">'+g+'</svg>';
+  document.getElementById('funnel-trend-legend').innerHTML=SERIES.map(([key,col])=>'<span><i style="border-color:'+col+'"></i>'+key.charAt(0).toUpperCase()+key.slice(1)+' rate</span>').join('');
 }
 
 const LOOKUP_CAP=300;
@@ -345,9 +516,10 @@ function renderLookup(){
     return true;
   });
   document.getElementById('lookup-count').textContent=fmt(matches.length)+' of '+fmt(rows.length)+' shown';
-  let h='<tr><th>Referral ID</th><th>Reference</th><th>Civil ID</th><th>Name</th><th>Mobile</th><th>Branch</th><th>Status</th><th class="num">Amount</th><th>Created</th></tr>';
+  let h='<tr><th>Referral ID</th><th>Reference</th><th>Civil ID</th><th>Name</th><th>Mobile</th><th>Branch</th><th>Status</th><th class="num">Amount</th><th>Created</th><th>Application status</th></tr>';
   matches.slice(0,LOOKUP_CAP).forEach(r=>{
-    h+='<tr><td>'+esc(r.id)+'</td><td>'+esc(r.ref)+'</td><td>'+esc(r.civilId)+'</td><td>'+esc(r.name||'—')+'</td><td>'+esc(r.mobile||'—')+'</td><td>'+esc(r.branch)+'</td><td><span class="status-pill status-'+esc(r.status)+'">'+esc(r.status)+'</span></td><td class="num">'+(r.amount?money(r.amount):'—')+'</td><td>'+esc(r.created||'—')+(r.createdTime?' '+r.createdTime:'')+'</td></tr>';
+    const appLab=stageLabel(r.appStage)+(r.appDeclined?' (declined)':'');
+    h+='<tr><td>'+esc(r.id)+'</td><td>'+esc(r.ref)+'</td><td>'+esc(r.civilId)+'</td><td>'+esc(r.name||'—')+'</td><td>'+esc(r.mobile||'—')+'</td><td>'+esc(r.branch)+'</td><td><span class="status-pill status-'+esc(r.status)+'">'+esc(r.status)+'</span></td><td class="num">'+(r.amount?money(r.amount):'—')+'</td><td>'+esc(r.created||'—')+(r.createdTime?' '+r.createdTime:'')+'</td><td>'+esc(appLab)+'</td></tr>';
   });
   document.getElementById('lookup-table').innerHTML=matches.length?h:'<tr><td style="text-align:center;color:var(--faint)">No matching referrals.</td></tr>';
   document.getElementById('lookup-note').textContent=matches.length>LOOKUP_CAP?('Showing first '+LOOKUP_CAP+' of '+fmt(matches.length)+' matching rows -- narrow the filters to see more specific results.'):'';
@@ -371,6 +543,8 @@ function renderAll(){
   renderKpis(rows);
   renderTrend(rows);
   renderStatusTable(rows);
+  renderFunnel(rows);
+  renderFunnelTrend(rows);
   renderBranches(rows);
   renderLookup();
 }

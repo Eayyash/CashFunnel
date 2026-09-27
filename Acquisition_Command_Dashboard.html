@@ -556,7 +556,7 @@ let cD = DAILY_DEFAULT;                 // active daily-aggregate dataset
 const CY='#15b3a3',GD='#df9f2c',GR='#22b571',RD='#ec5a78',VI='#7c68e6',BL='#3a9ae8',MU='#5b6b83';
 const PAL=[CY,GD,VI,BL,GR,'#ec5a78','#4bb39a','#c76fb0','#9aa8be','#6d7e98'];
 const fmt=n=>Math.round(n).toLocaleString('en-US');
-const money=n=>{n=Math.round(n);const a=Math.abs(n);if(a>=1e6)return 'SAR '+(n/1e6).toFixed(2)+'M';if(a>=1e3)return 'SAR '+(n/1e3).toFixed(0)+'K';return 'SAR '+n;};
+const money=n=>{n=Math.round(n);const a=Math.abs(n);if(a>=1e9)return 'SAR '+(n/1e9).toFixed(2)+'B';if(a>=1e6)return 'SAR '+(n/1e6).toFixed(2)+'M';if(a>=1e3)return 'SAR '+(n/1e3).toFixed(0)+'K';return 'SAR '+n;};
 const pctS=n=>(n>0?'+':'')+n.toFixed(1)+'%';
 Chart.defaults.font.family="'Inter',sans-serif";Chart.defaults.color=MU;Chart.defaults.font.size=11.5;
 Chart.defaults.plugins.legend.labels.usePointStyle=true;Chart.defaults.plugins.legend.labels.boxWidth=8;Chart.defaults.plugins.legend.labels.padding=14;

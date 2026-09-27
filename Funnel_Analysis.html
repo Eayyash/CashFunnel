@@ -751,7 +751,7 @@ function renderInsights(){
 
 
 /* ---------- Business View (origination overlay) ---------- */
-function money(n){n=Math.round(n);const a=Math.abs(n);if(a>=1e6)return 'SAR '+(n/1e6).toFixed(2)+'M';if(a>=1e3)return 'SAR '+(n/1e3).toFixed(0)+'K';return 'SAR '+n;}
+function money(n){n=Math.round(n);const a=Math.abs(n);if(a>=1e9)return 'SAR '+(n/1e9).toFixed(2)+'B';if(a>=1e6)return 'SAR '+(n/1e6).toFixed(2)+'M';if(a>=1e3)return 'SAR '+(n/1e3).toFixed(0)+'K';return 'SAR '+n;}
 function biggestLeak(){const a=CUR.cur.all;let md=-1,fr='',to='',drop=0;for(let i=0;i<MAIN.length-1;i++){const x=V(a,MAIN[i]),y=V(a,MAIN[i+1]);if(x>500){const d=x-y;if(d>md){md=d;fr=lab(MAIN[i]);to=lab(MAIN[i+1]);drop=d;}}}return {fr,to,drop};}
 function renderBusiness(){
   const lo=CUR.loans;const a=CUR.cur.all;
