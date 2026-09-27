@@ -199,7 +199,20 @@ function medianOf(a) {
   const s = a.slice().sort((x, y) => x - y), m = s.length >> 1;
   return Math.round(s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2);
 }
-function buildJourneyTrends(rows, dataMax) {
+const CS_LABEL_TO_KEY = { 'Listed Cat A': 'catA', 'Listed Cat B': 'catB', 'Listed Cat C': 'catC', 'Blacklisted': 'blacklisted', 'Rejected': 'rejected', 'Deleted': 'deleted' };
+const CS_KEYS = ['catA', 'catB', 'catC', 'blacklisted', 'rejected', 'deleted', 'unlisted', 'unreadable'];
+// Categorize one application's Company text against the approved-companies
+// status map. 'unreadable' covers both blank and '?'-corrupted text (see
+// buildDashboardArtifact for why so much of this field is unreadable) --
+// kept separate from a confirmed 'unlisted' (legible name, genuinely absent
+// from the approved list) since the two mean very different things.
+function companyStatusOf(companyRaw, companyStatusMap, normCompany) {
+  const raw = String(companyRaw == null ? '' : companyRaw).trim();
+  if (!raw || raw.indexOf('?') >= 0) return 'unreadable';
+  const label = companyStatusMap.get(normCompany(raw));
+  return label ? CS_LABEL_TO_KEY[label] : 'unlisted';
+}
+function buildJourneyTrends(rows, dataMax, companyStatusMap, normCompany) {
   const end = ymdAdd(dataMax, -1);
   const start30 = ymdAdd(end, -29) < '2026-08-14' ? ymdAdd(end, -29) : '2026-08-14';
   const startInc = '2026-01-01';
@@ -207,7 +220,7 @@ function buildJourneyTrends(rows, dataMax) {
   const days = {}, inc = {};
   for (let d = start30; d <= end; d = ymdAdd(d, 1)) {
     days[d] = { date: d, wd: new Date(d + 'T00:00:00Z').getUTCDay(), subs: 0, init: 0, fin: 0, bk: 0, amt: 0, saudi: 0, expats: 0,
-      emp_private: 0, emp_unlisted: 0, emp_govt: 0, emp_pension: 0, emp_military: 0, gosi_called: 0, mof_called: 0, simah_called: 0,
+      emp_private: 0, emp_unlisted: 0, emp_govt: 0, emp_pension: 0, emp_military: 0, gosi_called: 0, mof_called: 0, qarar_called: 0, simah_called: 0,
       dr_dbr: 0, dr_loansize: 0, dr_inactive: 0, dr_minincome: 0, dr_simah: 0, unl_tagged: 0, unl_wrong: 0,
       rg_l: 0, rg_m: 0, rg_h: 0, rg_unknown: 0,
       // Bookings by employer type, bucketed by BOOKING date (same convention as
@@ -216,6 +229,7 @@ function buildJourneyTrends(rows, dataMax) {
       // SUBMISSION counts bucketed by submitted date.
       bk_private: 0, bk_unlisted: 0, bk_govt: 0, bk_pension: 0, bk_military: 0,
       _si: [], _sa: [], _ei: [], _ea: [] };
+    CS_KEYS.forEach(k => { days[d]['cs_' + k] = 0; days[d]['bk_cs_' + k] = 0; });
   }
   for (let d = startInc; d <= end; d = ymdAdd(d, 1)) inc[d] = { date: d, _s: [], _e: [] };
   const EMP = { 'Private Company': 'emp_private', 'Unlisted': 'emp_unlisted', 'Government Entity': 'emp_govt', 'Pension': 'emp_pension', 'Military with Grades': 'emp_military' };
@@ -233,9 +247,28 @@ function buildJourneyTrends(rows, dataMax) {
       if (r['FinalApprovalFlag'] === 'Y') d.fin++;
       if (saudi) d.saudi++; else if (expat) d.expats++;
       const ek = EMP[String(r['FinalEmployerType'] || '').trim()]; if (ek) d[ek]++;
+      if (companyStatusMap) d['cs_' + companyStatusOf(r['Company'], companyStatusMap, normCompany)]++;
       if (flag(r['Is_GOSI_Called'])) d.gosi_called++;
       if (flag(r['Is_MOF_Called'])) d.mof_called++;
-      if (String(r['SMH_Score'] == null ? '' : r['SMH_Score']).trim() !== '') d.simah_called++;
+      // Qarar and SIMAH are NOT the same count. Fixed 2026-09-22 -- a first
+      // attempt used "DE_Decision !== 'D'" as the Qarar-called proxy, assuming
+      // 'D' meant "internal check declined before ever calling Qarar" per the
+      // Flow rule -- but a cross-tab against SMH_Score disproved that: 845 of
+      // 1,273 'D' rows on a sample day DO have SIMAH data populated (their
+      // decline reasons -- DBR, Loan Size Rule -- are POST-bureau policy rules,
+      // so Qarar/SIMAH clearly ran first). The remaining 'D' rows (blank
+      // SMH_Score) genuinely are pre-Qarar internal declines (e.g. Inactive
+      // Company). So "was Qarar called" can't be read off DE_Decision alone --
+      // the reliable signal is SMH_Score populated (SIMAH ran, so Qarar
+      // necessarily ran first) OR DE_Decision === 'X' (Qarar's own decline,
+      // confirmed via Declinereasons = "Qarar Decline" in 99.8% of X rows --
+      // this catches Qarar calls that DIDN'T reach SIMAH). Any other row with a
+      // blank SMH_Score (a 'D' that failed before Qarar, or a 'P' approved via
+      // the lite/internal-only path) never called Qarar at all.
+      const hasSmhScore = String(r['SMH_Score'] == null ? '' : r['SMH_Score']).trim() !== '';
+      const deDec = String(r['DE_Decision'] || '').trim();
+      if (hasSmhScore || deDec === 'X') d.qarar_called++;
+      if (hasSmhScore) d.simah_called++;
       const dk = DR[String(r['SimplifiedDeclinedReason'] || '').trim()]; if (dk) d[dk]++;
       if (/unlisted company/i.test(String(r['referreasons'] || ''))) {
         d.unl_tagged++;
@@ -254,6 +287,7 @@ function buildJourneyTrends(rows, dataMax) {
       if (bd) {
         bd.bk++; bd.amt += parseFloat(r['ItemValue']) || 0;
         const bek = BK_EMP[String(r['FinalEmployerType'] || '').trim()]; if (bek) bd[bek]++;
+        if (companyStatusMap) bd['bk_cs_' + companyStatusOf(r['Company'], companyStatusMap, normCompany)]++;
       }
     }
   }
@@ -470,25 +504,38 @@ result.meta.bookedThenCancelledYesterdayAmount = btc.amount;
 result.meta.bookedThenCancelledYesterdayDate = btc.yesterday;
 console.log(`Booked then Cancelled (yesterday ${btc.yesterday}): ${btc.count} (SAR ${Math.round(btc.amount).toLocaleString()})`);
 
-result.journey = buildJourneyTrends(dashboardRows, result.meta.max);
-console.log(`Journey trends: ${result.journey.trends30.length} days (${result.journey.windowStart} → ${result.journey.windowEnd}), income series ${result.journey.incomeDaily.length} days`);
-
-// Approved-companies reference stat (added 2026-09-22, per explicit request) --
-// reference/context only, NOT joined to individual applications: a probe found
-// the Acquisition CSV's Company field only name-matches ~20% of recent rows
-// against this list (many Arabic company names are already replaced with
-// literal '?' in the raw source file, upstream of this pipeline -- not
-// recoverable here), so a per-application listed/unlisted join would be
-// unreliable. FinalEmployerType stays the sole basis for listed/unlisted
-// throughout the New change tab. This file is a one-off snapshot, not part of
-// the regular daily pipeline -- read if present, skipped gracefully if not.
+// Company-status lookup (added 2026-09-22, per explicit request + follow-up
+// with the real Active-code legend). Active codes: 4=Listed Cat A, 1=Listed
+// Cat B, 2=Listed Cat C, 3=Blacklisted, 0=Rejected, 99=Deleted; a name not on
+// the list at all is Unlisted. When one normalized company name has multiple
+// entries with different statuses, the MOST RESTRICTIVE wins, per explicit
+// tie-break order: Blacklisted > Cat A > Cat B > Cat C > Rejected > Deleted.
+// This file is a one-off snapshot, not part of the regular daily pipeline --
+// read if present, skipped gracefully (buildJourneyTrends gets null) if not.
 const APPROVED_COMPANIES_CSV = path.join(ROOT, 'approvedCompanies-21-09-2026-16-11.csv');
+const STATUS_LABEL = { '4': 'Listed Cat A', '1': 'Listed Cat B', '2': 'Listed Cat C', '3': 'Blacklisted', '0': 'Rejected', '99': 'Deleted' };
+const STATUS_PRIORITY = ['Blacklisted', 'Listed Cat A', 'Listed Cat B', 'Listed Cat C', 'Rejected', 'Deleted'];
+const normCompany = s => String(s == null ? '' : s).trim().toLowerCase().replace(/\s+/g, ' ').replace(/[.,]/g, '');
+let companyStatusMap = null, approvedCompaniesMeta = null;
 if (fs.existsSync(APPROVED_COMPANIES_CSV)) {
   const approvedRows = readCsv(APPROVED_COMPANIES_CSV);
+  companyStatusMap = new Map();
+  approvedRows.forEach(r => {
+    const n = normCompany(r['Company']);
+    if (!n) return;
+    const label = STATUS_LABEL[String(r['Active'] || '').trim()];
+    if (!label) return;
+    const cur = companyStatusMap.get(n);
+    if (!cur || STATUS_PRIORITY.indexOf(label) < STATUS_PRIORITY.indexOf(cur)) companyStatusMap.set(n, label);
+  });
   const active = approvedRows.filter(r => String(r['Active'] || '').trim() === '1').length;
-  result.journey.approvedCompanies = { total: approvedRows.length, active, asOf: '2026-09-21' };
-  console.log(`Approved companies reference: ${approvedRows.length.toLocaleString()} total, ${active.toLocaleString()} Active=1`);
+  approvedCompaniesMeta = { total: approvedRows.length, active, asOf: '2026-09-21', distinctNames: companyStatusMap.size };
+  console.log(`Approved companies: ${approvedRows.length.toLocaleString()} total, ${active.toLocaleString()} Active=1, ${companyStatusMap.size.toLocaleString()} distinct names indexed`);
 }
+
+result.journey = buildJourneyTrends(dashboardRows, result.meta.max, companyStatusMap, normCompany);
+console.log(`Journey trends: ${result.journey.trends30.length} days (${result.journey.windowStart} → ${result.journey.windowEnd}), income series ${result.journey.incomeDaily.length} days`);
+if (approvedCompaniesMeta) result.journey.approvedCompanies = approvedCompaniesMeta;
 
 const newLine = `const DAILY_DEFAULT = ${JSON.stringify(result)};`;
 
