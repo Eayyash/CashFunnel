@@ -1,235 +1,118 @@
 # Tasheel Command Center — New Machine Setup
 
-This file is a **fully automated, zero-intervention installer**, not just
-documentation. Run the one script in Section 2 top to bottom on a new
-machine (different Windows user, no shared OneDrive account, nothing
-pre-installed) and you end up with a **working Command Center showing
-every current scorecard**, plus a pipeline ready to keep updating itself
-the moment a new daily export lands.
+**Updated 2026-09-28.** This supersedes the earlier version of this doc,
+which cloned the dashboards from `github.com/Eayyash/CashFunnel` directly.
+That approach doesn't work for someone who isn't the owner of that
+account: it ties their new install to somebody else's git history and
+gives no way to back their own work up under their own name. The design
+here fixes that — see "Why this changed" below if you're curious.
 
-It supersedes `REPLICATE_ON_NEW_MACHINE.md` (that file is now marked
-deprecated) — this one reflects how the pipeline actually works today and
-needs far less manual work than that older doc assumed.
+## What you get
 
-## Why this can be zero-intervention (read this once)
+A **starter bundle** — a zip file — containing:
+- `dashboards/` — all 11 dashboard HTML files, each with real data already
+  baked in (they render immediately, no build step needed to look at them)
+- `scripts/` — every Node.js pipeline script that keeps a dashboard updated
+- `.claude/agents/` — the five agent instruction docs (FunnelBA, DailyBA,
+  SIMAHDaily, SMSDaily, SNBReferralDaily)
+- `install.js` — a single cross-platform installer (macOS + Windows,
+  plain Node.js, no shell-specific code)
+- `README.md` — the same instructions as this section, packaged alongside
 
-Two facts about how this project is built make full automation possible:
+## Installing it
 
-1. **Every dashboard is a self-contained HTML file with its data already
-   baked in, and all ten of them are committed to git** (`index.html` —
-   the Command Center itself — plus `Acquisition_Command_Dashboard.html`,
-   `Application_Cost.html`, `Business_Performance_View.html`,
-   `Credit_Card_Dashboard.html`, `Funnel_Analysis.html`,
-   `Holistic_View.html`, `Mobile_Journey_Source_of_Truth.html`,
-   `SIMAH_Intelligence.html`, `SMS_Analyzer.html`, `SNB_Overview.html`).
-   A plain `git clone` alone already gets you every current scorecard,
-   fully populated — no rebuild, no data transfer, nothing to seed.
-2. **The pipeline scripts that keep them updated are almost entirely
-   self-seeding.** `update_funnel.js` reads Funnel_Analysis.html's own
-   embedded `FUNNEL_DEFAULT` as its starting point; SIMAH's per-date
-   history in `simah_data/*.json` (323 files) is git-tracked; every SMS
-   Campaign and SNB Referral export is confirmed to be a **full cumulative
-   snapshot back to day one**, not an incremental delta — so the very next
-   real daily file dropped in on the new machine reconstructs the whole
-   history on its own. The only pipeline that reads a configured
-   "historical" seed list at all is Acquisition (`merge_csv.js`), and it's
-   left empty here deliberately (see the caveat below) rather than trying
-   to transfer the multi-hundred-MB daily archive.
-
-The one thing genuinely **not** transferred by this script is the raw
-daily source-file *archive* itself (the actual `.csv`/`.xlsx`/`JSON SIMAH`
-files, all gitignored, several GB combined across months). You don't need
-them to see today's dashboards or to keep the pipeline running forward —
-you'd only need them to regenerate history from scratch, which the
-pipeline never actually does.
-
-## 1. Prerequisites
-
-- Windows with **Git Bash** available (this script is bash, matching every
-  other script in this repo)
-- Internet access to github.com and the npm registry
-- `winget` (built into Windows 10 2004+/Windows 11) — the script uses it to
-  auto-install Git and Node.js if they're missing, with **no prompts**
-
-Nothing else needs to be installed or configured by hand first.
-
-## 2. Run this (the entire automated setup)
-
-Paste this whole block into Git Bash and run it. It is idempotent — safe
-to re-run if it's interrupted partway through.
+You need **Node.js** and **git** already on the machine (both free, both
+cross-platform). Then, from inside the extracted bundle folder:
 
 ```bash
-set -e
-
-# ── 0. Target directory (auto-detected, override with $AI_WORK_BASE if you want a non-default location) ──
-BASE="${AI_WORK_BASE:-$HOME/Documents/EIA Work/AI-Work}"
-REPO_DIR="$BASE/Analysis Agent"
-REPO_URL="https://github.com/Eayyash/CashFunnel.git"
-echo "==> Target base directory: $BASE"
-mkdir -p "$BASE"
-
-# ── 1. Prerequisite check — auto-install via winget if missing, no prompts ──
-missing=()
-command -v git  >/dev/null 2>&1 || missing+=("Git.Git")
-command -v node >/dev/null 2>&1 || missing+=("OpenJS.NodeJS.LTS")
-if [ ${#missing[@]} -gt 0 ]; then
-  if command -v winget >/dev/null 2>&1; then
-    for pkg in "${missing[@]}"; do
-      echo "==> Installing $pkg via winget…"
-      winget install --id "$pkg" -e --silent --accept-package-agreements --accept-source-agreements || true
-    done
-    echo ""
-    echo "Git/Node were just installed. Close this Git Bash window, open a NEW one"
-    echo "(so PATH picks up the install), and re-run this same script — it will"
-    echo "pick up right where it left off."
-    exit 0
-  else
-    echo "ERROR: git and/or node are missing, and winget isn't available to auto-install them."
-    echo "Install Node.js LTS (https://nodejs.org) and Git (https://git-scm.com) manually, then re-run this script."
-    exit 1
-  fi
-fi
-echo "==> git: $(git --version) | node: $(node --version) | npm: $(npm --version)"
-
-# ── 2. Clone (or update) the repo ──
-if [ -d "$REPO_DIR/.git" ]; then
-  echo "==> Repo already present at $REPO_DIR — pulling latest…"
-  git -C "$REPO_DIR" fetch origin
-  git -C "$REPO_DIR" checkout master
-  git -C "$REPO_DIR" pull origin master
-else
-  echo "==> Cloning into $REPO_DIR…"
-  git clone "$REPO_URL" "$REPO_DIR"
-fi
-cd "$REPO_DIR"
-
-# ── 3. package.json is gitignored -- recreate it exactly, then install ──
-cat > package.json <<'EOF'
-{
-  "dependencies": {
-    "xlsx": "^0.18.5"
-  },
-  "devDependencies": {
-    "docx": "^9.7.1",
-    "http-server": "^14.1.1"
-  }
-}
-EOF
-echo "==> Installing npm packages…"
-npm install --no-fund --no-audit
-
-# ── 4. Archive folders -- siblings of the repo, same layout as the original machine ──
-mkdir -p "$BASE/Acquisition for Loans" "$BASE/Tawarruq Funnel" "$BASE/SIMAH Qarar JSON" \
-         "$BASE/SMS Campaigns" "$BASE/SMS Analyz" "$BASE/SNB Referral"
-echo "==> Archive folders created under: $BASE"
-
-# ── 5. pipeline.config.json -- generated directly, no interactive prompts ──
-# (setup_config.js's interactive Q&A is skipped entirely; this writes the
-# exact same schema it would have produced.)
-AI_WORK_BASE_NODE="$BASE" node -e '
-const fs = require("fs");
-const path = require("path");
-const os = require("os");
-const base = process.env.AI_WORK_BASE_NODE;
-const config = {
-  downloadsDir: path.join(os.homedir(), "Downloads"),
-  acquisitionArchiveDir: path.join(base, "Acquisition for Loans"),
-  funnelArchiveDir: path.join(base, "Tawarruq Funnel"),
-  simahArchiveDir: path.join(base, "SIMAH Qarar JSON"),
-  smsArchiveDir: path.join(base, "SMS Campaigns"),
-  smsSentListsDir: path.join(base, "SMS Analyz"),
-  snbReferralArchiveDir: path.join(base, "SNB Referral"),
-  // Deliberately empty -- see "Why this can be zero-intervention" above.
-  // The next real daily Acquisition export is a full cumulative snapshot
-  // and reconstructs the whole dataset on its own; nothing needs pre-seeding.
-  acquisitionHistoricalFiles: []
-};
-fs.writeFileSync("pipeline.config.json", JSON.stringify(config, null, 2) + "\n");
-console.log("Wrote pipeline.config.json:");
-console.log(JSON.stringify(config, null, 2));
-'
-
-# ── 6. Verify every dashboard's embedded <script> blocks parse cleanly ──
-echo ""
-echo "==> Verifying dashboards…"
-for f in index.html Acquisition_Command_Dashboard.html Application_Cost.html \
-         Business_Performance_View.html Credit_Card_Dashboard.html Funnel_Analysis.html \
-         Holistic_View.html Mobile_Journey_Source_of_Truth.html SIMAH_Intelligence.html \
-         SMS_Analyzer.html SNB_Overview.html; do
-  if [ -f "$f" ]; then
-    node -e "
-      const fs=require('fs');
-      const html=fs.readFileSync('$f','utf8');
-      const scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
-      let bad=0;
-      scripts.forEach((s,i)=>{ try{ new Function(s[1]); }catch(e){ bad++; console.log('  $f block'+i+' SYNTAX ERROR: '+e.message); } });
-      if(!bad) console.log('  ✅ $f ('+scripts.length+' script block(s))');
-    "
-  else
-    echo "  ⚠️  $f not found -- check the clone succeeded"
-  fi
-done
-
-echo ""
-echo "✅ Setup complete."
-echo ""
-echo "Command Center: file://$REPO_DIR/index.html"
-echo "Open that path in a browser now -- every scorecard is already populated"
-echo "from the last commit. Nothing else to run just to look at it."
+node install.js
 ```
 
-## 3. What you'll see immediately
+That single command:
 
-Opening `index.html` (the Command Center) gives you every dashboard with
-today's real numbers already in place — Acquisition, Application Cost,
-Business Performance, Credit Card, Funnel Analysis, Holistic View, Mobile
-Journey, SIMAH Intelligence, SMS Analyzer, SNB Overview. Nothing is blank
-or placeholder data.
+1. Checks git/Node.js are present
+2. Picks (or lets you override via `AI_WORK_BASE`) an install location —
+   defaults to `~/Documents/EIA Work/AI-Work/Analysis Agent`
+3. Copies the dashboards, scripts, and agent docs into place
+4. Installs the npm packages the pipeline scripts need
+5. Creates the daily-pipeline archive folders and writes
+   `pipeline.config.json` — no interactive prompts for this part
+6. **Asks you to connect your own GitHub account** — if the `gh` CLI is
+   installed, it runs `gh auth login` right there (opens your browser,
+   you sign in as yourself; the script itself never sees or stores your
+   credentials). If `gh` isn't installed, it prints the two manual steps
+   instead.
+7. **Initializes a brand-new, independent git repository** in the install
+   folder — one fresh commit, zero shared history with wherever the
+   bundle came from
+8. Verifies every dashboard's embedded script parses cleanly
+9. Prints the exact commands to push to your own GitHub, whenever you're
+   ready (it does not push for you — creating a remote repo and pushing
+   to it under your account is your call, not something a script should
+   do without you watching)
 
-## 4. Keeping it updated going forward
+Total run time is mostly `npm install` — a minute or two on a normal
+connection.
 
-Nothing changes about how you use the pipeline day to day — it's the
-exact same agents, triggered the exact same way, once a new file lands in
-Downloads (or wherever `downloadsDir` points):
+## The guarantees this is built around
 
-| Agent | Triggered by | Updates |
-|---|---|---|
-| **FunnelBA** | New `Acquisition_for_Loans_*.csv` | Acquisition Command Dashboard, Application Cost, SNB Overview, Business Performance View |
-| **DailyBA** | New `Tawarruq_Funnel_*.xlsx` | Funnel Analysis, Business Performance View |
-| **SIMAHDaily** | New `SIMAH_Qarar_JSON_*.csv` | SIMAH Intelligence, `simah_data/` chunks, Business Performance View |
-| **SMSDaily** | New `SMS_Campaign_*.xlsx` | SMS Analyzer |
-| **SNBReferralDaily** | New `SNB_Referral_*.csv` | SNB Overview |
+- **This machine's repo, config, and agents are never touched by giving
+  someone else this bundle.** The bundle is a static snapshot of files;
+  handing it out doesn't grant access to anything on your machine.
+- **The new machine gets its own independent git history from commit
+  one.** It is not a fork, not a clone with a shadow remote, not
+  connected in any way to the original repo. A `git log` on the new
+  machine shows exactly one commit: the baseline `install.js` just made.
+- **Nothing flows either direction after that.** Work done on the new
+  machine — new dashboards, new agents, new daily data — never reaches
+  the original machine or account. Updates made on the original machine
+  afterward never reach the new machine automatically either. If you want
+  to bring newer dashboards across later, you do it by generating a fresh
+  bundle and re-running `install.js` (which is safe to re-run — see
+  "Re-running / updating" below), or by manually copying specific files.
+- **GitHub access is always the new user's own.** The installer asks
+  *them* to authenticate, not anyone else. There's no account, token, or
+  credential of the original owner's anywhere in the bundle or the script.
 
-Reference the relevant `.claude/agents/*.md` file (all five are already in
-the clone) exactly as on the original machine — they're fully
-self-contained instructions and don't hardcode any machine-specific path
-any more (everything routes through `pipeline.config.json`).
+## Re-running / updating an existing install
 
-## 5. Known limitations (not blockers, just be aware)
+`install.js` is safe to run again against the same `AI_WORK_BASE` — it
+overwrites the dashboard/script/agent files with whatever's in the bundle
+(so a newer bundle brings newer dashboards) but never touches
+`pipeline.config.json` if you've already customized it, and never touches
+the `.git` history it already created (step 8's `git init`/commit only
+fires once — on a second run you'd `git add -A && git commit` yourself
+if you want to snapshot the update).
 
-- **SMS "sent lists" reference folder (`SMS Analyz`) starts empty.** These
-  are large, standing bulk recipient-list files (500K+ rows each) that are
-  never git-tracked and aren't part of this script's transfer. SMS
-  Analyzer's "SMS Sent Campaigns" section will simply show nothing new
-  until you manually copy files into that folder on the new machine — this
-  degrades gracefully (a documented, non-error condition in
-  `build_sms_analyzer.js`), it doesn't break anything else.
-- **`git push` needs your own GitHub credentials on the new machine.**
-  This script deliberately does not touch authentication — set up `gh auth
-  login` or your usual git credential method once, yourself. (Not
-  automatable for good reason: credentials should never be scripted or
-  transferred by an assistant.)
-- **A handful of one-off analysis scripts** (`build_coconut_*.js`,
-  `build_ucfs_company_compare.js`, `compute_full_booked_competitor_stats.js`,
-  `convert_simah_jsonl_to_daily_csv.js`, `generate_narratives.js`) still
-  have hardcoded paths from ad-hoc investigations earlier in this project.
-  None of the five standing daily-pipeline agents depend on them, so they
-  don't affect the Command Center — only touch them if you specifically
-  need to re-run one of those one-off analyses on the new machine.
+## Known limitations
 
-## 6. Verifying success
+- **Raw daily source-file archives are not bundled** (the actual
+  `.csv`/`.xlsx` exports, gitignored, several GB across months on the
+  original machine). You don't need them to see today's dashboards or to
+  keep the pipeline running forward — confirmed 2026-09-27 that nearly
+  every pipeline self-seeds from the dashboard's own embedded data or
+  from the next full daily export (each one is a complete cumulative
+  snapshot, not a delta). The one exception is the bulk "SMS sent lists"
+  reference folder, which starts empty on a new install and only affects
+  one sub-section of the SMS Analyzer dashboard.
+- **Auto-installing git/Node.js itself is not attempted** across both
+  operating systems from one script — package managers differ too much
+  (winget/choco on Windows, Homebrew on macOS) to do this reliably and
+  silently. The script checks for both and prints the right per-OS
+  install link if either is missing.
+- A handful of one-off analysis scripts bundled in `scripts/` (not
+  referenced by any of the five daily-pipeline agents) still have
+  hardcoded paths from earlier ad-hoc work on the original machine —
+  harmless unless you specifically try to run one of those.
 
-- [ ] `file://<path>/Analysis Agent/index.html` opens and every tile links to a populated dashboard
-- [ ] `node scripts/merge_csv.js` (after a real new `Acquisition_for_Loans_*.csv` arrives) runs without the "pipeline.config.json not found" error
-- [ ] `git -C "<path>/Analysis Agent" remote -v` shows the correct origin
-- [ ] `git push` succeeds once you've set up your own GitHub auth
+## Why this changed (context for the original owner)
+
+The first version of this doc had `install.js`'s predecessor run
+`git clone https://github.com/Eayyash/CashFunnel.git` directly. That's
+fine for replicating your *own* setup onto a second machine you also
+control, but it stops making sense the moment someone else is the one
+running the installer: they'd end up with your repo, your remote, your
+commit history — no natural way to make it theirs, and no reason they
+should need push access to your account in the first place. This version
+treats every install as its own independent project from the start,
+which is the right default whenever the bundle might leave your hands.
