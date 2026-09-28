@@ -179,7 +179,8 @@ table.dt tr:hover td{background:rgba(20,30,50,.02)}
 </header>
 
 <nav class="tabs" id="tabs">
-  <button class="tab on" data-tab="perf"><span class="n">02</span>Performance</button>
+  <button class="tab on" data-tab="summary"><span class="n">01</span>Summary</button>
+  <button class="tab" data-tab="perf"><span class="n">02</span>Performance</button>
   <button class="tab" data-tab="credit"><span class="n">03</span>Credit &amp; Risk</button>
   <button class="tab" data-tab="geo"><span class="n">04</span>Sales &amp; Geography</button>
   <button class="tab" data-tab="notes"><span class="n">05</span>Notes &amp; Quality</button>
@@ -188,7 +189,54 @@ table.dt tr:hover td{background:rgba(20,30,50,.02)}
   <button class="tab" data-tab="newchange"><span class="n">08</span>New change</button>
 </nav>
 <main>
-<section class="panel-tab on" id="perf">
+<section class="panel-tab on" id="summary">
+  <div class="sec-h"><span class="k">SUMMARY</span><h2>Key highlights</h2><span class="hint">auto-generated for the selected range</span></div>
+
+  <div class="sec-h" style="margin-top:8px"><span class="k">01</span><h2>Best &amp; worst days</h2><span class="hint">by submitted applications - this month, not affected by date filter</span></div>
+  <div class="two">
+    <div class="chart-card" id="sum-best-day"></div>
+    <div class="chart-card" id="sum-worst-day"></div>
+  </div>
+
+  <div class="sec-h" style="margin-top:20px"><span class="k">02</span><h2>Top performing segments</h2><span class="hint">highest submissions with highest conversion - combined rank - this month, not affected by date filter</span></div>
+  <div class="two">
+    <div class="chart-card" id="sum-top-employer"></div>
+    <div class="chart-card" id="sum-top-nationality"></div>
+  </div>
+
+  <div class="sec-h" style="margin-top:20px"><span class="k">03</span><h2>Major drop-offs</h2><span class="hint">last 7 days vs prior 7 days</span></div>
+  <div class="chart-card" id="sum-dropoff"></div>
+
+  <div class="sec-h" style="margin-top:20px"><span class="k">04</span><h2>Funnel vs last month</h2><span class="hint">selected range vs same calendar dates, one month back</span></div>
+  <div class="chart-card" id="sum-mom"></div>
+
+  <div class="sec-h" style="margin-top:20px"><span class="k">05</span><h2>CEO Dashboard — Traffic Light</h2><span class="hint">key metrics health check for selected range</span></div>
+  <div class="chart-card" id="sum-ceo-traffic"></div>
+
+  <div class="sec-h" style="margin-top:20px"><span class="k">06</span><h2>Top Employer Types</h2><span class="hint">own date range, independent of the filter above</span></div>
+  <div class="datebar" style="margin-bottom:10px">
+    <div class="dfield"><label>From</label><input type="date" id="tc-from"></div>
+    <div class="dfield"><label>To</label><input type="date" id="tc-to"></div>
+    <div class="presets" id="tc-presets">
+      <button data-r="all" class="on">All</button>
+      <button data-r="mtd">This month</button>
+      <button data-r="7d">Last 7 days</button>
+      <button data-r="sync">Match page range</button>
+    </div>
+    <span class="spacer"></span>
+    <div class="presets" id="tc-sort">
+      <span class="lbl" style="font-size:11px;color:var(--muted);margin-right:4px;align-self:center">Rank by</span>
+      <button data-s="sub" class="on">Submissions</button>
+      <button data-s="book">Booked loans</button>
+      <button data-s="val">Booked value</button>
+    </div>
+  </div>
+  <div class="note-block"><div id="sum-top-companies"></div></div>
+
+  <div class="sec-h" style="margin-top:20px"><span class="k">07</span><h2>Approved, Not Yet Booked</h2><span class="hint">not available for this dashboard</span></div>
+  <div class="ap-note">This sub-panel exists on Acquisition_Command_Dashboard.html but is <b>not portable here</b>: it needs individual per-application approval dates and paid-service flags (GOSI/MOF/SIMAH called) that only exist in Acquisition's row-level dataset. Credit Card's dataset is a day-bucket-only aggregate (no individual applications retained), so there is no equivalent data to compute this from. Omitted rather than approximated.</div>
+</section>
+<section class="panel-tab" id="perf">
   <div class="sec-h"><span class="k">KPI</span><h2>Core acquisition metrics</h2><span class="hint" id="perf-hint"></span></div>
   <div class="grid k7" id="kpi-grid"></div>
   <div class="sec-h"><span class="k">FUNNEL</span><h2>Acquisition funnel</h2><span class="hint">Submitted → Initial → Final → Booked · step conversion</span></div>
@@ -472,7 +520,8 @@ function renderNotes(){
 /* ============ master render ============ */
 const rendered={perf:true};
 function renderAll(){computeCUR();renderKPI();renderRates();renderFunnel();renderTrend();
-  ['credit','geo','demo'].forEach(t=>{if(rendered[t])renderChartTab(t);});if(rendered.notes)renderNotes();if(rendered.appr)renderApproved();updateChips();}
+  ['credit','geo','demo'].forEach(t=>{if(rendered[t])renderChartTab(t);});if(rendered.notes)renderNotes();if(rendered.appr)renderApproved();
+  if(document.getElementById('sum-mom'))renderSummaryTab();updateChips();}
 function updateChips(){
   document.getElementById('data-chip').innerHTML=`${cD.meta.name} · <b>${fmt(cD.meta.total)}</b> apps`;
   document.getElementById('range-chip').textContent=`Coverage ${prettyD(cD.meta.min)} – ${prettyD(cD.meta.max)}`;
@@ -497,6 +546,306 @@ function onDateChange(){const f=document.getElementById('d-from').value,t=docume
   if(!f||!t)return;RANGE={from:f<=t?f:t,to:f<=t?t:f};document.querySelectorAll('#presets button').forEach(x=>x.classList.remove('on'));renderAll();}
 document.getElementById('d-from').addEventListener('change',onDateChange);
 document.getElementById('d-to').addEventListener('change',onDateChange);
+
+/* ============ Summary (mimics Acquisition_Command_Dashboard.html's tab 01) ============ */
+// Ported and adapted 2026-09-28. summaryDailyExtremes() and topSegments()
+// needed ZERO changes -- they're already generic over cD.days[d].k /
+// cD.days[d].d[dim] (per-day aggregate buckets), the exact shape Credit
+// Card's own DAILY_DEFAULT.days already has. The other three engine
+// functions (Acquisition's topCompanies, windowMetrics, windowMetricsFull)
+// originally walked row-level RAWSTORE arrays for precision that isn't
+// actually needed for a whole-day date-range sum -- rewritten below as
+// simple day-bucket summations (ccTopEmployerTypes/ccWindowMetrics/
+// ccWindowMetricsFull) since Credit Card has no row-level data at all.
+//
+// NOT ported: Acquisition's "Approved, Not Yet Booked" sub-panel. It needs
+// individual per-application approval dates and paid-service flags
+// (GOSI/MOF/SIMAH called) that only exist in Acquisition's row-level
+// dataset -- Credit Card's day-bucket-only aggregate has no equivalent.
+// Rather than fake it or silently drop it, the Summary tab shows a note
+// explaining why it's absent.
+function capToYesterday(mx){const y=new Date();y.setHours(0,0,0,0);y.setDate(y.getDate()-1);const yStr=ymd(y);return mx<yStr?mx:yStr;}
+function currentMonthRange(){
+  const mn=cD.meta.min,mx=cD.meta.max,mxD=parseD(mx),mxCap=capToYesterday(mx);
+  const first=ymd(new Date(mxD.getFullYear(),mxD.getMonth(),1));
+  return {from:first<mn?mn:first, to:mxCap<first?first:mxCap};
+}
+function shiftMonth(dstr,n){ const d=parseD(dstr); const day=d.getDate(); d.setMonth(d.getMonth()+n); if(d.getDate()!==day){ d.setDate(0);} return ymd(d);}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function summaryDailyExtremes(){
+  const {from:monthFrom,to:monthTo}=currentMonthRange();
+  const monthDates=cD.dates.filter(d=>d>=monthFrom&&d<=monthTo);
+  const rows=monthDates.map(d=>{const k=cD.days[d]?cD.days[d].k:{sub:0,init:0,final:0,book:0,val:0};
+    return {date:d,sub:k.sub,init:k.init,final:k.final,book:k.book,val:k.val,
+      initRate:k.sub?+(100*k.init/k.sub).toFixed(1):0,
+      finalRate:k.init?+(100*k.final/k.init).toFixed(1):0,
+      bookRate:k.sub?+(100*k.book/k.sub).toFixed(1):0};});
+  const withSub=rows.filter(r=>r.sub>0);
+  if(!withSub.length)return {max:null,min:null};
+  const max=withSub.reduce((a,b)=>b.sub>a.sub?b:a);
+  const isWeekend=d=>{const dow=parseD(d).getDay();return dow===5||dow===6;};
+  const weekdayRows=withSub.filter(r=>!isWeekend(r.date));
+  const min=(weekdayRows.length?weekdayRows:withSub).reduce((a,b)=>b.sub<a.sub?b:a);
+  return {max,min};
+}
+function topSegments(){
+  const {from:monthFrom,to:monthTo}=currentMonthRange();
+  const monthDates=cD.dates.filter(d=>d>=monthFrom&&d<=monthTo);
+  const dims=['employer','nationality'];
+  const out={};
+  dims.forEach(dm=>{
+    const tally={};
+    monthDates.forEach(d=>{
+      const dd=cD.days[d]&&cD.days[d].d&&cD.days[d].d[dm];
+      if(!dd)return;
+      const subMap=dd.sub||{}, bookMap=dd.book||{};
+      for(const val in subMap){ const t=tally[val]||(tally[val]={sub:0,book:0}); t.sub+=subMap[val]; }
+      for(const val in bookMap){ const t=tally[val]||(tally[val]={sub:0,book:0}); t.book+=bookMap[val]; }
+    });
+    const arr=Object.entries(tally).filter(x=>x[1].sub>0).map(x=>({name:x[0],sub:x[1].sub,book:x[1].book,rate:+(100*x[1].book/x[1].sub).toFixed(1)}));
+    const byVol=[...arr].sort((a,b)=>b.sub-a.sub);
+    const byRate=[...arr].sort((a,b)=>b.rate-a.rate);
+    const rankVol={},rankRate={};
+    byVol.forEach((r,idx)=>rankVol[r.name]=idx);
+    byRate.forEach((r,idx)=>rankRate[r.name]=idx);
+    arr.forEach(r=>r.combined=rankVol[r.name]+rankRate[r.name]);
+    arr.sort((a,b)=>a.combined-b.combined);
+    out[dm]=arr[0]||null;
+  });
+  return out;
+}
+function ccTopEmployerTypes(fromA,toA,sortBy){
+  const dates=cD.dates.filter(d=>d>=fromA&&d<=toA);
+  const stats={}; const totals={sub:0,book:0,val:0};
+  dates.forEach(d=>{
+    const dd=cD.days[d]&&cD.days[d].d&&cD.days[d].d.employer; if(!dd)return;
+    const sb=dd.sub||{},bk=dd.book||{},bv=dd.bval||{};
+    const keys=new Set([...Object.keys(sb),...Object.keys(bk)]);
+    keys.forEach(name=>{
+      const s=stats[name]||(stats[name]={sub:0,book:0,val:0});
+      s.sub+=sb[name]||0; s.book+=bk[name]||0; s.val+=bv[name]||0;
+      totals.sub+=sb[name]||0; totals.book+=bk[name]||0; totals.val+=bv[name]||0;
+    });
+  });
+  let arr=Object.entries(stats).map(([name,s])=>({name,sub:s.sub,book:s.book,val:s.val}));
+  const key=sortBy==='val'?'val':(sortBy==='book'?'book':'sub');
+  arr.sort((a,b)=>b[key]-a[key]);
+  return {top:arr,totals,companyCount:arr.length};
+}
+function ccWindowMetrics(fromA,toA){
+  const dates=cD.dates.filter(d=>d>=fromA&&d<=toA);
+  let sub=0,book=0,val=0; const segTally={employer:{},nationality:{},income:{}};
+  dates.forEach(d=>{
+    const day=cD.days[d]; if(!day)return;
+    sub+=(day.k&&day.k.sub)||0; book+=(day.k&&day.k.book)||0; val+=(day.k&&day.k.val)||0;
+    ['employer','nationality','income'].forEach(dm=>{
+      const dd=day.d&&day.d[dm]; if(!dd)return;
+      const bk=dd.book||{},bv=dd.bval||{};
+      Object.keys(bk).forEach(name=>{
+        const t=segTally[dm][name]||(segTally[dm][name]={count:0,val:0});
+        t.count+=bk[name]||0; t.val+=bv[name]||0;
+      });
+    });
+  });
+  return {sub,book,val,avgTicket:book?val/book:0,rate:sub?100*book/sub:0,seg:segTally};
+}
+function dropoffAnalysis(){
+  const toA=RANGE.to;
+  const last7From=addDays(toA,-6), last7To=toA;
+  const priorFrom=addDays(toA,-13), priorTo=addDays(toA,-7);
+  const last7=ccWindowMetrics(last7From,last7To);
+  const prior7=ccWindowMetrics(priorFrom,priorTo);
+  const drivers={};
+  // Ranked by booked-COUNT decline, not dollar-value decline like
+  // Acquisition's original -- confirmed 2026-09-28 that this dataset's
+  // per-dimension booked value (bval) is always empty/zero, so ranking by
+  // deltaVal would never find a "worst" segment at all. Booked count per
+  // band IS real data here.
+  ['employer','nationality','income'].forEach(dm=>{
+    const keys=new Set([...Object.keys(last7.seg[dm]),...Object.keys(prior7.seg[dm])]);
+    let worst=null;
+    keys.forEach(k=>{
+      const a=last7.seg[dm][k]||{count:0,val:0};
+      const b=prior7.seg[dm][k]||{count:0,val:0};
+      const deltaVal=a.val-b.val, deltaCount=a.count-b.count;
+      if(!worst||deltaCount<worst.deltaCount) worst={name:k,deltaVal,deltaCount,last7Val:a.val,prior7Val:b.val,last7Count:a.count,prior7Count:b.count};
+    });
+    drivers[dm]=worst;
+  });
+  return {last7:{...last7,from:last7From,to:last7To},prior7:{...prior7,from:priorFrom,to:priorTo},drivers};
+}
+function ccWindowMetricsFull(fromA,toA){
+  const dates=cD.dates.filter(d=>d>=fromA&&d<=toA);
+  let sub=0,init=0,final=0,book=0,val=0;
+  dates.forEach(d=>{
+    const k=cD.days[d]&&cD.days[d].k; if(!k)return;
+    sub+=k.sub||0; init+=k.init||0; final+=k.final||0; book+=k.book||0; val+=k.val||0;
+  });
+  return {sub,init,final,book,val,avgTicket:book?val/book:0,
+    initRate:sub?100*init/sub:0, finalRate:init?100*final/init:0, bookRate:sub?100*book/sub:0};
+}
+function momComparison(){
+  const prevFrom=shiftMonth(RANGE.from,-1), prevTo=shiftMonth(RANGE.to,-1);
+  const cur=ccWindowMetricsFull(RANGE.from,RANGE.to);
+  const prev=ccWindowMetricsFull(prevFrom,prevTo);
+  return {cur:{...cur,from:RANGE.from,to:RANGE.to},prev:{...prev,from:prevFrom,to:prevTo}};
+}
+function renderCEOTrafficLight(){
+  const c=CUR; if(!c) return;
+  const k=c.cur.k;
+  const sub=k.sub, init=k.init, final=k.final, book=k.book, val=k.val;
+  const avgTicket=book?Math.round(val/book):0;
+  const initRate=sub?100*init/sub:0;
+  const finalRate=init?100*final/init:0;
+  const bookRate=sub?100*book/sub:0;
+  const initBookRate=init?(100*book/init):0;
+  const empD=c.cur.d.employer||{};
+  const empSub=empD.sub||{}, empBook=empD.book||{}, empInit=empD.init||{};
+  let rSub=0,rInit=0,rBook=0;
+  Object.entries(empSub).forEach(([cat,cnt])=>{if(cat!=='Unlisted'&&cat!=='Unknown'){rSub+=cnt;rInit+=(empInit[cat]||0);rBook+=(empBook[cat]||0);}});
+  const rE2E=rSub?(100*rBook/rSub):0;
+  const rInitRate=rSub?(100*rInit/rSub):0;
+  let bestEmp='—';let bestEmpRate=0;
+  Object.entries(empSub).forEach(([cat,cnt])=>{
+    if(cat==='Unlisted'||cat==='Unknown'||cnt<20) return;
+    const rate=cnt?(empBook[cat]||0)/cnt*100:0;
+    if(rate>bestEmpRate){bestEmpRate=rate;bestEmp=cat;}
+  });
+  const light=function(v,good,warn){return v>=good?'🟢':v>=warn?'🟡':'🔴';};
+  const nDays=c.curDays||1;
+  const dailySub=Math.round(rSub/nDays);
+  const dailyBook=Math.round(rBook/nDays);
+  // Thresholds recalibrated for Credit Card's actual scale (a few hundred
+  // submissions/day, not Acquisition's thousands) -- copying Acquisition's
+  // absolute thresholds verbatim would show red/yellow permanently and be
+  // misleading. Based on this dataset's own observed range (Apr-Jul 2026).
+  const metrics=[
+    {label:'Applications (excl Unlisted)',val:fmt(rSub),light:light(dailySub,350,200)},
+    {label:'Daily Avg Submissions',val:fmt(dailySub),light:light(dailySub,350,200)},
+    {label:'Approvals (Init)',val:fmt(rInit),light:light(rInit/nDays,80,50)},
+    {label:'Approval Rate',val:rInitRate.toFixed(1)+'%',light:light(rInitRate,25,15)},
+    {label:'Final Approval Rate',val:finalRate.toFixed(1)+'%',light:light(finalRate,55,40)},
+    {label:'Init → Book Rate',val:initBookRate.toFixed(1)+'%',light:light(initBookRate,60,40)},
+    {label:'Booking Rate (Real)',val:rE2E.toFixed(1)+'%',light:light(rE2E,12,8)},
+    {label:'Total Bookings',val:fmt(rBook),light:light(dailyBook,15,8)},
+    {label:'Avg Loan Size',val:money(avgTicket),light:light(avgTicket,10000,7000)},
+    {label:'Portfolio Revenue',val:money(val),light:light(val/nDays,100000,60000)},
+    {label:'Days in Range',val:fmt(nDays),light:'🔵'},
+    {label:'Top Employer',val:bestEmp.length>15?bestEmp.slice(0,13)+'…':bestEmp,light:'🟢'},
+    {label:'Headline Rate (incl Unlisted)',val:bookRate.toFixed(1)+'%',light:light(bookRate,8,5)},
+    {label:'Real vs Headline',val:(rE2E/Math.max(bookRate,0.01)).toFixed(1)+'x',light:light(rE2E/Math.max(bookRate,0.01),1.3,1)}
+  ];
+  const el=document.getElementById('sum-ceo-traffic');
+  if(!el) return;
+  el.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin-top:8px">'+
+    metrics.map(function(m){return '<div style="background:var(--panel);border:1px solid var(--line2);border-radius:10px;padding:12px;text-align:center">'+
+      '<div style="font-size:18px;margin-bottom:2px">'+m.light+'</div>'+
+      '<div style="font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:.04em">'+m.label+'</div>'+
+      '<div style="font-size:15px;font-weight:700;color:var(--ink);margin-top:2px">'+m.val+'</div>'+
+    '</div>';}).join('')+'</div>';
+}
+let TC_RANGE={from:cD.meta.min,to:cD.meta.max};
+let TC_SORT='sub';
+function setTCDateInputs(){const f=document.getElementById('tc-from'),t=document.getElementById('tc-to');
+  if(!f||!t)return;f.min=t.min=cD.meta.min;f.max=t.max=cD.meta.max;f.value=TC_RANGE.from;t.value=TC_RANGE.to;}
+function applyTCPreset(r){const mn=cD.meta.min,mx=cD.meta.max,mxD=parseD(mx),mxCap=capToYesterday(mx);
+  if(r==='sync')TC_RANGE={from:RANGE.from,to:RANGE.to};
+  else if(r==='mtd'){const first=ymd(new Date(mxD.getFullYear(),mxD.getMonth(),1));TC_RANGE={from:first<mn?mn:first,to:mxCap};}
+  else if(r==='7d')TC_RANGE={from:addDays(mxCap,-6)<mn?mn:addDays(mxCap,-6),to:mxCap};
+  else TC_RANGE={from:mn,to:mx};
+  setTCDateInputs();renderSummaryTab();}
+document.querySelectorAll('#tc-presets button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#tc-presets button').forEach(x=>x.classList.remove('on'));b.classList.add('on');applyTCPreset(b.dataset.r);}));
+function onTCDateChange(){const f=document.getElementById('tc-from').value,t=document.getElementById('tc-to').value;
+  if(!f||!t)return;TC_RANGE={from:f<=t?f:t,to:f<=t?t:f};document.querySelectorAll('#tc-presets button').forEach(x=>x.classList.remove('on'));renderSummaryTab();}
+document.getElementById('tc-from').addEventListener('change',onTCDateChange);
+document.getElementById('tc-to').addEventListener('change',onTCDateChange);
+document.querySelectorAll('#tc-sort button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#tc-sort button').forEach(x=>x.classList.remove('on'));b.classList.add('on');TC_SORT=b.dataset.s;renderSummaryTab();}));
+function renderSummaryTab(){
+  const ext=summaryDailyExtremes();
+  const dayCard=(r,label,note)=>{
+    if(!r)return '<h3>'+label+'</h3><p class="cap">No data in range.</p>';
+    return '<h3>'+label+' — '+prettyD(r.date)+'</h3>'+
+      (note?'<p class="cap" style="margin:2px 0 8px;">'+note+'</p>':'')+
+      '<div class="summary-cards"><div class="card money kpi"><div class="lab">Submitted</div><div class="big" style="font-size:22px">'+fmt(r.sub)+'</div></div>'+
+      '<div class="card money kpi"><div class="lab">Initial approval</div><div class="big" style="font-size:22px">'+r.initRate+'%</div></div>'+
+      '<div class="card money kpi"><div class="lab">Final approval</div><div class="big" style="font-size:22px">'+r.finalRate+'%</div></div>'+
+      '<div class="card money kpi"><div class="lab">Booking rate</div><div class="big" style="font-size:22px">'+r.bookRate+'%</div></div>'+
+      '<div class="card money kpi"><div class="lab">Booked amount</div><div class="big" style="font-size:22px">'+money(r.val)+'</div></div></div>';
+  };
+  document.getElementById('sum-best-day').innerHTML=dayCard(ext.max,'Highest volume day');
+  document.getElementById('sum-worst-day').innerHTML=dayCard(ext.min,'Lowest volume day','ℹ️ Weekends (Fri/Sat) are excluded — this lowest day is not a weekend.');
+  const top=topSegments();
+  const segCard=(r,label)=>{
+    if(!r)return '<h3>'+label+'</h3><p class="cap">No data in range.</p>';
+    return '<h3>'+label+'</h3><div class="summary-cards"><div class="card money kpi"><div class="lab">Segment</div><div class="big" style="font-size:17px">'+esc(r.name)+'</div></div>'+
+      '<div class="card money kpi"><div class="lab">Submitted</div><div class="big" style="font-size:22px">'+fmt(r.sub)+'</div></div>'+
+      '<div class="card money kpi"><div class="lab">Booking rate</div><div class="big" style="font-size:22px">'+r.rate+'%</div></div></div>';
+  };
+  document.getElementById('sum-top-employer').innerHTML=segCard(top.employer,'Top employer type');
+  document.getElementById('sum-top-nationality').innerHTML=segCard(top.nationality,'Top nationality flag');
+  const tcRes=ccTopEmployerTypes(TC_RANGE.from,TC_RANGE.to,TC_SORT);
+  if(tcRes&&tcRes.top.length){
+    const sortLabel=TC_SORT==='val'?'Booked value':(TC_SORT==='book'?'Booked loans':'Submissions');
+    // Booked VALUE per employer type is not shown here -- confirmed
+    // 2026-09-28 that this dataset's per-dimension 'bval' breakdown is
+    // always empty/zero (unlike the per-day aggregate total, which is
+    // real and already shown in Approved Criteria's "Total funded value").
+    // Showing an always-SAR-0 column would be misleading, so it's omitted
+    // rather than displayed as if it were real data.
+    let tch='<div style="font-size:11px;color:var(--faint);margin-bottom:8px">Employer types · ranked by '+sortLabel+' · '+fmt(tcRes.companyCount)+' employer type'+(tcRes.companyCount===1?'':'s')+' · booked value by employer type is not tracked in this dataset</div>';
+    tch+='<table class="dt"><thead><tr><th>#</th><th>Employer Type</th><th class="num">Submissions</th><th class="num">Booked loans</th></tr></thead><tbody>';
+    tcRes.top.forEach((cc,i)=>{
+      tch+='<tr><td class="num">'+(i+1)+'</td><td>'+esc(cc.name)+'</td><td class="num">'+fmt(cc.sub)+'</td><td class="num">'+fmt(cc.book)+'</td></tr>';
+    });
+    tch+='<tr style="font-weight:700;border-top:2px solid var(--line2)"><td></td><td>Total (all employer types)</td><td class="num">'+fmt(tcRes.totals.sub)+'</td><td class="num">'+fmt(tcRes.totals.book)+'</td></tr>';
+    tch+='</tbody></table>';
+    document.getElementById('sum-top-companies').innerHTML=tch;
+  } else {
+    document.getElementById('sum-top-companies').innerHTML='<p class="cap">No booked loans from any employer type in the selected range.</p>';
+  }
+  const dr=dropoffAnalysis();
+  const rateDelta=+(dr.last7.rate-dr.prior7.rate).toFixed(1);
+  const ticketDelta=dr.last7.avgTicket-dr.prior7.avgTicket;
+  const valDelta=dr.last7.val-dr.prior7.val;
+  const arrow=v=>v<0?'▼':(v>0?'▲':'▬');
+  const cls=v=>v<0?'dn':(v>0?'up':'flat');
+  let dh='<h3>Last 7 days ('+prettyD(dr.last7.from)+String.fromCharCode(8211)+prettyD(dr.last7.to)+') vs prior 7 days ('+prettyD(dr.prior7.from)+String.fromCharCode(8211)+prettyD(dr.prior7.to)+')</h3>';
+  dh+='<div class="summary-cards">'+
+    '<div class="card money kpi"><div class="lab">Booking rate</div><div class="big" style="font-size:20px">'+dr.last7.rate.toFixed(1)+'% <span class="deltac '+cls(rateDelta)+'" style="font-size:12.5px">'+arrow(rateDelta)+' '+Math.abs(rateDelta)+'pp</span></div></div>'+
+    '<div class="card money kpi"><div class="lab">Avg ticket size</div><div class="big" style="font-size:20px">'+money(dr.last7.avgTicket)+' <span class="deltac '+cls(ticketDelta)+'" style="font-size:12.5px">'+arrow(ticketDelta)+' '+money(Math.abs(ticketDelta))+'</span></div></div>'+
+    '<div class="card money kpi"><div class="lab">Total sales value</div><div class="big" style="font-size:20px">'+money(dr.last7.val)+' <span class="deltac '+cls(valDelta)+'" style="font-size:12.5px">'+arrow(valDelta)+' '+money(Math.abs(valDelta))+'</span></div></div></div>';
+  dh+='<div class="three" style="margin-top:12px">';
+  ['employer','nationality','income'].forEach(dm=>{
+    const d=dr.drivers[dm];
+    dh+='<div><div class="nsub" style="margin-bottom:6px;color:var(--ink2);font-weight:600">'+DIMLAB[dm]+' driving the drop</div>';
+    if(d && d.deltaCount<0){ dh+='<div class="callout" style="border-left-color:var(--red)">'+esc(d.name)+': '+fmt(d.prior7Count)+' → '+fmt(d.last7Count)+' booked loans ('+d.deltaCount+')</div>'; }
+    else { dh+='<p class="cap">No segment declined.</p>'; }
+    dh+='</div>';
+  });
+  dh+='</div>';
+  document.getElementById('sum-dropoff').innerHTML=dh;
+  const mm=momComparison();
+  const row=(label,curV,prevV,fmtFn,pp)=>{
+    const delta=curV-prevV;
+    const cl2=delta>0?'up':(delta<0?'dn':'flat');
+    const ar2=delta>0?'▲':(delta<0?'▼':'▬');
+    const dstr=pp?(delta>=0?'+':'')+delta.toFixed(1)+'pp':(delta>=0?'+':'-')+fmtFn(Math.abs(delta));
+    return '<tr><td>'+label+'</td><td class="num">'+fmtFn(curV)+'</td><td class="num" style="color:var(--faint)">'+fmtFn(prevV)+'</td><td class="num deltac '+cl2+'">'+ar2+' '+dstr+'</td></tr>';
+  };
+  let mh='<h3>'+prettyD(mm.cur.from)+String.fromCharCode(8211)+prettyD(mm.cur.to)+' vs '+prettyD(mm.prev.from)+String.fromCharCode(8211)+prettyD(mm.prev.to)+'</h3>';
+  mh+='<table class="dt"><thead><tr><th>Metric</th><th class="num">Selected range</th><th class="num">Last month</th><th class="num">Change</th></tr></thead><tbody>';
+  mh+=row('Submitted apps',mm.cur.sub,mm.prev.sub,fmt,false);
+  mh+=row('Initial approval rate',mm.cur.initRate,mm.prev.initRate,v=>v.toFixed(1)+'%',true);
+  mh+=row('Final approval rate',mm.cur.finalRate,mm.prev.finalRate,v=>v.toFixed(1)+'%',true);
+  mh+=row('Booking rate',mm.cur.bookRate,mm.prev.bookRate,v=>v.toFixed(1)+'%',true);
+  mh+=row('Avg ticket size',mm.cur.avgTicket,mm.prev.avgTicket,money,false);
+  mh+=row('Total sales value',mm.cur.val,mm.prev.val,money,false);
+  mh+='</tbody></table>';
+  document.getElementById('sum-mom').innerHTML=mh;
+  renderCEOTrafficLight();
+}
 
 /* ============ Approved Criteria (mimics Acquisition_Command_Dashboard.html's tab 07) ============ */
 // Ported near-verbatim -- these functions are fully generic over CUR.cur.d[dim]
@@ -772,7 +1121,7 @@ function buildDaily(rows,name){
   for(const d in days){days[d].k.val=Math.round(days[d].k.val);for(const dm in days[d].d){const bv=days[d].d[dm].bval;for(const kk in bv)bv[kk]=Math.round(bv[kk]);}}
   return {meta:{min:dates[0],max:dates[dates.length-1],total:rows.length,name},dates,days};
 }
-function loadDataset(nd){cD=nd;defaultRange();setDateInputs();document.querySelectorAll('#presets button').forEach((x,i)=>x.classList.toggle('on',i===0));renderAll();}
+function loadDataset(nd){cD=nd;defaultRange();setDateInputs();TC_RANGE={from:cD.meta.min,to:cD.meta.max};setTCDateInputs();document.querySelectorAll('#tc-presets button').forEach((x,i)=>x.classList.toggle('on',i===0));document.querySelectorAll('#presets button').forEach((x,i)=>x.classList.toggle('on',i===0));renderAll();}
 
 document.getElementById('btn-upload').onclick=()=>document.getElementById('file-xlsx').click();
 document.getElementById('file-xlsx').onchange=e=>{const f=e.target.files[0];if(!f)return;overlay(true,'Reading workbook…',f.name);
@@ -794,6 +1143,6 @@ document.getElementById('file-json').onchange=e=>{const f=e.target.files[0];if(!
   rd.onload=ev=>{try{const nd=JSON.parse(ev.target.result);if(!nd.dates||!nd.days)throw new Error('unrecognized file');loadDataset(nd);toast('Imported '+(nd.meta&&nd.meta.name||'dataset'));}catch(err){toast('Import failed: '+err.message);}};rd.readAsText(f);e.target.value='';};
 
 /* ============ init ============ */
-defaultRange();setDateInputs();renderAll();
+defaultRange();setDateInputs();setTCDateInputs();renderAll();
 </script>
 </body></html>
