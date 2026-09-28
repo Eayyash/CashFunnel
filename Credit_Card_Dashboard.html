@@ -84,6 +84,22 @@ main{max-width:1500px;margin:0 auto;padding:22px 22px 70px}
 .fstage .fname{font-family:'Space Grotesk';font-size:13px;z-index:2}.fstage .fcount{font-family:'JetBrains Mono';font-weight:700;font-size:17px;z-index:2}
 .fconn{height:24px;display:flex;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:11px;font-family:'JetBrains Mono'}
 .fconn .pct{color:var(--cyan-d);font-weight:700}.fconn .arw{color:var(--faint)}
+/* ============ New change: trend-chart framework, mimicking Acquisition_Command_Dashboard.html's tab 08 ============ */
+.nc-top{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin:4px 2px 12px}
+.nc-pill{background:#e6f5ec;color:#0b6b34;border:1px solid #b6e0c6;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:600}
+.nc-crumb{font-size:12px;color:var(--faint)}.nc-crumb b{color:#0b6b34;font-weight:600}
+.nc-card{margin-bottom:16px}
+.nc-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.nc-h h3{margin:0;font-size:15px;font-weight:600}
+.nc-h .k{font-family:'JetBrains Mono';font-size:11px;color:#0b6b34;letter-spacing:.08em}
+.nc-h .nc-dl{margin-left:auto;padding:5px 10px;font-size:11.5px}
+.nc-sub{font-size:11.5px;color:var(--faint);margin:3px 0 8px}
+.nc-chart svg{width:100%;height:auto;display:block}
+.nc-legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:11.5px;color:var(--ink2);margin:6px 0 4px}
+.nc-legend i{display:inline-block;width:20px;height:0;border-top:2.5px solid;vertical-align:middle;margin-right:6px}
+.nc-legend i.d{border-top-style:dashed}
+.nc-delta{font-size:11.5px;color:var(--muted);margin:2px 0 9px;line-height:1.65}.nc-delta b{color:var(--ink2)}
+.nc-callout{border:1px dashed var(--line2);border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.55;color:var(--ink2);background:var(--panel2)}
+.nc-callout b{color:#0b6b34}.nc-callout p{margin:0 0 7px}.nc-callout p:last-child{margin:0}
 table.dt{width:100%;border-collapse:collapse;font-size:12.5px}
 table.dt th{text-align:left;color:var(--muted);font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;padding:7px 10px;border-bottom:1px solid var(--line2)}
 table.dt td{padding:8px 10px;border-bottom:1px solid var(--line);color:var(--ink2)}
@@ -141,6 +157,7 @@ table.dt tr:hover td{background:rgba(20,30,50,.02)}
   <button class="tab" data-tab="geo"><span class="n">03</span>Sales &amp; Geography</button>
   <button class="tab" data-tab="notes"><span class="n">04</span>Notes &amp; Quality</button>
   <button class="tab" data-tab="demo"><span class="n">05</span>Demographic</button>
+  <button class="tab" data-tab="newchange"><span class="n">06</span>New change</button>
 </nav>
 <main>
 <section class="panel-tab on" id="perf">
@@ -200,6 +217,10 @@ table.dt tr:hover td{background:rgba(20,30,50,.02)}
     <div class="chart-card"><h3>Income band</h3><p class="cap">declared monthly income (SAR)</p><div class="cwrap"><canvas id="c-income"></canvas></div></div>
     <div class="chart-card"><h3>Marital status</h3><div class="cwrap"><canvas id="c-marital"></canvas></div></div>
     <div class="chart-card"><h3>Top nationalities</h3><div class="cwrap"><canvas id="c-natdetail"></canvas></div></div></div>
+</section>
+<section class="panel-tab" id="newchange">
+  <div class="sec-h"><span class="k">06</span><h2>New change</h2><span class="hint">Trend framework, mirroring Acquisition_Command_Dashboard.html's tab 08 -- no specific change date configured yet</span></div>
+  <div id="nc-root"></div>
 </section>
 <div class="foot" id="foot"></div>
 </main>
@@ -408,11 +429,101 @@ function onDateChange(){const f=document.getElementById('d-from').value,t=docume
 document.getElementById('d-from').addEventListener('change',onDateChange);
 document.getElementById('d-to').addEventListener('change',onDateChange);
 
+/* ============ New change: trend-chart framework (mimics Acquisition_Command_Dashboard.html's tab 08) ============ */
+// Unlike Acquisition, this dataset is small and already fully aggregated
+// per day in DAILY_DEFAULT.days, so trend rows are built directly from the
+// embedded dataset client-side -- no separate build-script step needed.
+// No specific "change date" is configured yet (Credit Cards has no known
+// GOSI/MOF/Qarar/SIMAH-style journey event) -- added 2026-09-28 per explicit
+// request to mimic Acquisition's New change structure. Once a real change
+// date + comparison is defined, ncCmpBounds/ncDelta-style before/after logic
+// (see Acquisition_Command_Dashboard.html) can be layered on top the same way.
+const NC_C2={g:'#129d4e',dg:'#0b6b34',r:'#dc2743',v:'#6f5be0',b:'#2f92e6',a:'#d99100',n:'#5b6b83'};
+function ncEsc2(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+const ncS2=(label,color,num,den,dash)=>({label,color,dash:!!dash,num,den,get:d=>{const m=den(d);return m?num(d)/m*100:null;}});
+function ccBuildTrends(){
+  const rows=(cD.dates||[]).map(d=>{
+    const day=cD.days[d]||{k:{},d:{}};
+    const k=day.k||{};
+    const emp=(day.d&&day.d.employer&&day.d.employer.sub)||{};
+    const src=(day.d&&day.d.source&&day.d.source.sub)||{};
+    return {
+      date:d, subs:k.sub||0, init:k.init||0, fin:k.final||0, bk:k.book||0,
+      emp_private:emp['Private Company']||0, emp_unlisted:emp['Unlisted']||0,
+      emp_govt:emp['Government Entity']||0, emp_pension:emp['Pension']||0, emp_military:emp['Military with Grades']||0,
+      src_ui:src['UI']||0, src_backoffice:src['backoffice']||0,
+    };
+  });
+  return {windowStart:rows.length?rows[0].date:null, windowEnd:rows.length?rows[rows.length-1].date:null, trends30:rows};
+}
+function ncConfigs2(J){
+  const T=J.trends30,C=NC_C2;
+  return [
+  {id:'nc2-1',num:'01',title:'Approval Trend',sub:'Initial approval = Init ÷ Submitted (solid). Final approval = Final ÷ Init (dashed).',rows:T,kind:'pct',
+   series:()=>[ncS2('Initial approval % (Init ÷ Submitted)',C.g,d=>d.init,d=>d.subs),ncS2('Final approval % (Final ÷ Init)',C.dg,d=>d.fin,d=>d.init,true)],
+   callout:'<p><b>Read:</b> daily initial and final approval rate over the full available range.</p>'},
+  {id:'nc2-2',num:'02',title:'Employer Type Trend',sub:'Daily share of submissions by employer type.',rows:T,kind:'pct',
+   series:()=>[['Private Company','emp_private',C.g],['Unlisted','emp_unlisted',C.r],['Government Entity','emp_govt',C.b],['Pension','emp_pension',C.v],['Military with Grades','emp_military',C.a]].map(x=>ncS2(x[0],x[2],d=>d[x[1]],d=>d.subs)),
+   callout:'<p><b>Read:</b> daily employer-type mix among submissions.</p>'},
+  {id:'nc2-3',num:'03',title:'Submission Source Trend',sub:'Daily share of submissions by source (UI vs backoffice).',rows:T,kind:'pct',
+   series:()=>[ncS2('UI',C.g,d=>d.src_ui,d=>d.subs),ncS2('Backoffice',C.b,d=>d.src_backoffice,d=>d.subs)],
+   callout:'<p><b>Read:</b> mirrors the Submission Source Trend card added to Acquisition_Command_Dashboard.html\'s New change tab.</p>'}
+  ];
+}
+function ncSvg2(cfg,ser){
+  const W=940,H=270,L=52,R=16,Tp=22,B=30,rows=cfg.rows,n=rows.length;
+  if(!n)return '<p class="cap">No data.</p>';
+  const vals=[];ser.forEach(s=>rows.forEach(d=>{const v=s.get(d);if(v!=null&&isFinite(v))vals.push(v);}));
+  if(!vals.length)return '<p class="cap">No data in this window.</p>';
+  let lo=Math.min.apply(null,vals),hi=Math.max.apply(null,vals);
+  if(cfg.kind==='pct'){lo=Math.max(0,Math.floor(lo*0.85));hi=Math.min(100,Math.ceil(hi*1.1));}else{lo=Math.floor(lo*0.9);hi=Math.ceil(hi*1.08);}
+  if(hi<=lo)hi=lo+1;
+  const X=i=>L+(n>1?i*(W-L-R)/(n-1):(W-L-R)/2),Y=v=>Tp+(H-Tp-B)*(1-(v-lo)/(hi-lo));
+  const tf=v=>cfg.kind==='pct'?Math.round(v)+'%':(v>=1000?(v/1000).toFixed(v%1000?1:0)+'K':Math.round(v));
+  let g='';
+  for(let k=0;k<=4;k++){const v=lo+(hi-lo)*k/4,y=Y(v);g+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y+'" y2="'+y+'" stroke="rgba(30,45,75,.10)"/><text x="'+(L-7)+'" y="'+(y+4)+'" text-anchor="end" font-size="10.5" fill="#8493a8">'+tf(v)+'</text>';}
+  const step=Math.max(1,Math.ceil(n/9));
+  rows.forEach((d,i)=>{if(i%step===0||i===n-1)g+='<text x="'+X(i)+'" y="'+(H-9)+'" text-anchor="middle" font-size="10.5" fill="#8493a8">'+prettyD(d.date)+'</text>';});
+  ser.forEach(s=>{
+    let p='',open=false;const pts=[];
+    rows.forEach((d,i)=>{const v=s.get(d);if(v==null||!isFinite(v)){open=false;return;}p+=(open?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1)+' ';open=true;pts.push([i,v]);});
+    g+='<path d="'+p+'" fill="none" stroke="'+s.color+'" stroke-width="2.2"'+(s.dash?' stroke-dasharray="6 4"':'')+'/>';
+    if(n<=70)pts.forEach(q=>{g+='<circle cx="'+X(q[0]).toFixed(1)+'" cy="'+Y(q[1]).toFixed(1)+'" r="3" fill="'+s.color+'"><title>'+ncEsc2(s.label)+' · '+prettyD(rows[q[0]].date)+' · '+tf(q[1])+'</title></circle>';});
+  });
+  return '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+ncEsc2(cfg.title)+'">'+g+'</svg>';
+}
+function ncCsv2(cfg){
+  const ser=cfg.series();
+  const lines=[['date'].concat(ser.map(s=>'"'+s.label.replace(/"/g,'""')+'"')).join(',')];
+  cfg.rows.forEach(d=>lines.push([d.date].concat(ser.map(s=>{const v=s.get(d);return v==null||!isFinite(v)?'':(Math.round(v*100)/100);})).join(',')));
+  const blob=new Blob([lines.join('\n')],{type:'text/csv'}),a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download='new_change_'+cfg.id+'.csv';document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);
+}
+function ncPaint2(cfg){
+  const el=document.getElementById(cfg.id),ser=cfg.series();
+  el.querySelector('.nc-chart').innerHTML=ncSvg2(cfg,ser);
+  el.querySelector('.nc-legend').innerHTML=ser.map(s=>'<span><i class="'+(s.dash?'d':'')+'" style="border-color:'+s.color+'"></i>'+ncEsc2(s.label)+'</span>').join('');
+}
+let NC2_CFGS=[];
+function renderNewChange(){
+  const root=document.getElementById('nc-root');
+  const J=ccBuildTrends();
+  if(!J.trends30.length){root.innerHTML='<p class="cap">No data loaded yet.</p>';return;}
+  NC2_CFGS=ncConfigs2(J);
+  let h='<div class="nc-top"><span class="nc-pill">Framework only -- no change date configured yet</span><span class="nc-crumb">Credit Card Acquisition › <b>New change</b></span></div>';
+  h+='<div class="nc-callout" style="margin-bottom:16px"><p><b>What this is:</b> the same reusable trend-chart structure built for Acquisition_Command_Dashboard.html\'s New change tab (numbered cards, legend, CSV download per chart) -- mimicked here as requested. There\'s no specific policy/journey change defined for Credit Cards yet, so these are general trend charts over the whole available range ('+prettyD(J.windowStart)+' – '+prettyD(J.windowEnd)+'), not a before/after comparison. Point this at a real change date later to add that, the same way Acquisition\'s does.</p></div>';
+  NC2_CFGS.forEach(c=>{h+='<div class="card nc-card" id="'+c.id+'"><div class="nc-h"><span class="k">'+c.num+'</span><h3>'+ncEsc2(c.title)+'</h3><button class="btn nc-dl" data-id="'+c.id+'">Download data (CSV)</button></div><div class="nc-sub">'+ncEsc2(c.sub)+'</div><div class="nc-chart"></div><div class="nc-legend"></div>'+(c.callout?'<div class="nc-callout">'+c.callout+'</div>':'')+'</div>';});
+  root.innerHTML=h;
+  NC2_CFGS.forEach(c=>ncPaint2(c));
+  root.querySelectorAll('.nc-dl').forEach(b=>b.addEventListener('click',()=>ncCsv2(NC2_CFGS.find(c=>c.id===b.dataset.id))));
+}
+
 /* ============ tabs ============ */
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));t.classList.add('on');const id=t.dataset.tab;
   document.querySelectorAll('.panel-tab').forEach(p=>p.classList.toggle('on',p.id===id));
-  if(!rendered[id]){rendered[id]=true;if(['credit','geo','demo'].includes(id))renderChartTab(id);if(id==='notes')renderNotes();}}));
+  if(!rendered[id]){rendered[id]=true;if(['credit','geo','demo'].includes(id))renderChartTab(id);if(id==='notes')renderNotes();if(id==='newchange')renderNewChange();}}));
 document.querySelectorAll('#credit,#geo,#demo').forEach(sec=>{const tab=sec.id;
   sec.querySelectorAll('.stage-ctl button').forEach(b=>b.addEventListener('click',()=>{
     sec.querySelectorAll('.stage-ctl button').forEach(x=>x.classList.remove('on'));b.classList.add('on');tabState[tab].s=b.dataset.s;renderChartTab(tab);}));});
