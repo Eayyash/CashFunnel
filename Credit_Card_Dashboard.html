@@ -84,6 +84,33 @@ main{max-width:1500px;margin:0 auto;padding:22px 22px 70px}
 .fstage .fname{font-family:'Space Grotesk';font-size:13px;z-index:2}.fstage .fcount{font-family:'JetBrains Mono';font-weight:700;font-size:17px;z-index:2}
 .fconn{height:24px;display:flex;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:11px;font-family:'JetBrains Mono'}
 .fconn .pct{color:var(--cyan-d);font-weight:700}.fconn .arw{color:var(--faint)}
+/* ---- Approved Criteria (mimicking Acquisition_Command_Dashboard.html's tab 07) ---- */
+.ap-note{font-size:12.5px;color:var(--ink2);background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:10px;padding:12px 15px;margin-bottom:14px}
+.ap-note b{color:var(--ink)}
+.ap-chips{display:flex;flex-wrap:wrap;gap:8px}
+.ap-chip{border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:8px 11px;font-size:12px;color:var(--ink2);box-shadow:0 1px 2px rgba(20,30,50,.04)}
+.ap-chip .t{font-size:9.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);display:block;margin-bottom:3px}
+.ap-chip b{color:var(--ink);font-family:'JetBrains Mono';font-size:12.5px}
+.ap-chip .sh{color:var(--cyan-d);font-family:'JetBrains Mono';font-size:11px;margin-left:5px}
+.ap-ins{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+.ap-card{border:1px solid var(--line);border-radius:12px;padding:13px 14px;background:var(--panel);box-shadow:0 1px 2px rgba(20,30,50,.04)}
+.ap-card .h{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:6px}
+.ap-card .b{font-size:12.5px;color:var(--ink2);line-height:1.55}
+.ap-card .b b{color:var(--ink)}
+.ap-card.good{border-left:3px solid var(--green)}
+.ap-card.bad{border-left:3px solid var(--red)}
+.ap-card.info{border-left:3px solid var(--cyan)}
+.sec-h .k.mkt{background:linear-gradient(90deg,#7c4dff,#b06ab3);color:#fff;border-color:transparent}
+.mk-spec{border:1px solid var(--line);border-left:3px solid #7c4dff;border-radius:12px;background:var(--panel);padding:14px 15px;box-shadow:0 1px 2px rgba(20,30,50,.04)}
+.mk-spec .h{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:9px}
+.mk-chips{display:flex;flex-wrap:wrap;gap:8px}
+.mk-chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--panel2);border-radius:9px;padding:5px 9px}
+.mk-chip .t{font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint)}
+.mk-chip b{font-family:'JetBrains Mono';font-size:12px;color:var(--ink)}
+.mk-chip .sh{font-family:'JetBrains Mono';font-size:10px;color:#7c4dff;font-weight:700}
+.mk-spec .foot{font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.5}
+.ap-card.mkt{border-left:3px solid #7c4dff}
+.ap-card .idx{font-family:'JetBrains Mono';font-size:10px;font-weight:700;color:#7c4dff}
 /* ============ New change: trend-chart framework, mimicking Acquisition_Command_Dashboard.html's tab 08 ============ */
 .nc-top{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin:4px 2px 12px}
 .nc-pill{background:#e6f5ec;color:#0b6b34;border:1px solid #b6e0c6;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:600}
@@ -152,12 +179,13 @@ table.dt tr:hover td{background:rgba(20,30,50,.02)}
 </header>
 
 <nav class="tabs" id="tabs">
-  <button class="tab on" data-tab="perf"><span class="n">01</span>Performance</button>
-  <button class="tab" data-tab="credit"><span class="n">02</span>Credit &amp; Risk</button>
-  <button class="tab" data-tab="geo"><span class="n">03</span>Sales &amp; Geography</button>
-  <button class="tab" data-tab="notes"><span class="n">04</span>Notes &amp; Quality</button>
-  <button class="tab" data-tab="demo"><span class="n">05</span>Demographic</button>
-  <button class="tab" data-tab="newchange"><span class="n">06</span>New change</button>
+  <button class="tab on" data-tab="perf"><span class="n">02</span>Performance</button>
+  <button class="tab" data-tab="credit"><span class="n">03</span>Credit &amp; Risk</button>
+  <button class="tab" data-tab="geo"><span class="n">04</span>Sales &amp; Geography</button>
+  <button class="tab" data-tab="notes"><span class="n">05</span>Notes &amp; Quality</button>
+  <button class="tab" data-tab="demo"><span class="n">06</span>Demographic</button>
+  <button class="tab" data-tab="appr"><span class="n">07</span>Approved Criteria</button>
+  <button class="tab" data-tab="newchange"><span class="n">08</span>New change</button>
 </nav>
 <main>
 <section class="panel-tab on" id="perf">
@@ -218,8 +246,49 @@ table.dt tr:hover td{background:rgba(20,30,50,.02)}
     <div class="chart-card"><h3>Marital status</h3><div class="cwrap"><canvas id="c-marital"></canvas></div></div>
     <div class="chart-card"><h3>Top nationalities</h3><div class="cwrap"><canvas id="c-natdetail"></canvas></div></div></div>
 </section>
+<section class="panel-tab" id="appr">
+  <div class="sec-h"><span class="k">BOOKED PROFILE</span><h2>Who actually books</h2><span class="hint" id="ap-hint"></span></div>
+  <div class="ap-note" id="ap-note"></div>
+  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px" id="ap-kpis"></div>
+
+  <div class="sec-h" style="margin-top:20px"><span class="k">TYPICAL PROFILE</span><h2>The modal booked customer</h2><span class="hint">most common band per attribute · share of bookings</span></div>
+  <div class="ap-chips" id="ap-profile"></div>
+
+  <div class="sec-h" style="margin-top:22px"><span class="k">RISK & AFFORDABILITY</span><h2>Booked loans by credit criteria</h2><span class="hint">counts of booked loans</span></div>
+  <div class="three">
+    <div class="chart-card"><h3>SIMAH / QARAR grade</h3><p class="cap">booked loans by SC risk grade</p><div class="cwrap"><canvas id="c-ap-simah"></canvas></div></div>
+    <div class="chart-card"><h3>DBR band</h3><p class="cap">debt-burden ratio at booking</p><div class="cwrap"><canvas id="c-ap-dbr"></canvas></div></div>
+    <div class="chart-card"><h3>App score band</h3><p class="cap">application score</p><div class="cwrap"><canvas id="c-ap-score"></canvas></div></div></div>
+
+  <div class="sec-h" style="margin-top:22px"><span class="k">DEMOGRAPHICS</span><h2>Booked loans by customer profile</h2></div>
+  <div class="three">
+    <div class="chart-card"><h3>Income band</h3><p class="cap">declared monthly income (SAR)</p><div class="cwrap"><canvas id="c-ap-income"></canvas></div></div>
+    <div class="chart-card"><h3>Age band</h3><div class="cwrap"><canvas id="c-ap-age"></canvas></div></div>
+    <div class="chart-card"><h3>Employer type</h3><div class="cwrap"><canvas id="c-ap-emp"></canvas></div></div></div>
+  <div class="three" style="margin-top:14px">
+    <div class="chart-card"><h3>Region</h3><div class="cwrap"><canvas id="c-ap-region"></canvas></div></div>
+    <div class="chart-card"><h3>Product</h3><div class="cwrap"><canvas id="c-ap-product"></canvas></div></div>
+    <div class="chart-card"><h3>Nationality</h3><p class="cap">Saudi vs Expat</p><div class="cwrap"><canvas id="c-ap-nat"></canvas></div></div></div>
+
+  <div class="sec-h" style="margin-top:24px"><span class="k">CONVERSION STRENGTH</span><h2>Which criteria convert best</h2><span class="hint">booking rate % of submissions · dashed line = overall average</span></div>
+  <div class="three">
+    <div class="chart-card"><h3>By SIMAH / QARAR grade</h3><div class="cwrap"><canvas id="c-ap-cv-simah"></canvas></div></div>
+    <div class="chart-card"><h3>By DBR band</h3><div class="cwrap"><canvas id="c-ap-cv-dbr"></canvas></div></div>
+    <div class="chart-card"><h3>By income band</h3><div class="cwrap"><canvas id="c-ap-cv-income"></canvas></div></div></div>
+  <div class="three" style="margin-top:14px">
+    <div class="chart-card"><h3>By employer type</h3><div class="cwrap"><canvas id="c-ap-cv-emp"></canvas></div></div>
+    <div class="chart-card"><h3>By region</h3><div class="cwrap"><canvas id="c-ap-cv-region"></canvas></div></div>
+    <div class="chart-card"><h3>By submit source</h3><div class="cwrap"><canvas id="c-ap-cv-source"></canvas></div></div></div>
+
+  <div class="sec-h" style="margin-top:24px"><span class="k">PM READ</span><h2>What this means for booking growth</h2><span class="hint">auto-generated from the selected range</span></div>
+  <div class="ap-ins" id="ap-insights"></div>
+
+  <div class="sec-h" style="margin-top:24px"><span class="k mkt">MARKETING INSIGHTS</span><h2>Who to target to grow bookings</h2><span class="hint">audience segments · auto-generated from the selected range</span></div>
+  <div class="mk-spec" id="ap-mkt-spec"></div>
+  <div class="ap-ins" id="ap-marketing" style="margin-top:12px"></div>
+</section>
 <section class="panel-tab" id="newchange">
-  <div class="sec-h"><span class="k">06</span><h2>New change</h2><span class="hint">Trend framework, mirroring Acquisition_Command_Dashboard.html's tab 08 -- no specific change date configured yet</span></div>
+  <div class="sec-h"><span class="k">08</span><h2>New change</h2><span class="hint">Trend framework, mirroring Acquisition_Command_Dashboard.html's tab 08 -- no specific change date configured yet</span></div>
   <div id="nc-root"></div>
 </section>
 <div class="foot" id="foot"></div>
@@ -403,7 +472,7 @@ function renderNotes(){
 /* ============ master render ============ */
 const rendered={perf:true};
 function renderAll(){computeCUR();renderKPI();renderRates();renderFunnel();renderTrend();
-  ['credit','geo','demo'].forEach(t=>{if(rendered[t])renderChartTab(t);});if(rendered.notes)renderNotes();updateChips();}
+  ['credit','geo','demo'].forEach(t=>{if(rendered[t])renderChartTab(t);});if(rendered.notes)renderNotes();if(rendered.appr)renderApproved();updateChips();}
 function updateChips(){
   document.getElementById('data-chip').innerHTML=`${cD.meta.name} · <b>${fmt(cD.meta.total)}</b> apps`;
   document.getElementById('range-chip').textContent=`Coverage ${prettyD(cD.meta.min)} – ${prettyD(cD.meta.max)}`;
@@ -428,6 +497,134 @@ function onDateChange(){const f=document.getElementById('d-from').value,t=docume
   if(!f||!t)return;RANGE={from:f<=t?f:t,to:f<=t?t:f};document.querySelectorAll('#presets button').forEach(x=>x.classList.remove('on'));renderAll();}
 document.getElementById('d-from').addEventListener('change',onDateChange);
 document.getElementById('d-to').addEventListener('change',onDateChange);
+
+/* ============ Approved Criteria (mimics Acquisition_Command_Dashboard.html's tab 07) ============ */
+// Ported near-verbatim -- these functions are fully generic over CUR.cur.d[dim]
+// (per-dimension {sub,init,book,bval} band counts for the selected range),
+// which Credit_Card_Dashboard.html's own computeCUR()/DAILY_DEFAULT.days
+// already produces with the exact same shape as Acquisition's, since both
+// dashboards were built from the same base template. No Acquisition-only
+// field is referenced inside any of these -- every dimension name below
+// (simah, dbr, income, age, employer, region, product, nationality,
+// gender, source, scoreband) exists in Credit Card's own per-day 'd'
+// breakdown, confirmed 2026-09-28 before porting.
+const AP_LAB={simah:'SIMAH grade',dbr:'DBR band',income:'Income band',age:'Age band',employer:'Employer type',region:'Region',product:'Product',nationality:'Nationality',gender:'Gender',source:'Submit source',scoreband:'Score band',marital:'Marital status'};
+function apRate(dim){const d=CUR.cur.d[dim]||{};const bk=d.book||{},sb=d.sub||{};
+  return Object.keys(sb).map(k=>({k,book:bk[k]||0,sub:sb[k]||0,rate:sb[k]?100*(bk[k]||0)/sb[k]:0}));}
+function apTop(dim){const d=(CUR.cur.d[dim]||{}).book||{};const e=sortDesc(d);const tot=e.reduce((s,x)=>s+x[1],0)||1;
+  return e.length?{k:e[0][0],v:e[0][1],share:100*e[0][1]/tot}:null;}
+function apBarBook(id,dim,opts){opts=opts||{};const d=(CUR.cur.d[dim]||{}).book||{};
+  let e=opts.order?orderBy(d,opts.order):sortDesc(d,opts.top||null);
+  e=e.filter(x=>x[1]>0);
+  if(!e.length){mk(id,barCfg(['—'],[0],opts.color||CY,!!opts.horiz));return;}
+  mk(id,barCfg(e.map(x=>x[0]),e.map(x=>x[1]),opts.color||CY,!!opts.horiz));}
+function apDough(id,dim,cols){const d=(CUR.cur.d[dim]||{}).book||{};const e=sortDesc(d).filter(x=>x[1]>0);
+  if(!e.length){mk(id,doughCfg(['No bookings'],[1],[MU]));return;}
+  mk(id,doughCfg(e.map(x=>x[0]),e.map(x=>x[1]),cols));}
+function apCv(id,dim,order,color){let rows=apRate(dim).filter(r=>r.sub>=25);
+  rows=order?order.filter(k=>rows.some(r=>r.k===k)).map(k=>rows.find(r=>r.k===k)):rows.sort((a,b)=>b.rate-a.rate).slice(0,10);
+  if(!rows.length){mk(id,barCfg(['—'],[0],color||VI));return;}
+  const overall=CUR.cur.k.sub?100*CUR.cur.k.book/CUR.cur.k.sub:0;
+  const cfg=barCfg(rows.map(r=>r.k),rows.map(r=>+r.rate.toFixed(2)),color||VI,false,v=>v+'%');
+  cfg.options.plugins.tooltip={callbacks:{label:c=>c.raw+'% booked · '+fmt(rows[c.dataIndex].book)+' of '+fmt(rows[c.dataIndex].sub)}};
+  cfg.options.scales.y={...AX,ticks:{...AX.ticks,callback:v=>v+'%'}};
+  cfg.options.plugins.datalabels={color:'#123a34',anchor:'end',align:'top',offset:2,clamp:true,display:'auto',font:{weight:'700',size:9.5},formatter:v=>v>0?v+'%':''};
+  cfg.plugins=(cfg.plugins||[]).concat([{id:'avgline'+id,afterDraw:(ch)=>{const y=ch.scales.y.getPixelForValue(overall);if(!isFinite(y))return;
+    const x=ch.chartArea;const g=ch.ctx;g.save();g.strokeStyle='rgba(90,105,120,.75)';g.setLineDash([5,4]);g.lineWidth=1.2;
+    g.beginPath();g.moveTo(x.left,y);g.lineTo(x.right,y);g.stroke();
+    g.setLineDash([]);g.fillStyle='#5a6978';g.font='700 9px JetBrains Mono, monospace';g.textAlign='right';
+    g.fillText('avg '+overall.toFixed(2)+'%',x.right-2,y-4);g.restore();}}]);
+  mk(id,cfg);}
+function apAvgVal(dim,key){const d=CUR.cur.d[dim]||{};const bv=(d.bval||{})[key],bk=(d.book||{})[key];return (bv&&bk)?bv/bk:0;}
+function renderMarketing(){
+  const k=CUR.cur.k;const overall=k.sub?100*k.book/k.sub:0;
+  const spec=document.getElementById('ap-mkt-spec'),box=document.getElementById('ap-marketing');
+  if(!k.book){spec.innerHTML='<div class="h">Core audience</div><div class="foot">No bookings in the selected range.</div>';box.innerHTML='';return;}
+  const specDims=['age','income','employer','nationality','gender','region','city'];
+  const chips=specDims.map(dm=>{const t=apTop(dm);
+    return (t&&t.k!=='Unknown'&&t.k!=='Other')?('<div class="mk-chip"><span class="t">'+(AP_LAB[dm]||dm)+'</span><b>'+t.k+'</b><span class="sh">'+t.share.toFixed(0)+'%</span></div>'):'';}).join('');
+  spec.innerHTML='<div class="h">Core audience — build lookalikes / targeting on this</div><div class="mk-chips">'+chips+'</div>'+
+    '<div class="foot">Each chip is the <b>most common band among booked customers</b> and its share of bookings. Use this as the seed audience for lookalike / interest targeting; percentages show how concentrated bookings are on that band.</div>';
+  const dims=['age','income','employer','nationality','gender','region','city','source','product','dbr','simah'];
+  const pool=[];dims.forEach(dm=>{apRate(dm).filter(r=>r.sub>=100&&r.k!=='Unknown'&&r.k!=='Other').forEach(r=>pool.push(Object.assign({dim:dm},r,{idx:overall?r.rate/overall*100:0,share:k.sub?100*r.sub/k.sub:0})));});
+  const out=[];
+  const IDX=r=>'<span class="idx">index '+r.idx.toFixed(0)+'</span>';
+  const scale=pool.filter(r=>r.idx>=120&&r.share<8&&['age','income','employer','region','city','nationality','source'].indexOf(r.dim)>=0)
+    .sort((a,b)=>(b.idx*Math.log(b.sub))-(a.idx*Math.log(a.sub))).slice(0,4);
+  if(scale.length)out.push(['mkt','Scale these — high conversion, low reach',
+    scale.map(r=>'<b>'+r.k+'</b> ('+(AP_LAB[r.dim]||r.dim)+') books at '+r.rate.toFixed(1)+'% vs '+overall.toFixed(2)+'% avg '+IDX(r)+', but is only '+r.share.toFixed(1)+'% of submissions').join(' · ')+
+    '. <b>Action:</b> these audiences convert well above average yet are under-reached — the cheapest booking growth is more reach here, not more spend on existing audiences.']);
+  const drain=pool.filter(r=>r.share>=6&&r.idx<=80&&['age','income','employer','region','city','nationality','source'].indexOf(r.dim)>=0)
+    .sort((a,b)=>(b.share*(100-b.idx))-(a.share*(100-a.idx))).slice(0,3);
+  if(drain.length)out.push(['bad','Re-message or de-prioritise — high reach, weak conversion',
+    drain.map(r=>'<b>'+r.k+'</b> ('+(AP_LAB[r.dim]||r.dim)+') is '+r.share.toFixed(1)+'% of submissions but books at only '+r.rate.toFixed(1)+'% '+IDX(r)).join(' · ')+
+    '. <b>Action:</b> spend is generating traffic that cannot pass the credit gate. Either qualify earlier in the ad/landing copy (income &amp; existing-commitment expectations) or shift budget to the scale-up segments above.']);
+  const rv=(REG_ORDER.concat(['Unknown'])).map(r=>({k:r,avg:apAvgVal('region',r),book:((CUR.cur.d.region||{}).book||{})[r]||0}))
+    .filter(x=>x.book>=20&&x.k!=='Unknown').sort((a,b)=>b.avg-a.avg).slice(0,3);
+  const avgAll=k.book?k.val/k.book:0;
+  if(rv.length)out.push(['good','Highest-value audiences (bigger tickets)',
+    rv.map(x=>'<b>'+x.k+'</b> avg '+money(x.avg)+' ('+(avgAll?((x.avg/avgAll-1)*100).toFixed(0):'0')+'% vs avg '+money(avgAll)+') on '+fmt(x.book)+' bookings').join(' · ')+
+    '. <b>Action:</b> same acquisition cost, larger funded value — weight budget and premium creative toward these regions to grow SAR booked, not just loan count.']);
+  const src=apRate('source').filter(r=>r.sub>=100).sort((a,b)=>b.book-a.book);
+  if(src.length)out.push(['info','Channel performance',
+    src.map(r=>'<b>'+r.k+'</b> '+fmt(r.book)+' booked from '+fmt(r.sub)+' submissions ('+r.rate.toFixed(1)+'%)').join(' · ')+
+    '. <b>Action:</b> compare cost-per-booking (not cost-per-lead) across channels — the channel with the most submissions is not necessarily the one producing bookings.']);
+  const pr=apRate('product').filter(r=>r.sub>=100).sort((a,b)=>b.rate-a.rate);
+  if(pr.length>1)out.push(['info','Product to lead with',
+    pr.map(r=>'<b>'+r.k+'</b> '+r.rate.toFixed(1)+'% booking rate ('+fmt(r.book)+' of '+fmt(r.sub)+')').join(' · ')+
+    '. <b>Action:</b> lead acquisition creative with the strongest converter; for the weaker product the constraint is downstream (signing / handoff), so more traffic will not fix it.']);
+  const dbrRows=apRate('dbr').filter(r=>r.sub>=100&&r.k!=='Unknown').sort((a,b)=>b.rate-a.rate);
+  const incRows=apRate('income').filter(r=>r.sub>=100&&r.k!=='Unknown').sort((a,b)=>b.rate-a.rate);
+  if(dbrRows.length&&incRows.length)out.push(['mkt','Pre-qualification message (cuts wasted clicks)',
+    'Bookings peak at <b>'+dbrRows[0].k+'</b> DBR ('+dbrRows[0].rate.toFixed(1)+'%) and <b>'+incRows[0].k+'</b> SAR income ('+incRows[0].rate.toFixed(1)+'%). '+
+    '<b>Action:</b> state affordability expectations up-front in ads and on the landing page. DBR is the largest single decline driver — setting expectations pre-click raises booking rate and lowers cost-per-booking without touching credit policy.']);
+  box.innerHTML=out.map(x=>'<div class="ap-card '+x[0]+'"><div class="h">'+x[1]+'</div><div class="b">'+x[2]+'</div></div>').join('');
+}
+function renderApproved(){
+  const k=CUR.cur.k;
+  document.getElementById('ap-hint').textContent=prettyD(CUR.from)+'–'+prettyD(CUR.to);
+  document.getElementById('ap-note').innerHTML='Profile of loans that actually <b>booked</b> in this range — the criteria that convert. Bands with fewer than 25 submissions are excluded from conversion charts to avoid small-sample noise.';
+  const avg=k.book?k.val/k.book:0, ten=k.tn?k.tsum/k.tn:0, clim=k.clim_n?k.clim_sum/k.clim_n:0;
+  const kp=[['Booked loans',fmt(k.book),'funded in range'],['Avg loan size',money(avg),'per booked loan'],
+    ['Avg credit limit',money(clim),'weighted by bookings'],['Total funded value',money(k.val),'SAR booked in range'],
+    ['Approved → booked',(k.init?(100*k.book/k.init).toFixed(1):'0')+'%','directional'],
+    ['Submitted → booked',(k.sub?(100*k.book/k.sub).toFixed(2):'0')+'%','directional']];
+  document.getElementById('ap-kpis').innerHTML=kp.map(x=>'<div class="card kpi"><div class="lab">'+x[0]+'</div><div class="big" style="font-size:21px">'+x[1]+'</div><div class="cap" style="color:var(--faint);font-size:10px">'+x[2]+'</div></div>').join('');
+  const dims=['simah','dbr','income','age','employer','region','product','nationality','gender','source'];
+  document.getElementById('ap-profile').innerHTML=dims.map(dm=>{const t=apTop(dm);
+    return t?('<div class="ap-chip"><span class="t">'+(AP_LAB[dm]||dm)+'</span><b>'+t.k+'</b><span class="sh">'+t.share.toFixed(0)+'%</span></div>'):'';}).join('')||'<div class="ap-chip">No bookings in range</div>';
+  apBarBook('c-ap-simah','simah',{color:VI});
+  apBarBook('c-ap-dbr','dbr',{order:DBR_ORDER,color:GD});
+  apBarBook('c-ap-score','scoreband',{color:BL});
+  apBarBook('c-ap-income','income',{order:INC_ORDER,color:GD});
+  apBarBook('c-ap-age','age',{order:AGE_ORDER,color:CY});
+  apBarBook('c-ap-emp','employer',{horiz:true,color:CY,top:8});
+  apBarBook('c-ap-region','region',{order:REG_ORDER,color:CY});
+  apDough('c-ap-product','product',[CY,VI,BL]);
+  apDough('c-ap-nat','nationality',[CY,GD]);
+  apCv('c-ap-cv-simah','simah',null,VI);
+  apCv('c-ap-cv-dbr','dbr',DBR_ORDER,GD);
+  apCv('c-ap-cv-income','income',INC_ORDER,GD);
+  apCv('c-ap-cv-emp','employer',null,CY);
+  apCv('c-ap-cv-region','region',REG_ORDER,CY);
+  apCv('c-ap-cv-source','source',null,BL);
+  const overall=k.sub?100*k.book/k.sub:0;const out=[];
+  const pool=[];['simah','dbr','income','employer','region','product','source','age','nationality'].forEach(dm=>{
+    apRate(dm).filter(r=>r.sub>=100&&r.k!=='Unknown').forEach(r=>pool.push(Object.assign({dim:dm},r)));});
+  const best=pool.slice().sort((a,b)=>b.rate-a.rate).slice(0,3);
+  const worst=pool.slice().filter(r=>r.sub>=300).sort((a,b)=>a.rate-b.rate).slice(0,3);
+  if(best.length)out.push(['good','Best-converting segments','Highest booking rates vs the '+overall.toFixed(2)+'% average: '+best.map(r=>'<b>'+r.k+'</b> ('+(AP_LAB[r.dim]||r.dim)+') '+r.rate.toFixed(1)+'%').join(' · ')+'. These are where demand converts — bias acquisition spend and offer priority here.']);
+  if(worst.length)out.push(['bad','Weakest-converting volume segments','Large-volume bands that under-convert: '+worst.map(r=>'<b>'+r.k+'</b> ('+(AP_LAB[r.dim]||r.dim)+') '+r.rate.toFixed(1)+'%').join(' · ')+'. Highest-leverage fix: qualify earlier or re-shape the offer before the credit gate.']);
+  const pr=apRate('product').filter(r=>r.sub>0).sort((a,b)=>b.book-a.book);
+  if(pr.length>1)out.push(['info','Product concentration',pr.map(r=>'<b>'+r.k+'</b> '+fmt(r.book)+' booked ('+r.rate.toFixed(1)+'% of its '+fmt(r.sub)+' submissions)').join(' · ')+'. Booking is concentrated in the strongest converter — the weaker product’s large top-of-funnel is the biggest untapped booking pool.']);
+  const dbrRows=apRate('dbr').filter(r=>r.sub>=100&&r.k!=='Unknown');
+  if(dbrRows.length){const bestD=dbrRows.slice().sort((a,b)=>b.rate-a.rate)[0];
+    out.push(['info','Affordability (DBR) sweet spot','Bookings peak at <b>'+bestD.k+'</b> DBR ('+bestD.rate.toFixed(1)+'% booking rate). DBR is also the single largest decline driver — pre-qualifying affordability earlier and right-sizing the offer is the clearest lever to lift bookings.']);}
+  const sm=apRate('simah').filter(r=>r.sub>=100&&r.k!=='Unknown').sort((a,b)=>b.rate-a.rate);
+  if(sm.length)out.push(['info','Risk grade concentration','Best SIMAH/QARAR conversion at <b>'+sm[0].k+'</b> ('+sm[0].rate.toFixed(1)+'%). Track whether rising booked volume shifts the grade mix — growth should not come from loosening the risk profile.']);
+  document.getElementById('ap-insights').innerHTML=out.map(x=>'<div class="ap-card '+x[0]+'"><div class="h">'+x[1]+'</div><div class="b">'+x[2]+'</div></div>').join('')||'<div class="ap-card info"><div class="b">No bookings in the selected range.</div></div>';
+  renderMarketing();
+}
 
 /* ============ New change: trend-chart framework (mimics Acquisition_Command_Dashboard.html's tab 08) ============ */
 // Unlike Acquisition, this dataset is small and already fully aggregated
@@ -523,7 +720,7 @@ function renderNewChange(){
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));t.classList.add('on');const id=t.dataset.tab;
   document.querySelectorAll('.panel-tab').forEach(p=>p.classList.toggle('on',p.id===id));
-  if(!rendered[id]){rendered[id]=true;if(['credit','geo','demo'].includes(id))renderChartTab(id);if(id==='notes')renderNotes();if(id==='newchange')renderNewChange();}}));
+  if(!rendered[id]){rendered[id]=true;if(['credit','geo','demo'].includes(id))renderChartTab(id);if(id==='notes')renderNotes();if(id==='appr')renderApproved();if(id==='newchange')renderNewChange();}}));
 document.querySelectorAll('#credit,#geo,#demo').forEach(sec=>{const tab=sec.id;
   sec.querySelectorAll('.stage-ctl button').forEach(b=>b.addEventListener('click',()=>{
     sec.querySelectorAll('.stage-ctl button').forEach(x=>x.classList.remove('on'));b.classList.add('on');tabState[tab].s=b.dataset.s;renderChartTab(tab);}));});
