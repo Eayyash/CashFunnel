@@ -995,6 +995,13 @@ const NC_C={g:'#129d4e',dg:'#0b6b34',r:'#dc2743',v:'#6f5be0',b:'#2f92e6',a:'#d99
 function ncEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 const ncS=(label,color,num,den,dash)=>({label,color,dash:!!dash,num,den,get:d=>{const m=den(d);return m?num(d)/m*100:null;}});
 const ncV=(label,color,get,dash)=>({label,color,dash:!!dash,get:d=>{const v=get(d);return v>0?v:null;}});
+// ncV treats 0 as "no data" (breaks the line) -- correct for something
+// like income, where a missing value and a genuine zero look the same in
+// this dataset. ncC is for real counts (e.g. daily bookings) where 0 is a
+// meaningful, real data point, not missing data -- added 2026-09-29 after
+// card 13's lines were showing gaps on zero-booking days instead of
+// dipping to 0 as they should.
+const ncC=(label,color,get,dash)=>({label,color,dash:!!dash,get:d=>{const v=get(d);return (v==null||!isFinite(v))?null:v;}});
 const ncFmt=(v,kind)=>v==null||!isFinite(v)?'—':kind==='money'?'SAR '+Math.round(v).toLocaleString():kind==='n'?Math.round(v).toLocaleString():v.toFixed(1)+'%';
 function ncCallout(html){return '<div class="nc-callout">'+html+'</div>';}
 const NC_FLOW='<p><b>Flow:</b> For Tawarruq (the online journey), GOSI/MOF now runs before Qarar/SIMAH: no GOSI/MOF data parks the application in NINJA instead of calling Qarar/SIMAH. Combo is different -- it still gates Qarar/SIMAH on declared income, not on GOSI/MOF. Once Qarar/SIMAH does run: a failed internal check declines without calling Qarar; a Qarar decline never reaches SIMAH (no risk grade). Qarar costs SAR 6 and SIMAH adds SAR 18, so skipping SIMAH on a decline is intentional cost saving.</p>';
@@ -1037,7 +1044,7 @@ function ncConfigs(J){
    series:()=>[ncS('UI',C.g,d=>d.ss_ui,d=>d.subs),ncS('Backoffice',C.b,d=>d.ss_backoffice,d=>d.subs),ncS('Android',C.v,d=>d.ss_android,d=>d.subs),ncS('Android-S',C.v,d=>d.ss_android_s,d=>d.subs,true),ncS('iOS (IOS-S)',C.a,d=>d.ss_ios,d=>d.subs)],
    callout:'<p><b>Read:</b> share of daily submissions coming from each channel, one line per real SubmitSource value in the data -- UI, backoffice, Android, Android-S (dashed, same color family as Android since both are the Android app), and iOS. UI and backoffice make up almost all volume; the three app channels are a small, recent slice of it. A handful of rows elsewhere in the full history have a blank SubmitSource (none in this window), so no line is drawn for that.</p>'},
   {id:'nc13',num:'13',title:'Digital Booking',sub:'Daily count of bookings that went through the straight-through (digital) booking process, by SubmitSource -- absolute numbers, bucketed by booking date.',rows:T,kind:'n',
-   series:()=>[ncV('UI',C.g,d=>d.stb_ui),ncV('Backoffice',C.b,d=>d.stb_backoffice),ncV('Android',C.v,d=>d.stb_android),ncV('Android-S',C.v,d=>d.stb_android_s,true),ncV('iOS (IOS-S)',C.a,d=>d.stb_ios)],
+   series:()=>[ncC('UI',C.g,d=>d.stb_ui),ncC('Backoffice',C.b,d=>d.stb_backoffice),ncC('Android',C.v,d=>d.stb_android),ncC('Android-S',C.v,d=>d.stb_android_s,true),ncC('iOS (IOS-S)',C.a,d=>d.stb_ios)],
    callout:'<p><b>Read:</b> STB_Flag=\'Y\' covers both STB_Status values \'Booked_Full_STB\' and \'PermissionToServe\' -- confirmed 2026-09-29 that both are genuine completed bookings (100% have Altitudestatus=\'Completed [C]\', 99.8% have a booking date), not an in-progress state. Unlike card 12 (share of submissions), this shows absolute booking counts, bucketed by booking date rather than submission date -- the two cards answer different questions and are not meant to be read as the same funnel at two stages.</p>'}
   ];
 }
