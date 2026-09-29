@@ -241,12 +241,11 @@ function buildJourneyTrends(rows, dataMax, companyStatusMap, normCompany) {
       ss_ui: 0, ss_backoffice: 0, ss_android: 0, ss_android_s: 0, ss_ios: 0, ss_other: 0,
       // "Digital Booking" by SubmitSource, bucketed by BOOKING date (same
       // convention as bk/bk_private above) -- added 2026-09-29 per explicit
-      // request. STB_Flag='Y' covers both STB_Status values 'Booked_Full_STB'
-      // and 'PermissionToServe' -- confirmed 2026-09-29 that BOTH are
-      // genuinely booked loans (100% have Altitudestatus='Completed [C]',
-      // 99.8% have SalesCompletedDate populated), so this is not an
-      // in-progress/pending state, it's a completed booking that went
-      // through the straight-through (digital) booking process.
+      // request. Narrowed 2026-09-29 (same day, follow-up) to
+      // STB_Status === 'Booked_Full_STB' only -- the first version also
+      // included 'PermissionToServe' (STB_Flag='Y' covers both), but per
+      // explicit follow-up request this now counts only the full-STB
+      // status specifically.
       stb_ui: 0, stb_backoffice: 0, stb_android: 0, stb_android_s: 0, stb_ios: 0,
       _si: [], _sa: [], _ei: [], _ea: [] };
     CS_KEYS.forEach(k => { days[d]['cs_' + k] = 0; days[d]['bk_cs_' + k] = 0; });
@@ -310,7 +309,7 @@ function buildJourneyTrends(rows, dataMax, companyStatusMap, normCompany) {
         bd.bk++; bd.amt += parseFloat(r['ItemValue']) || 0;
         const bek = BK_EMP[String(r['FinalEmployerType'] || '').trim()]; if (bek) bd[bek]++;
         if (companyStatusMap) bd['bk_cs_' + companyStatusOf(r['Company'], companyStatusMap, normCompany)]++;
-        if (String(r['STB_Flag'] || '').trim() === 'Y') {
+        if (String(r['STB_Status'] || '').trim() === 'Booked_Full_STB') {
           const stbKey = SS[String(r['SubmitSource'] || '').trim()];
           if (stbKey) bd['stb_' + stbKey.slice(3)]++; // ss_ui -> stb_ui, etc.
         }
