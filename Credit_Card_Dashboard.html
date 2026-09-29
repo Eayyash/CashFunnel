@@ -2326,9 +2326,9 @@ function ncConfigs(J){
   {id:'nc12',num:'12',title:'Submission Source Trend',sub:'Daily share of submissions by SubmitSource -- every real value shown as its own line, no merging.',rows:T,kind:'pct',
    series:()=>[ncS('UI',C.g,d=>d.ss_ui,d=>d.subs),ncS('Backoffice',C.b,d=>d.ss_backoffice,d=>d.subs),ncS('Android',C.v,d=>d.ss_android,d=>d.subs),ncS('Android-S',C.v,d=>d.ss_android_s,d=>d.subs,true),ncS('iOS (IOS-S)',C.a,d=>d.ss_ios,d=>d.subs)],
    callout:'<p><b>Read:</b> share of daily submissions coming from each channel.</p>'},
-  {id:'nc13',num:'13',title:'Digital Booking',sub:'Daily count of bookings that went through the straight-through (digital) booking process, by SubmitSource -- absolute numbers, bucketed by booking date.',rows:T,kind:'n',labels:true,
+  {id:'nc13',num:'13',title:'Digital Booking',sub:'Daily count of bookings that went through the straight-through (digital) booking process, by SubmitSource -- absolute numbers, bucketed by booking date. Starts 1 Sep, same convention as Acquisition_Command_Dashboard.html\'s card 13 (narrower window than the other New change cards -- also keeps the point count low enough for the per-point value labels below to render, since those only draw when a chart has 70 or fewer points).',rows:T.filter(d=>d.date>='2026-09-01'),kind:'n',labels:true,
    series:()=>[ncC('UI',C.g,d=>d.stb_ui),ncC('Backoffice',C.b,d=>d.stb_backoffice),ncC('Android',C.v,d=>d.stb_android),ncC('Android-S',C.v,d=>d.stb_android_s,true),ncC('iOS (IOS-S)',C.a,d=>d.stb_ios)],
-   callout:'<p><b>Read:</b> counts only STB_Status = \'Booked_Full_STB\'. Unlike card 12 (share of submissions), this shows absolute booking counts, bucketed by booking date rather than submission date.</p>'}
+   callout:'<p><b>Read:</b> counts only STB_Status = \'Booked_Full_STB\'. Unlike card 12 (share of submissions), this shows absolute booking counts, bucketed by booking date rather than submission date. Volumes are small for Cards (a handful a day) compared to loans -- this is a genuinely low-volume channel here, not a data gap.</p>'}
   ];
 }
 const NC={mode:'med',cfgs:[]};
