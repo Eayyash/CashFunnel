@@ -94,6 +94,10 @@ main{max-width:1500px;margin:0 auto;padding:22px 22px 70px}
 .delta{display:inline-flex;align-items:center;gap:3px;font-family:'JetBrains Mono';font-size:11.5px;font-weight:700;padding:2px 7px;border-radius:6px;margin-top:8px}
 .delta.up{color:var(--green);background:rgba(18,157,78,.12)}.delta.dn{color:var(--red);background:rgba(220,39,67,.11)}.delta.flat{color:var(--muted);background:rgba(91,107,131,.12)}
 .mom-note{font-size:10.5px;color:var(--faint);margin-top:5px;font-family:'JetBrains Mono'}
+.split-line{font-family:'JetBrains Mono';font-weight:700;font-size:15px;margin:0 0 6px;display:flex;gap:16px;flex-wrap:wrap}
+.split-line .split-on{color:var(--cyan-d)}
+.split-line .split-off{color:var(--gold-d)}
+.split-line .split-pct{font-weight:600;font-size:11px;opacity:.7;margin-left:3px}
 .chart-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px 18px;box-shadow:0 1px 2px rgba(20,30,50,.04),0 10px 26px -18px rgba(20,30,50,.28)}
 .chart-card h3{margin:0 0 3px;font-size:14px;font-weight:600}.chart-card .cap{font-size:11.5px;color:var(--muted);margin:0 0 12px}
 .cwrap{position:relative;height:260px}.cwrap.tall{height:320px}.cwrap.short{height:210px}
@@ -634,9 +638,11 @@ function renderKPI(){
       const offline=srcSub['backoffice']||0;
       const online=Object.entries(srcSub).reduce((s,[k,v])=>s+(k==='backoffice'?0:v),0);
       const tot=online+offline;
-      sourceLine=`<div class="mom-note" style="opacity:.85;font-size:10px;margin-top:2px">Online ${fmt(online)}${tot?' ('+(online/tot*100).toFixed(1)+'%)':''} · Offline ${fmt(offline)}${tot?' ('+(offline/tot*100).toFixed(1)+'%)':''}</div>`;
+      const onPct=tot?' <span class="split-pct">'+(online/tot*100).toFixed(1)+'%</span>':'';
+      const offPct=tot?' <span class="split-pct">'+(offline/tot*100).toFixed(1)+'%</span>':'';
+      sourceLine=`<div class="split-line"><span class="split-on">Online ${fmt(online)}${onPct}</span><span class="split-off">Offline ${fmt(offline)}${offPct}</span></div>`;
     }
-    h+=`<div class="card kpi ${cls}"><div class="lab">${lab}</div><div class="big">${big}</div>${momBadge(mom)}<div class="mom-note">${avgline}</div>${uniqLine}${sourceLine}</div>`;
+    h+=`<div class="card kpi ${cls}"><div class="lab">${lab}</div><div class="big">${big}</div>${sourceLine}${momBadge(mom)}<div class="mom-note">${avgline}</div>${uniqLine}</div>`;
   });
   // Pending Final Approval: now dynamic, filtered to the selected date
   // range by submitted date (same basis as the KPI cards above) -- changed
