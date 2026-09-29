@@ -1,118 +1,113 @@
 # Tasheel Command Center — New Machine Setup
 
-**Updated 2026-09-28.** This supersedes the earlier version of this doc,
-which cloned the dashboards from `github.com/Eayyash/CashFunnel` directly.
-That approach doesn't work for someone who isn't the owner of that
-account: it ties their new install to somebody else's git history and
-gives no way to back their own work up under their own name. The design
-here fixes that — see "Why this changed" below if you're curious.
+**Updated 2026-09-29.** This replaces the earlier zip-bundle version of
+this doc. That version took roughly two hours to finish in practice —
+downloading two separate zip parts, extracting and merging them by hand,
+and an interactive GitHub login step that ran in the middle of the
+install and was easy to get stuck on. This version fixes all three: one
+file, one command, no login step blocking anything.
 
-## What you get
+## Choose one, then run one command
 
-A **starter bundle** — a zip file — containing:
-- `dashboards/` — all 11 dashboard HTML files, each with real data already
-  baked in (they render immediately, no build step needed to look at them)
-- `scripts/` — every Node.js pipeline script that keeps a dashboard updated
-- `.claude/agents/` — the five agent instruction docs (FunnelBA, DailyBA,
-  SIMAHDaily, SMSDaily, SNBReferralDaily)
-- `install.js` — a single cross-platform installer (macOS + Windows,
-  plain Node.js, no shell-specific code)
-- `README.md` — the same instructions as this section, packaged alongside
-
-## Installing it
-
-You need **Node.js** and **git** already on the machine (both free, both
-cross-platform). Then, from inside the extracted bundle folder:
+**Option A — Use Emad Ayyash's existing account/repo** (fastest, ~3–5 minutes)
+Use this if you're Emad, or setting this machine up as a continuation of
+the existing project (shared history, can push updates straight back).
 
 ```bash
-node install.js
+node install.js --mode=existing
 ```
 
-That single command:
+**Option B — Start a brand-new, independent account** (~3–5 minutes, plus an optional GitHub step later)
+Use this if a different person or team is starting their own copy. You
+get a fresh, standalone git history — nothing shared with the original.
 
-1. Checks git/Node.js are present
-2. Picks (or lets you override via `AI_WORK_BASE`) an install location —
-   defaults to `~/Documents/EIA Work/AI-Work/Analysis Agent`
-3. Copies the dashboards, scripts, and agent docs into place
-4. Installs the npm packages the pipeline scripts need
-5. Creates the daily-pipeline archive folders and writes
-   `pipeline.config.json` — no interactive prompts for this part
-6. **Asks you to connect your own GitHub account** — if the `gh` CLI is
-   installed, it runs `gh auth login` right there (opens your browser,
-   you sign in as yourself; the script itself never sees or stores your
-   credentials). If `gh` isn't installed, it prints the two manual steps
-   instead.
-7. **Initializes a brand-new, independent git repository** in the install
-   folder — one fresh commit, zero shared history with wherever the
-   bundle came from
+```bash
+node install.js --mode=new
+```
+
+Both commands need only **`install.js`** (this one small file — nothing
+else to download) plus **Node.js** and **git** already on the machine.
+If you run `node install.js` with no `--mode` flag, it asks you that one
+question and then runs the rest unattended.
+
+## Why this is fast now
+
+Both modes do the exact same first step: **`git clone` the actual,
+public Command Center repo** (`github.com/Eayyash/CashFunnel`). Every
+dashboard in it is already committed with real data baked in, so the
+clone alone gets you a fully working Command Center — no separate zip,
+no manual file merging. From there:
+
+- **Option A** just keeps the clone's git history and remote as they are.
+- **Option B** deletes the cloned `.git` folder and re-initializes a
+  fresh one with a single baseline commit — same files, zero shared
+  history.
+
+Everything else (`npm install`, creating the daily-pipeline archive
+folders, writing `pipeline.config.json`) is a few seconds of unattended
+work either way.
+
+## What `install.js` does, step by step
+
+1. Checks git and Node.js are present
+2. Picks an install location — defaults to
+   `~/Documents/EIA Work/AI-Work/Analysis Agent` (override with the
+   `AI_WORK_BASE` environment variable if you want it elsewhere)
+3. Clones the repo (or pulls latest, if already cloned there before)
+4. **Option B only:** strips `.git` and re-initializes a fresh, independent
+   repository with one commit
+5. Recreates `package.json` (gitignored) and runs `npm install`
+6. Creates the archive folders and writes `pipeline.config.json` — no
+   prompts for this part
+7. Prints the GitHub push-access commands for your situation —
+   **informational only, never runs a login for you**. This is the fix
+   for the two-hour problem: the old version launched an interactive
+   `gh auth login` mid-install; this version just tells you the two
+   commands to run yourself, whenever you're ready, completely decoupled
+   from getting the dashboards working
 8. Verifies every dashboard's embedded script parses cleanly
-9. Prints the exact commands to push to your own GitHub, whenever you're
-   ready (it does not push for you — creating a remote repo and pushing
-   to it under your account is your call, not something a script should
-   do without you watching)
-
-Total run time is mostly `npm install` — a minute or two on a normal
-connection.
+9. Prints the path to open
 
 ## The guarantees this is built around
 
-- **This machine's repo, config, and agents are never touched by giving
-  someone else this bundle.** The bundle is a static snapshot of files;
-  handing it out doesn't grant access to anything on your machine.
-- **The new machine gets its own independent git history from commit
-  one.** It is not a fork, not a clone with a shadow remote, not
-  connected in any way to the original repo. A `git log` on the new
-  machine shows exactly one commit: the baseline `install.js` just made.
-- **Nothing flows either direction after that.** Work done on the new
-  machine — new dashboards, new agents, new daily data — never reaches
-  the original machine or account. Updates made on the original machine
-  afterward never reach the new machine automatically either. If you want
-  to bring newer dashboards across later, you do it by generating a fresh
-  bundle and re-running `install.js` (which is safe to re-run — see
-  "Re-running / updating" below), or by manually copying specific files.
-- **GitHub access is always the new user's own.** The installer asks
-  *them* to authenticate, not anyone else. There's no account, token, or
-  credential of the original owner's anywhere in the bundle or the script.
+- **Option B's history is genuinely independent.** One fresh commit,
+  no shared history, no shared remote. Nothing done there can reach or
+  be reached by the original repo or account, in either direction.
+- **Nothing on the original machine is touched by anyone running this.**
+  `install.js` only ever reads from the public repo and writes to the
+  new machine's own disk.
+- **GitHub authentication is always a separate, optional, self-driven
+  step.** The script never attempts a login on your behalf, for either
+  mode.
 
-## Re-running / updating an existing install
+## Re-running / updating
 
-`install.js` is safe to run again against the same `AI_WORK_BASE` — it
-overwrites the dashboard/script/agent files with whatever's in the bundle
-(so a newer bundle brings newer dashboards) but never touches
-`pipeline.config.json` if you've already customized it, and never touches
-the `.git` history it already created (step 8's `git init`/commit only
-fires once — on a second run you'd `git add -A && git commit` yourself
-if you want to snapshot the update).
+Both modes are safe to re-run against the same install location:
+
+- **Option A:** re-running does a `git fetch` + `git pull` instead of a
+  fresh clone — this is how you pull in dashboard updates from the
+  original repo later.
+- **Option B:** re-running (from the same `AI_WORK_BASE`) will hit the
+  "already cloned" branch too, but since the `.git` folder here is the
+  independent one from your first run, it will try to `git pull` from
+  whatever remote you may have added — if you haven't added one, this
+  will just report nothing to pull, harmlessly. Re-running does NOT
+  reset your independent history a second time.
 
 ## Known limitations
 
-- **Raw daily source-file archives are not bundled** (the actual
-  `.csv`/`.xlsx` exports, gitignored, several GB across months on the
-  original machine). You don't need them to see today's dashboards or to
-  keep the pipeline running forward — confirmed 2026-09-27 that nearly
-  every pipeline self-seeds from the dashboard's own embedded data or
-  from the next full daily export (each one is a complete cumulative
-  snapshot, not a delta). The one exception is the bulk "SMS sent lists"
-  reference folder, which starts empty on a new install and only affects
-  one sub-section of the SMS Analyzer dashboard.
-- **Auto-installing git/Node.js itself is not attempted** across both
-  operating systems from one script — package managers differ too much
-  (winget/choco on Windows, Homebrew on macOS) to do this reliably and
-  silently. The script checks for both and prints the right per-OS
-  install link if either is missing.
-- A handful of one-off analysis scripts bundled in `scripts/` (not
-  referenced by any of the five daily-pipeline agents) still have
-  hardcoded paths from earlier ad-hoc work on the original machine —
-  harmless unless you specifically try to run one of those.
-
-## Why this changed (context for the original owner)
-
-The first version of this doc had `install.js`'s predecessor run
-`git clone https://github.com/Eayyash/CashFunnel.git` directly. That's
-fine for replicating your *own* setup onto a second machine you also
-control, but it stops making sense the moment someone else is the one
-running the installer: they'd end up with your repo, your remote, your
-commit history — no natural way to make it theirs, and no reason they
-should need push access to your account in the first place. This version
-treats every install as its own independent project from the start,
-which is the right default whenever the bundle might leave your hands.
+- **Raw daily source-file archives are not part of the repo** (the
+  actual `.csv`/`.xlsx` exports, gitignored, several GB across months).
+  You don't need them to see today's dashboards or to keep the pipeline
+  running forward — every pipeline either self-seeds from the dashboard's
+  own embedded data or from the next full daily export (each one is a
+  complete cumulative snapshot, not a delta). The one exception is the
+  bulk "SMS sent lists" reference folder, which starts empty and only
+  affects one sub-section of the SMS Analyzer dashboard.
+- **Auto-installing git/Node.js itself is not attempted** — package
+  managers differ too much across macOS/Windows to do this reliably and
+  silently. The script just checks for both and tells you where to get
+  whichever is missing.
+- A handful of one-off analysis scripts in `scripts/` (not referenced by
+  any of the five daily-pipeline agents) still have hardcoded paths from
+  earlier ad-hoc work — harmless unless you specifically try to run one.
