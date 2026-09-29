@@ -193,18 +193,30 @@ function buildDaily(rows, name) {
 // grade mix, decline reasons, employer mix, income trends, submission
 // source mix, STB digital-booking mix) but keyed to THIS file's own
 // CONFIG.bookCol/BOOKED_SET (StatusLastUpdateMoment_Date), not
-// Acquisition's SalesCompletedDate. No JOURNEY_CHANGE_DATE is set for
-// Credit Cards -- there is no known GOSI/MOF-before-Qarar/SIMAH policy
-// change event for this product (that 10-Sep-2026 change was confirmed
-// Tawarruq/loans-specific). The client-side New Change tab renders all 13
-// trend cards from trends30/incomeDaily below without needing a change
-// date; only the loans dashboard's before/after comparison cards
-// (company-status economics, cost-benefit, employer-benefit, insights)
-// depend on one, and those are intentionally NOT ported for Credit Card
-// -- see Credit_Card_Dashboard.html's New change tab intro note.
+// Acquisition's SalesCompletedDate.
+// JOURNEY_CHANGE_DATE: corrected 2026-09-29 -- an earlier version of this
+// file assumed the 10-Sep-2026 GOSI/MOF-before-Qarar/SIMAH policy change
+// was Tawarruq/loans-specific and left this null. Confirmed against the
+// live Cards data that assumption was WRONG: the same shift shows up here
+// too (GOSI call rate 44.4%->75.9%, MOF 2.4%->15.8%, SIMAH 74.0%->52.6%,
+// all in the same direction as loans, split at the same date), so the
+// backend gating change is shared across products, not loans-only. This
+// also means the before/after "journey change" analysis cards (company
+// status, cost-benefit, employer-benefit, insights) now apply here too --
+// ported below, keyed off the same approvedCompanies-*.csv reference file
+// Acquisition uses (a bank-wide company list, not loans-specific).
+const JOURNEY_CHANGE_DATE = '2026-09-10';
 function ymdAdd(ymdStr, n) { const d = new Date(ymdStr + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
 function medianOf(a) { if (!a.length) return 0; const s = a.slice().sort((x, y) => x - y), m = s.length >> 1; return Math.round(s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2); }
-function buildJourneyTrends(rows, dataMax) {
+const CS_LABEL_TO_KEY = { 'Listed Cat A': 'catA', 'Listed Cat B': 'catB', 'Listed Cat C': 'catC', 'Blacklisted': 'blacklisted', 'Rejected': 'rejected', 'Deleted': 'deleted' };
+const CS_KEYS = ['catA', 'catB', 'catC', 'blacklisted', 'rejected', 'deleted', 'unlisted', 'unreadable'];
+function companyStatusOf(companyRaw, companyStatusMap, normCompany) {
+  const raw = String(companyRaw == null ? '' : companyRaw).trim();
+  if (!raw || raw === 'NULL' || raw.indexOf('?') >= 0) return 'unreadable';
+  const label = companyStatusMap.get(normCompany(raw));
+  return label ? CS_LABEL_TO_KEY[label] : 'unlisted';
+}
+function buildJourneyTrends(rows, dataMax, companyStatusMap, normCompany) {
   const end = ymdAdd(dataMax, -1);
   // Window start: earliest date in the data (Credit Card's history is far
   // shorter than Acquisition's, so there's no fixed '2026-08-14' floor --
@@ -223,6 +235,7 @@ function buildJourneyTrends(rows, dataMax) {
       ss_ui: 0, ss_backoffice: 0, ss_android: 0, ss_android_s: 0, ss_ios: 0, ss_other: 0,
       stb_ui: 0, stb_backoffice: 0, stb_android: 0, stb_android_s: 0, stb_ios: 0,
       _si: [], _sa: [], _ei: [], _ea: [] };
+    CS_KEYS.forEach(k => { days[d]['cs_' + k] = 0; days[d]['bk_cs_' + k] = 0; });
   }
   for (let d = startInc; d <= end; d = ymdAdd(d, 1)) inc[d] = { date: d, _s: [], _e: [] };
   const EMP = { 'Private Company': 'emp_private', 'Unlisted': 'emp_unlisted', 'Government Entity': 'emp_govt', 'Pension': 'emp_pension', 'Military with Grades': 'emp_military' };
@@ -241,6 +254,7 @@ function buildJourneyTrends(rows, dataMax) {
       if (r['FinalApprovalFlag'] === 'Y') d.fin++;
       if (saudi) d.saudi++; else if (expat) d.expats++;
       const ek = EMP[String(r['FinalEmployerType'] || '').trim()]; if (ek) d[ek]++;
+      if (companyStatusMap) d['cs_' + companyStatusOf(r['Company'], companyStatusMap, normCompany)]++;
       if (flag(r['Is_GOSI_Called'])) d.gosi_called++;
       if (flag(r['Is_MOF_Called'])) d.mof_called++;
       const hasSmhScore = String(r['SMH_Score'] == null ? '' : r['SMH_Score']).trim() !== '' && String(r['SMH_Score']).trim() !== 'NULL';
@@ -266,6 +280,7 @@ function buildJourneyTrends(rows, dataMax) {
       if (bd) {
         bd.bk++; bd.amt += parseFloat(r['ItemValue']) || 0;
         const bek = BK_EMP[String(r['FinalEmployerType'] || '').trim()]; if (bek) bd[bek]++;
+        if (companyStatusMap) bd['bk_cs_' + companyStatusOf(r['Company'], companyStatusMap, normCompany)]++;
         if (String(r['STB_Status'] || '').trim() === 'Booked_Full_STB') {
           const stbKey = SS[String(r['SubmitSource'] || '').trim()];
           if (stbKey) bd['stb_' + stbKey.slice(3)]++;
@@ -279,7 +294,7 @@ function buildJourneyTrends(rows, dataMax) {
     delete o._si; delete o._sa; delete o._ei; delete o._ea; return o;
   });
   const incomeDaily = Object.values(inc).map(d => ({ date: d.date, sau_med: medianOf(d._s), sau_avg: avgUnder(d._s), exp_med: medianOf(d._e), exp_avg: avgUnder(d._e), sau_n: d._s.length, exp_n: d._e.length }));
-  return { changeDate: null, windowStart: start30, windowEnd: end, dataMax, trends30, incomeDaily };
+  return { changeDate: JOURNEY_CHANGE_DATE, windowStart: start30, windowEnd: end, dataMax, trends30, incomeDaily };
 }
 
 console.log('Aggregating (DAILY_DEFAULT, filtered to Product_type=Cards)…');
@@ -295,9 +310,33 @@ if (nd.meta.total < 1000) {
   process.exit(1);
 }
 
+// ── Approved-companies reference (same bank-wide list Acquisition uses --
+// confirmed 2026-09-29 this applies to Cards too, not loans-specific).
+const APPROVED_COMPANIES_CSV = path.join(ROOT, 'approvedCompanies-21-09-2026-16-11.csv');
+const STATUS_LABEL = { '4': 'Listed Cat A', '1': 'Listed Cat B', '2': 'Listed Cat C', '3': 'Blacklisted', '0': 'Rejected', '99': 'Deleted' };
+const STATUS_PRIORITY = ['Blacklisted', 'Listed Cat A', 'Listed Cat B', 'Listed Cat C', 'Rejected', 'Deleted'];
+const normCompany = s => String(s == null ? '' : s).trim().toLowerCase().replace(/\s+/g, ' ').replace(/[.,]/g, '');
+let companyStatusMap = null, approvedCompaniesMeta = null;
+if (fs.existsSync(APPROVED_COMPANIES_CSV)) {
+  const approvedRows = readCsv(APPROVED_COMPANIES_CSV);
+  companyStatusMap = new Map();
+  approvedRows.forEach(r => {
+    const n = normCompany(r['Company']);
+    if (!n) return;
+    const label = STATUS_LABEL[String(r['Active'] || '').trim()];
+    if (!label) return;
+    const cur = companyStatusMap.get(n);
+    if (!cur || STATUS_PRIORITY.indexOf(label) < STATUS_PRIORITY.indexOf(cur)) companyStatusMap.set(n, label);
+  });
+  const active = approvedRows.filter(r => String(r['Active'] || '').trim() === '1').length;
+  approvedCompaniesMeta = { total: approvedRows.length, active, asOf: '2026-09-21', distinctNames: companyStatusMap.size };
+  console.log(`Approved companies: ${approvedRows.length.toLocaleString()} total, ${active.toLocaleString()} Active=1, ${companyStatusMap.size.toLocaleString()} distinct names indexed`);
+}
+
 console.log('Building journey trends…');
-nd.journey = buildJourneyTrends(rows, nd.meta.max);
+nd.journey = buildJourneyTrends(rows, nd.meta.max, companyStatusMap, normCompany);
 console.log(`Journey trends: ${nd.journey.trends30.length} days (${nd.journey.windowStart} → ${nd.journey.windowEnd}), income series ${nd.journey.incomeDaily.length} days`);
+if (approvedCompaniesMeta) nd.journey.approvedCompanies = approvedCompaniesMeta;
 
 // ── Build RAWSTORE (columnar binary for the client-side interactive
 // engine) -- adapted from update_acquisition_dashboard.js's "Build
