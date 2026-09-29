@@ -622,7 +622,21 @@ function renderKPI(){
     let big=(typ==='m'||typ==='a')?money(curV):(typ==='t'?(curV?curV.toFixed(1):'—')+' mo':typ==='u'?(curV?(curV*100).toFixed(1):'—')+'%':fmt(curV));
     let uniqLine='';
     if(UNIQ_KEYS.has(key)){const u=c.uniq&&c.uniq[key];if(u!=null)uniqLine=`<div class="mom-note" style="opacity:.75;font-size:10px;margin-top:2px">${fmt(u)} unique applicants</div>`;}
-    h+=`<div class="card kpi ${cls}"><div class="lab">${lab}</div><div class="big">${big}</div>${momBadge(mom)}<div class="mom-note">${avgline}</div>${uniqLine}</div>`;
+    // Online vs Offline split, Submissions card only -- added 2026-09-29 per
+    // explicit request. SubmitSource='backoffice' (branch/agent-entered) is
+    // Offline; every other value (UI, Android, Android-S, IOS-S, blank) is
+    // Online. Uses CUR.cur.d.source.sub, the same per-dimension RAWSTORE
+    // aggregate already powering Approved Criteria's 'source' breakdown --
+    // no new data pipeline needed, this is a pre-existing dimension.
+    let sourceLine='';
+    if(key==='sub'){
+      const srcSub=(c.cur.d.source||{}).sub||{};
+      const offline=srcSub['backoffice']||0;
+      const online=Object.entries(srcSub).reduce((s,[k,v])=>s+(k==='backoffice'?0:v),0);
+      const tot=online+offline;
+      sourceLine=`<div class="mom-note" style="opacity:.85;font-size:10px;margin-top:2px">Online ${fmt(online)}${tot?' ('+(online/tot*100).toFixed(1)+'%)':''} · Offline ${fmt(offline)}${tot?' ('+(offline/tot*100).toFixed(1)+'%)':''}</div>`;
+    }
+    h+=`<div class="card kpi ${cls}"><div class="lab">${lab}</div><div class="big">${big}</div>${momBadge(mom)}<div class="mom-note">${avgline}</div>${uniqLine}${sourceLine}</div>`;
   });
   // Pending Final Approval: now dynamic, filtered to the selected date
   // range by submitted date (same basis as the KPI cards above) -- changed
