@@ -371,6 +371,19 @@ function buildSimah2Analysis(rows) {
   const smhScore = { up: 0, down: 0, same: 0, n: 0, sumDelta: 0 };
   const monthly = {};
 
+  // Total monthly SIMAH call volume (every row with SMH_Score populated,
+  // keyed by that row's own submitted month) -- a broader volume metric
+  // than monthlyTrend below, which only counts 2nd-call PAIRS. Added
+  // 2026-10-01 per explicit request for a "number of SIMAH calls" trend.
+  const monthlyCallVolume = {};
+  rows.forEach(r => {
+    if (String(r['SMH_Score'] || '').trim() === '') return;
+    const sd = toYMD(r['submitted']);
+    if (!sd) return;
+    const mk = sd.slice(0, 7);
+    monthlyCallVolume[mk] = (monthlyCallVolume[mk] || 0) + 1;
+  });
+
   const bump = (o, k) => { o[k] = (o[k] || 0) + 1; };
   const transitionBump = (t, from, to) => { const f = t[from] || (t[from] = {}); f[to] = (f[to] || 0) + 1; };
 
@@ -400,6 +413,13 @@ function buildSimah2Analysis(rows) {
   const offer = {};
   offerFields.forEach(f => { offer[f] = { n: 0, up: 0, down: 0, same: 0, sumDelta: 0 }; });
   const finBand = { n: 0, changed: 0, same: 0 };
+  // Full list of applications where the financing offer actually differed
+  // between the 1st and 2nd SIMAH-reaching call -- added 2026-10-01 per
+  // explicit request to see the actual applications, not just the
+  // aggregate up/down/same counts above. Small by construction (offer
+  // fields are only populated for a tiny fraction of pairs), safe to
+  // embed in full.
+  const differentOfferApps = [];
   pairs.forEach(p => {
     offerFields.forEach(f => {
       const a = num(p.first[f]), b = num(p.second[f]);
@@ -414,14 +434,30 @@ function buildSimah2Analysis(rows) {
       finBand.n++;
       if (fb1 !== fb2) finBand.changed++; else finBand.same++;
     }
+    const amt1 = num(p.first['FIN_AMOUNT']), amt2 = num(p.second['FIN_AMOUNT']);
+    if (amt1 != null && amt2 != null && amt1 !== amt2) {
+      differentOfferApps.push({
+        civilId: str(p.first['CivilID']) || '',
+        stagingId1: str(p.first['StagingID']) || '',
+        stagingId2: str(p.second['StagingID']) || '',
+        date1: toYMD(p.first['submitted']),
+        date2: p.d2,
+        amount1: amt1,
+        amount2: amt2,
+        delta: amt2 - amt1,
+      });
+    }
   });
+  differentOfferApps.sort((a, b) => b.delta - a.delta || a.date2.localeCompare(b.date2));
 
   const monthlyTrend = Object.keys(monthly).sort().map(m => ({ month: m, pairs: monthly[m] }));
+  const monthlyCallVolumeTrend = Object.keys(monthlyCallVolume).sort().map(m => ({ month: m, calls: monthlyCallVolume[m] }));
 
   return {
     distinctCivilIdsWithSimah: byCiv.size,
     pairCount: pairs.length,
     riskGrade, dbrBand, smhScore, offer, finBand, monthlyTrend,
+    monthlyCallVolumeTrend, differentOfferApps,
   };
 }
 
