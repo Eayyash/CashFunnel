@@ -10,9 +10,14 @@
  * index.html, matching the convention every other dashboard here follows
  * (one topic, one self-contained HTML file).
  *
+ * 2026-10-01 rewrite: embeds raw per-pair/per-call records (S.pairsRaw,
+ * S.callsRaw from buildSimah2Analysis() in update_acquisition_dashboard.js)
+ * instead of server-side-only aggregates, so the page can carry a real
+ * top-of-page date-range filter -- every KPI/table/chart below recomputes
+ * client-side from the filtered raw records, not fixed at build time.
+ *
  * Reads the already-computed `simah2` block out of
- * Acquisition_Command_Dashboard.html's embedded DAILY_DEFAULT (built by
- * buildSimah2Analysis() in update_acquisition_dashboard.js) rather than
+ * Acquisition_Command_Dashboard.html's embedded DAILY_DEFAULT rather than
  * re-deriving anything from the raw CSV -- same "read a sibling
  * dashboard's output as input" pattern update_bpv.js already uses.
  *
@@ -41,15 +46,17 @@ if (!m) {
 }
 const DD = JSON.parse(m[1]);
 const S = DD.simah2;
-if (!S || !S.pairCount) {
-  console.error('ERROR: no simah2 block found -- rebuild Acquisition_Command_Dashboard.html with the latest update_acquisition_dashboard.js first.');
+if (!S || !S.pairsRaw) {
+  console.error('ERROR: no simah2.pairsRaw block found -- rebuild Acquisition_Command_Dashboard.html with the latest update_acquisition_dashboard.js first.');
   process.exit(1);
 }
-console.log(`  ${S.pairCount.toLocaleString()} pairs, ${S.distinctCivilIdsWithSimah.toLocaleString()} distinct SIMAH-pulled customers, ${S.differentOfferApps.length.toLocaleString()} apps with a different offer amount`);
+console.log(`  ${S.pairsRaw.length.toLocaleString()} pairs, ${S.distinctCivilIdsWithSimah.toLocaleString()} distinct SIMAH-pulled customers, ${S.callsRaw.length.toLocaleString()} total SIMAH calls`);
 
 const DATA = {
   meta: { generatedAt: new Date().toISOString().replace('T', ' ').slice(0, 19), sourceDate: DD.meta.max },
-  simah2: S,
+  distinctCivilIdsWithSimah: S.distinctCivilIdsWithSimah,
+  callsRaw: S.callsRaw,
+  pairsRaw: S.pairsRaw,
 };
 
 const html = `<!DOCTYPE html>
@@ -79,7 +86,7 @@ header{padding:20px 26px;display:flex;align-items:center;gap:13px;justify-conten
 main{max-width:1180px;margin:0 auto;padding:6px 26px 60px}
 .hint{font-size:11.5px;color:var(--faint);margin:2px 0 20px}
 .section{margin-bottom:34px}
-.sec-h{display:flex;align-items:baseline;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.sec-h{display:flex;align-items:baseline;gap:10px;margin-bottom:14px;flex-wrap:wrap;justify-content:space-between}
 .sec-h h2{font-size:16px;margin:0}
 .sec-h .n{font-size:10px;color:var(--faint);font-family:'JetBrains Mono'}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px}
@@ -106,6 +113,18 @@ td.same{font-weight:700;color:var(--ink)}
 .bar-fill{height:100%;border-radius:6px}
 .bar-val{text-align:right;font-family:'JetBrains Mono';color:var(--ink2)}
 .up{color:var(--green)}.down{color:var(--red)}
+.filters{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:22px}
+.filter-row{display:flex;flex-wrap:wrap;gap:14px;align-items:end}
+.filter-item{display:flex;flex-direction:column;gap:5px}
+.filter-item label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700}
+.filter-item select,.filter-item input{padding:7px 10px;border:1px solid var(--line2);border-radius:8px;background:var(--panel2);color:var(--ink);font-family:'Inter',sans-serif;font-size:12.5px}
+.presets{display:flex;gap:6px}
+.presets button{appearance:none;border:1px solid var(--line2);background:var(--panel2);color:var(--ink2);font-size:11.5px;font-weight:600;padding:6px 12px;border-radius:8px;cursor:pointer;font-family:'Inter',sans-serif}
+.presets button.on{background:var(--cyan);color:#fff;border-color:var(--cyan)}
+.btn-reset,.btn-dl{padding:7px 14px;border:1px solid var(--line2);border-radius:8px;background:var(--panel2);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif}
+.btn-reset:hover,.btn-dl:hover{color:var(--ink);border-color:var(--line)}
+.btn-dl{background:var(--cyan);color:#fff;border-color:var(--cyan)}
+.btn-dl:hover{color:#fff;opacity:.9}
 @media (max-width:640px){.kpis{grid-template-columns:repeat(2,1fr)}.bar-row{grid-template-columns:55px 1fr 45px}}
 </style></head>
 <body>
@@ -119,8 +138,23 @@ td.same{font-weight:700;color:var(--ink)}
 <main>
 <div class="hint" id="source-hint"></div>
 
+<div class="filters">
+  <div class="filter-row">
+    <div class="filter-item"><label>From</label><input type="date" id="f-from"></div>
+    <div class="filter-item"><label>To</label><input type="date" id="f-to"></div>
+    <div class="filter-item"><label>Range</label><div class="presets" id="presets">
+      <button data-r="all" class="on">All</button>
+      <button data-r="30d">Last 30 days</button>
+      <button data-r="90d">Last 90 days</button>
+      <button data-r="mtd">This month</button>
+    </div></div>
+    <button class="btn-reset" id="f-reset">Reset</button>
+  </div>
+  <div class="hint" style="margin:10px 0 0" id="filter-hint"></div>
+</div>
+
 <div class="section">
-  <div class="sec-h"><h2>Summary</h2><span class="n">customers who applied twice, both reaching SIMAH</span></div>
+  <div class="sec-h"><h2>Summary</h2><span class="n">customers who applied twice, both reaching SIMAH -- filtered by the 2nd call's date</span></div>
   <div class="kpis" id="kpis"></div>
   <div class="caveat" style="margin-top:14px"><p><b>What this is:</b> for every customer whose 1st AND 2nd application both reached SIMAH (SMH_Score populated), this compares application #1 against application #2 — risk grade, DBR band, SIMAH score, and (where available) the actual offer terms. Later re-applications (3rd, 4th, …) are not included — this is specifically about the <i>second</i> call.</p></div>
 </div>
@@ -151,7 +185,7 @@ td.same{font-weight:700;color:var(--ink)}
 </div>
 
 <div class="section">
-  <div class="sec-h"><h2>Applications offered a different amount</h2><span class="n" id="diff-count"></span></div>
+  <div class="sec-h"><h2>Applications offered a different amount</h2><span style="display:flex;align-items:center;gap:10px"><span class="n" id="diff-count"></span><button class="btn-dl" id="diff-export">⬇ Export to Excel (CSV)</button></span></div>
   <div class="caveat"><p><b>Sample size:</b> this list is every application where the financing amount on the 2nd call differs from the 1st — small by construction, since the offer fields are only populated once an application reaches a real financing offer (confirmed: a small fraction of all pairs). Treat this as a worklist of specific cases, not a population-level trend; the risk-grade/DBR/SIMAH-score sections above cover the full pair population and are the more solid aggregate result. CREDIT_LIMIT was checked and excluded — it's a Cards-only column in this shared schema, always blank for loan applications.</p></div>
   <div class="tablewrap"><table id="diff-table"></table></div>
 </div>
@@ -165,31 +199,65 @@ function pct(n){ return (n==null||isNaN(n))?'—':n.toFixed(1)+'%'; }
 function money(n){ return (n==null||isNaN(n))?'—':'SAR '+Math.round(n).toLocaleString(); }
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
-const S = SIMAH2_DATA.simah2;
-document.getElementById('source-hint').textContent = 'Source data through ' + SIMAH2_DATA.meta.sourceDate + ' · generated ' + SIMAH2_DATA.meta.generatedAt;
+// pairsRaw row shape: [civilId, stagingId1, stagingId2, date1, date2,
+//   riskGrade1, riskGrade2, dbrBand1, dbrBand2, smh1, smh2, amt1, amt2,
+//   rate1, rate2, tenure1, tenure2, finBand1, finBand2]
+const P = { civ:0, sid1:1, sid2:2, d1:3, d2:4, g1:5, g2:6, b1:7, b2:8, s1:9, s2:10, amt1:11, amt2:12, rate1:13, rate2:14, ten1:15, ten2:16, fb1:17, fb2:18 };
 
-function renderKpis(){
-  const offerPct = S.pairCount ? (100*S.offer.FIN_AMOUNT.n/S.pairCount) : 0;
+let FROM = null, TO = null;
+function addDays(ymd,n){ const d=new Date(ymd+'T00:00:00Z'); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10); }
+
+function minMaxDate(){
+  let mn=null, mx=null;
+  SIMAH2_DATA.callsRaw.forEach(d=>{ if(!mn||d<mn)mn=d; if(!mx||d>mx)mx=d; });
+  return [mn, mx];
+}
+const [DATA_MIN, DATA_MAX] = minMaxDate();
+
+function filteredPairs(){
+  return SIMAH2_DATA.pairsRaw.filter(p => (!FROM || p[P.d2] >= FROM) && (!TO || p[P.d2] <= TO));
+}
+function filteredCalls(){
+  return SIMAH2_DATA.callsRaw.filter(d => (!FROM || d >= FROM) && (!TO || d <= TO));
+}
+
+function renderKpis(pairs){
+  const n = pairs.length;
+  let gChanged=0, bChanged=0, sUp=0, sDown=0, sSame=0, sN=0, sSum=0, offerN=0;
+  pairs.forEach(p=>{
+    if(p[P.g1]!==p[P.g2]) gChanged++;
+    if(p[P.b1]!==p[P.b2]) bChanged++;
+    if(p[P.s1]!=null && p[P.s2]!=null){ sN++; sSum += (p[P.s2]-p[P.s1]); if(p[P.s2]>p[P.s1])sUp++; else if(p[P.s2]<p[P.s1])sDown++; else sSame++; }
+    if(p[P.amt1]!=null && p[P.amt2]!=null) offerN++;
+  });
+  const diffCount = pairs.filter(p=>p[P.amt1]!=null && p[P.amt2]!=null && p[P.amt1]!==p[P.amt2]).length;
   const items = [
-    ['Pairs (2nd call reached)', fmt(S.pairCount), fmt(S.distinctCivilIdsWithSimah)+' distinct SIMAH-pulled customers'],
-    ['Risk grade changed', pct(100*S.riskGrade.changed/S.pairCount), fmt(S.riskGrade.changed)+' of '+fmt(S.pairCount)+' pairs'],
-    ['DBR band changed', pct(100*S.dbrBand.changed/S.pairCount), fmt(S.dbrBand.changed)+' of '+fmt(S.pairCount)+' pairs'],
-    ['SIMAH score, avg change', (S.smhScore.n?((S.smhScore.sumDelta/S.smhScore.n>=0?'+':'')+(S.smhScore.sumDelta/S.smhScore.n).toFixed(1)):'—'), fmt(S.smhScore.down)+' down · '+fmt(S.smhScore.up)+' up · '+fmt(S.smhScore.same)+' same'],
-    ['Offered a different amount', fmt(S.differentOfferApps.length), pct(offerPct)+' of pairs reached a real offer both times'],
+    ['Pairs (2nd call reached)', fmt(n), fmt(SIMAH2_DATA.distinctCivilIdsWithSimah)+' distinct SIMAH-pulled customers (all time)'],
+    ['Risk grade changed', n?pct(100*gChanged/n):'—', fmt(gChanged)+' of '+fmt(n)+' pairs'],
+    ['DBR band changed', n?pct(100*bChanged/n):'—', fmt(bChanged)+' of '+fmt(n)+' pairs'],
+    ['SIMAH score, avg change', (sN?((sSum/sN>=0?'+':'')+(sSum/sN).toFixed(1)):'—'), fmt(sDown)+' down · '+fmt(sUp)+' up · '+fmt(sSame)+' same'],
+    ['Offered a different amount', fmt(diffCount), n?pct(100*offerN/n)+' of pairs reached a real offer both times':'—'],
   ];
   document.getElementById('kpis').innerHTML = items.map(([lab,big,sub])=>
     '<div class="card"><div class="lab">'+esc(lab)+'</div><div class="big">'+big+'</div><div class="sub">'+esc(sub)+'</div></div>').join('');
 }
 
-function renderBars(containerId, rows, valueKey, color, label){
-  const max = Math.max(1, ...rows.map(r=>r[valueKey]));
-  document.getElementById(containerId).innerHTML = rows.map(r=>{
-    const w = Math.max(2, Math.round(100*r[valueKey]/max));
-    return '<div class="bar-row"><div class="lab">'+esc(r.month)+'</div><div class="bar-track"><div class="bar-fill" style="width:'+w+'%;background:'+color+'"></div></div><div class="bar-val">'+fmt(r[valueKey])+'</div></div>';
-  }).join('') || '<p class="hint">No data.</p>';
+function renderBars(containerId, rows){
+  const max = Math.max(1, ...rows.map(r=>r[1]));
+  document.getElementById(containerId).innerHTML = rows.map(([month,val])=>{
+    const w = Math.max(2, Math.round(100*val/max));
+    return '<div class="bar-row"><div class="lab">'+esc(month)+'</div><div class="bar-track"><div class="bar-fill" style="width:'+w+'%;background:var(--cyan)"></div></div><div class="bar-val">'+fmt(val)+'</div></div>';
+  }).join('') || '<p class="hint">No data in this range.</p>';
+}
+function monthlyCounts(dates){
+  const m = {};
+  dates.forEach(d=>{ const k=d.slice(0,7); m[k]=(m[k]||0)+1; });
+  return Object.keys(m).sort().map(k=>[k,m[k]]);
 }
 
-function transitionTable(t, grades){
+function transitionTable(pairs, idx1, idx2, grades){
+  const t = {};
+  pairs.forEach(p=>{ const from=p[idx1], to=p[idx2]; const f=t[from]||(t[from]={}); f[to]=(f[to]||0)+1; });
   let h = '<thead><tr><th>1st call \\\\ 2nd call</th>' + grades.map(g=>'<th class="num">'+esc(g)+'</th>').join('') + '<th class="num">Total</th></tr></thead><tbody>';
   grades.forEach(from=>{
     const row = t[from] || {};
@@ -203,51 +271,107 @@ function transitionTable(t, grades){
   return h;
 }
 
-function renderOfferTable(){
-  const rows = [
-    ['Financing amount', S.offer.FIN_AMOUNT, 'money'],
-    ['Profit rate', S.offer.PROFIT_RATE, 'pct'],
-    ['Tenure', S.offer.TENURE, 'mo'],
+function offerStat(pairs, aIdx, bIdx){
+  let n=0, up=0, down=0, same=0, sum=0;
+  pairs.forEach(p=>{
+    const a=p[aIdx], b=p[bIdx];
+    if(a==null || b==null) return;
+    n++; if(b>a)up++; else if(b<a)down++; else same++; sum += (b-a);
+  });
+  return {n,up,down,same,sumDelta:sum};
+}
+function renderOfferTable(pairs){
+  const fields = [
+    ['Financing amount', offerStat(pairs, P.amt1, P.amt2), 'money'],
+    ['Profit rate', offerStat(pairs, P.rate1, P.rate2), 'pct'],
+    ['Tenure', offerStat(pairs, P.ten1, P.ten2), 'mo'],
   ];
   let h = '<thead><tr><th>Field</th><th class="num">n</th><th class="num">Up</th><th class="num">Down</th><th class="num">Same</th><th class="num">Avg change</th></tr></thead><tbody>';
-  rows.forEach(([lab,o,kind])=>{
-    if(!o || !o.n){ h += '<tr><td>'+esc(lab)+'</td><td class="num">0</td><td class="num" colspan="4">no matching pairs</td></tr>'; return; }
+  fields.forEach(([lab,o,kind])=>{
+    if(!o.n){ h += '<tr><td>'+esc(lab)+'</td><td class="num">0</td><td class="num" colspan="4">no matching pairs</td></tr>'; return; }
     const avgD = o.sumDelta/o.n;
     const fmtD = kind==='money'?money(avgD):kind==='pct'?(avgD.toFixed(2)+' pp'):(avgD.toFixed(1)+' mo');
     h += '<tr><td>'+esc(lab)+'</td><td class="num">'+fmt(o.n)+'</td><td class="num">'+fmt(o.up)+'</td><td class="num">'+fmt(o.down)+'</td><td class="num">'+fmt(o.same)+'</td><td class="num" style="font-weight:600">'+(avgD>=0?'+':'')+fmtD+'</td></tr>';
   });
-  const fb = S.finBand;
-  h += '<tr><td>FinBand (category)</td><td class="num">'+fmt(fb.n)+'</td><td class="num" colspan="3">'+fmt(fb.changed)+' changed · '+fmt(fb.same)+' same</td><td class="num" style="font-weight:600">'+(fb.n?pct(100*fb.changed/fb.n):'—')+' changed</td></tr>';
+  let fbN=0, fbChanged=0, fbSame=0;
+  pairs.forEach(p=>{ if(p[P.fb1]!=null && p[P.fb2]!=null){ fbN++; if(p[P.fb1]!==p[P.fb2])fbChanged++; else fbSame++; } });
+  h += '<tr><td>FinBand (category)</td><td class="num">'+fmt(fbN)+'</td><td class="num" colspan="3">'+fmt(fbChanged)+' changed · '+fmt(fbSame)+' same</td><td class="num" style="font-weight:600">'+(fbN?pct(100*fbChanged/fbN):'—')+' changed</td></tr>';
   h += '</tbody>';
   document.getElementById('offer-table').innerHTML = h;
 }
 
-function renderDiffTable(){
-  const apps = S.differentOfferApps;
+function diffApps(pairs){
+  return pairs
+    .filter(p => p[P.amt1]!=null && p[P.amt2]!=null && p[P.amt1]!==p[P.amt2])
+    .map(p => ({ civilId:p[P.civ], sid1:p[P.sid1], sid2:p[P.sid2], date1:p[P.d1], date2:p[P.d2], amount1:p[P.amt1], amount2:p[P.amt2], delta:p[P.amt2]-p[P.amt1] }))
+    .sort((a,b) => b.delta - a.delta || a.date2.localeCompare(b.date2));
+}
+let CURRENT_DIFF = [];
+function renderDiffTable(pairs){
+  const apps = diffApps(pairs);
+  CURRENT_DIFF = apps;
   document.getElementById('diff-count').textContent = fmt(apps.length) + ' applications';
   let h = '<thead><tr><th>Civil ID</th><th>1st Staging ID</th><th>2nd Staging ID</th><th>1st date</th><th>2nd date</th><th class="num">1st amount</th><th class="num">2nd amount</th><th class="num">Change</th></tr></thead><tbody>';
   apps.forEach(a=>{
     const cls = a.delta>=0 ? 'up' : 'down';
-    h += '<tr><td>'+esc(a.civilId)+'</td><td>'+esc(a.stagingId1)+'</td><td>'+esc(a.stagingId2)+'</td><td>'+esc(a.date1)+'</td><td>'+esc(a.date2)+'</td><td class="num">'+money(a.amount1)+'</td><td class="num">'+money(a.amount2)+'</td><td class="num '+cls+'">'+(a.delta>=0?'+':'')+money(a.delta)+'</td></tr>';
+    h += '<tr><td>'+esc(a.civilId)+'</td><td>'+esc(a.sid1)+'</td><td>'+esc(a.sid2)+'</td><td>'+esc(a.date1)+'</td><td>'+esc(a.date2)+'</td><td class="num">'+money(a.amount1)+'</td><td class="num">'+money(a.amount2)+'</td><td class="num '+cls+'">'+(a.delta>=0?'+':'')+money(a.delta)+'</td></tr>';
   });
   h += '</tbody>';
   document.getElementById('diff-table').innerHTML = h;
 }
 
-renderKpis();
-renderBars('call-volume-bars', S.monthlyCallVolumeTrend, 'calls', 'var(--cyan)');
-renderBars('pairs-bars', S.monthlyTrend, 'pairs', 'var(--violet)');
-const riskGrades = ['L','M','H','Unknown'];
-document.getElementById('riskgrade-n').textContent = 'SC_RiskGrade transition, all ' + fmt(S.pairCount) + ' pairs';
-document.getElementById('riskgrade-table').innerHTML = transitionTable(S.riskGrade.transitions, riskGrades);
-const dbrBands = Object.keys(S.dbrBand.transitions).sort();
-document.getElementById('dbrband-n').textContent = 'CurrentDBRBand transition, all ' + fmt(S.pairCount) + ' pairs';
-document.getElementById('dbrband-table').innerHTML = transitionTable(S.dbrBand.transitions, dbrBands);
-renderOfferTable();
-renderDiffTable();
+function exportDiffCsv(){
+  const header = ['Civil ID','1st Staging ID','2nd Staging ID','1st date','2nd date','1st amount (SAR)','2nd amount (SAR)','Change (SAR)'];
+  const esc2 = v => { const s = String(v==null?'':v); return /[",\\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; };
+  const lines = [header.join(',')];
+  CURRENT_DIFF.forEach(a => lines.push([a.civilId,a.sid1,a.sid2,a.date1,a.date2,a.amount1,a.amount2,a.delta].map(esc2).join(',')));
+  const blob = new Blob([lines.join('\\n')], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'simah2_different_offer_amount' + (FROM||TO ? ('_'+(FROM||DATA_MIN)+'_to_'+(TO||DATA_MAX)) : '') + '.csv';
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+document.getElementById('diff-export').addEventListener('click', exportDiffCsv);
+
+function renderAll(){
+  const pairs = filteredPairs(), calls = filteredCalls();
+  document.getElementById('filter-hint').textContent = 'Showing ' + (FROM||DATA_MIN) + ' → ' + (TO||DATA_MAX) + ' · ' + fmt(pairs.length) + ' pairs, ' + fmt(calls.length) + ' SIMAH calls in range';
+  renderKpis(pairs);
+  renderBars('call-volume-bars', monthlyCounts(calls));
+  renderBars('pairs-bars', monthlyCounts(pairs.map(p=>p[P.d2])));
+  const riskGrades = ['L','M','H','Unknown'];
+  document.getElementById('riskgrade-n').textContent = 'SC_RiskGrade transition, ' + fmt(pairs.length) + ' pairs in range';
+  document.getElementById('riskgrade-table').innerHTML = transitionTable(pairs, P.g1, P.g2, riskGrades);
+  const dbrBands = ['<=20%','>20-<=30%','>30-<=40%','>40-<=45%','>45-<=50%','>50-<=55%','>55-<=60%','>60-<=65%','>65%','Unknown'];
+  document.getElementById('dbrband-n').textContent = 'CurrentDBRBand transition, ' + fmt(pairs.length) + ' pairs in range';
+  document.getElementById('dbrband-table').innerHTML = transitionTable(pairs, P.b1, P.b2, dbrBands);
+  renderOfferTable(pairs);
+  renderDiffTable(pairs);
+}
+
+function applyPreset(r){
+  if(r==='all'){FROM=null;TO=null;}
+  else if(r==='30d'){FROM=addDays(DATA_MAX,-29);TO=DATA_MAX;}
+  else if(r==='90d'){FROM=addDays(DATA_MAX,-89);TO=DATA_MAX;}
+  else if(r==='mtd'){FROM=DATA_MAX.slice(0,8)+'01';TO=DATA_MAX;}
+  document.getElementById('f-from').value=FROM||DATA_MIN;
+  document.getElementById('f-to').value=TO||DATA_MAX;
+  document.querySelectorAll('#presets button').forEach(b=>b.classList.toggle('on',b.dataset.r===r));
+  renderAll();
+}
+document.querySelectorAll('#presets button').forEach(b=>b.addEventListener('click',()=>applyPreset(b.dataset.r)));
+document.getElementById('f-from').addEventListener('change',()=>{FROM=document.getElementById('f-from').value||null;document.querySelectorAll('#presets button').forEach(x=>x.classList.remove('on'));renderAll();});
+document.getElementById('f-to').addEventListener('change',()=>{TO=document.getElementById('f-to').value||null;document.querySelectorAll('#presets button').forEach(x=>x.classList.remove('on'));renderAll();});
+document.getElementById('f-reset').addEventListener('click',()=>applyPreset('all'));
+
+document.getElementById('source-hint').textContent = 'Source data through ' + SIMAH2_DATA.meta.sourceDate + ' · generated ' + SIMAH2_DATA.meta.generatedAt;
+document.getElementById('f-from').min = DATA_MIN; document.getElementById('f-from').max = DATA_MAX;
+document.getElementById('f-to').min = DATA_MIN; document.getElementById('f-to').max = DATA_MAX;
+applyPreset('all');
 </script>
 </body></html>
 `;
 
 fs.writeFileSync(OUT_HTML, html, 'utf-8');
-console.log(`✅ Simah2_Call.html written — ${S.pairCount.toLocaleString()} pairs, ${S.differentOfferApps.length.toLocaleString()} apps with a different offer amount.`);
+console.log(`✅ Simah2_Call.html written — ${S.pairsRaw.length.toLocaleString()} pairs, ${S.callsRaw.length.toLocaleString()} total SIMAH calls (all embedded for client-side date filtering).`);

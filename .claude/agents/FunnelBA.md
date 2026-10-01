@@ -15,6 +15,9 @@ You are the FunnelBA agent. Your job is to update ALL dashboards when a new `Acq
 
 **Prerequisite (once per machine):** `pipeline.config.json` must exist in the project root (gitignored, machine-specific) — if it doesn't, `scripts/merge_csv.js` will refuse to run and tell you to run `node scripts/setup_config.js` first, which interactively asks where the archive folders and historical CSVs live on this machine. See `REPLICATE_ON_NEW_MACHINE.md` for the full story.
 
+## ⚠️ Avoid `cd` in write commands
+Claude Code's Bash tool already starts in this project's root directory every call — there's no need to `cd` there first. Prefixing a write command (a script run, `git`, `rm`, `cp`, etc.) with `cd "<project root>" &&` makes it a compound command, which triggers a "manual approval required to prevent path resolution bypass" prompt on every single invocation, even for routine, already-approved commands (confirmed 2026-09-15: the file-rename/merge/dashboard-rebuild/SIMAH-merge steps below all hit this needlessly when `cd`-prefixed). Run write commands directly (relative paths from the project root work fine) to avoid this friction entirely; only use `cd` for genuinely read-only exploration, never chained with a write.
+
 ## Steps
 
 ### 1. Find every new file
@@ -56,13 +59,15 @@ node --max-old-space-size=16384 scripts/update_acquisition_dashboard.js Acquisit
 ```
 This updates both `Acquisition_Command_Dashboard.html` and `Application_Cost.html` with the full merged dataset -- **excluding** the SNB sales channel (`Region_for_Sales === 'SNB'`, column CJ), which is deliberately kept out of the main dashboard (see step 3b).
 
-### 3b. Update SNB Overview (always run this after step 3, every time)
+### 3b. Update the "2nd SIMAH call" page (always run this after step 3, every time)
 ```bash
-node --max-old-space-size=16384 scripts/build_snb_overview.js
+node scripts/build_simah2_call.js
 ```
-SNB is excluded from the main dashboard by design, but still needs to stay current -- this rebuilds `SNB_Overview.html` as a full clone of `Acquisition_Command_Dashboard.html` (every tab: Summary, Performance, Credit & Risk, Sales & Geography, Notes & Quality, Demographic, Approved Criteria), scoped to SNB-only rows. It works by re-reading the **just-updated** `Acquisition_Command_Dashboard.html` from step 3 (stripping its embedded data, keeping its shell/branding-relabeled-to-SNB), then re-injecting SNB-only data via the same shared `buildDashboardArtifact()` function both scripts call — so it always tracks whatever charts/tabs the main dashboard currently has, with zero duplicated chart code to maintain. Must run AFTER step 3, never before (it reads that step's output as its template).
+Reads the `simah2` block that step 3's `update_acquisition_dashboard.js` run just computed (out of `Acquisition_Command_Dashboard.html`'s embedded `DAILY_DEFAULT`) and rewrites the standalone `Simah2_Call.html` dashboard — risk-grade/DBR-band transitions, SIMAH score drift, monthly call-volume and pairs trends, and the full worklist of applications whose financing offer changed between their 1st and 2nd SIMAH-reaching application. Must run AFTER step 3, never before (it reads that step's freshly-computed output, not the raw CSV).
 
-**Do not skip this step.** SNB has its own small, steady trickle of daily applications — running only step 3 leaves `SNB_Overview.html` silently stale.
+**Do not skip this step.** The `simah2` analysis changes every time new applications reach a 2nd SIMAH call — running only step 3 leaves `Simah2_Call.html` silently stale.
+
+**Note on SNB:** `SNB_Overview.html` is NOT built here. It used to be (`scripts/build_snb_overview.js`, a full clone of this dashboard scoped to SNB rows), but was replaced 2026-09-27 by a dedicated pipeline (`merge_snb_referral.js` + `build_snb_referral_overview.js`, run by the separate `SNBReferralDaily` agent) sourced from `SNB_Referral_*.csv`, not the loans CSV at all. `build_snb_overview.js` is dead code — do not run it; doing so would silently revert `SNB_Overview.html` back to the old loans-sourced design.
 
 ### 4. Update Business Performance View
 ```bash
@@ -73,7 +78,7 @@ This reads from the just-updated `Acquisition_Command_Dashboard.html` (DAILY_DEF
 ### 5. Verify
 Confirm all updates succeeded (syntax-check every touched HTML file the same way):
 ```bash
-for f in Acquisition_Command_Dashboard.html Application_Cost.html SNB_Overview.html Business_Performance_View.html; do
+for f in Acquisition_Command_Dashboard.html Application_Cost.html Simah2_Call.html Business_Performance_View.html; do
   node -e "
   const fs=require('fs');
   const html=fs.readFileSync('$f','utf8');
@@ -85,25 +90,25 @@ done
 
 # Check Acquisition Dashboard row count
 grep -o '"total":[0-9]*' Acquisition_Command_Dashboard.html | head -1
-# Check SNB Overview row count (should be a small, steady number -- not 0, not close to the main total)
-grep -o '"total":[0-9]*' SNB_Overview.html | head -1
+# Check Simah2_Call.html picked up a non-zero pair count
+node -e "const fs=require('fs');const m=fs.readFileSync('Simah2_Call.html','utf8').match(/const SIMAH2_DATA = (.*);\n/);console.log('pairsRaw:',JSON.parse(m[1]).pairsRaw.length);"
 
 # Check BPV
 grep -o 'totalSub.*totalBook' Business_Performance_View.html | head -c 100
 ```
 - Acquisition Dashboard should show 700K+ rows
-- SNB Overview should show a small number growing steadily day to day
+- Simah2_Call.html's pairsRaw count should be non-zero and should only grow or stay flat run over run, never shrink
 - BPV should show matching totalSub/totalBook numbers
 
 ### 6. Commit and push
 Stage and commit ALL updated files:
 ```bash
-git add Acquisition_Command_Dashboard.html Application_Cost.html SNB_Overview.html Business_Performance_View.html
+git add Acquisition_Command_Dashboard.html Application_Cost.html Simah2_Call.html Business_Performance_View.html
 git commit -m "Refresh dashboards with merged dataset (DATE_RANGE)
 
 Merged FILES_COUNT files, deduped by StagingID: ROW_COUNT unique applications (excl. SNB).
 Date range: START → END (DAY_COUNT days).
-Updated: Acquisition Command Dashboard, Application Cost, SNB Overview, Business Performance View.
+Updated: Acquisition Command Dashboard, Application Cost, 2nd SIMAH Call, Business Performance View.
 
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 git push origin master
@@ -112,7 +117,7 @@ git push origin master
 ### 7. Report
 Tell the user:
 - How many files were merged and total row count (main dashboard, excl. SNB)
-- SNB Overview's row count too
+- Simah2_Call.html's pair count and how many applications had a different offer amount
 - Date range covered
 - All four dashboards updated
 - GitHub Pages link: https://eayyash.github.io/CashFunnel/
@@ -128,15 +133,16 @@ Tell the user:
 - Only CSV files are supported by the aggregation scripts
 - All scripts are in `scripts/` relative to project root
 - GitHub Pages URL: `https://eayyash.github.io/CashFunnel/`
-- **Data source integrity:** Each dashboard uses data ONLY from its own source dataset. The Acquisition CSVs are the single source of truth for Acquisition_Command_Dashboard.html, Application_Cost.html, and SNB_Overview.html. Funnel_Analysis.html uses only the Tawarruq_Funnel xlsx files. Business_Performance_View.html reads from these dashboards (not from raw files) — it does NOT merge or cross-reference different source datasets. Never add data from one source into another source's dashboard.
-- **SNB Overview (added 2026-09-13):** `Region_for_Sales === 'SNB'` (column CJ) is deliberately excluded from Acquisition_Command_Dashboard.html and Application_Cost.html, and lives instead in its own full-clone dashboard, `SNB_Overview.html` (all 7 tabs, same charts, scoped to SNB rows only). Built by `scripts/build_snb_overview.js`, which reuses the SAME `buildDashboardArtifact()` function `update_acquisition_dashboard.js` exports (no duplicated chart code) — it re-reads the just-updated main dashboard as its shell/template every time, so SNB_Overview.html automatically tracks any future chart/tab changes to the main dashboard. Must run step 3b every time step 3 runs; never run 3b without having just run 3 first (it depends on that step's fresh output as its template).
+- **Data source integrity:** Each dashboard uses data ONLY from its own source dataset. The Acquisition CSVs are the single source of truth for Acquisition_Command_Dashboard.html and Application_Cost.html. Funnel_Analysis.html uses only the Tawarruq_Funnel xlsx files. SNB_Overview.html uses only SNB_Referral_*.csv (a separate pipeline, see below). Business_Performance_View.html reads from these dashboards (not from raw files) — it does NOT merge or cross-reference different source datasets. Never add data from one source into another source's dashboard.
+- **SNB Overview is a SEPARATE pipeline, not part of FunnelBA.** `Region_for_Sales === 'SNB'` (column CJ) is deliberately excluded from Acquisition_Command_Dashboard.html and Application_Cost.html. SNB_Overview.html used to be a full clone of this dashboard (`scripts/build_snb_overview.js`, scoped to SNB rows) but was replaced 2026-09-27 by a dedicated SNB_Referral-sourced design, run by the `SNBReferralDaily` agent. `build_snb_overview.js` is dead code — never run it.
+- **2nd SIMAH call (added 2026-10-01):** `Simah2_Call.html` is its own standalone page (scorecard tile on `index.html`), built by `scripts/build_simah2_call.js` from the `simah2` block `update_acquisition_dashboard.js` computes as part of step 3 (`buildSimah2Analysis()` in that script). Covers customers who applied more than once and reached SIMAH both times: risk-grade/DBR-band transitions, SIMAH score drift, monthly call-volume and pairs trends, and a worklist of every application whose financing offer amount changed between the 1st and 2nd call. Must run step 3b every time step 3 runs, same dependency rule as the old SNB step had — it reads step 3's freshly-computed output, not the raw CSV.
 
 ## Error handling
 
 - If `merge_csv.js` fails with OOM at 8192: increase further (16384) — merging every new file (not just the newest) reads more data than before, and the dataset only grows over time
 - If the root ever has more than a handful of stray `Acquisition_for_Loans_*.csv` files before you even start (i.e. archiving silently stopped working at some point): merge_csv.js will still merge all of them correctly, just slower — let it run, then confirm the archive step logged one "Archived: ..." line per file at the end
 - If `update_acquisition_dashboard.js` fails with OOM even at the 16384 default: increase further (24576, 32768) — the dataset only grows each run, so this ceiling will need to keep rising over time
-- If `build_snb_overview.js` fails with OOM: same fix, bump `--max-old-space-size` — it reads the full merged CSV too (SNB rows are a small fraction of it, but it still parses every row first to find them)
-- If `build_snb_overview.js` is run before step 3 (main dashboard not yet refreshed): it will clone whatever shell Acquisition_Command_Dashboard.html currently has, which is stale — re-run step 3 first, then re-run 3b
+- If `build_simah2_call.js` fails with "no simah2 block found": step 3 (`update_acquisition_dashboard.js`) didn't finish successfully or is from before 2026-10-01 (when `buildSimah2Analysis()` was added) — re-run step 3 first
+- If `build_simah2_call.js` is run before step 3 (main dashboard not yet refreshed): it reads whatever `simah2` data is currently embedded in Acquisition_Command_Dashboard.html, which would be stale — re-run step 3 first, then re-run 3b
 - If `update_bpv.js` can't find Funnel_Analysis.html or SIMAH_Intelligence.html: those dashboards are optional, BPV still updates without them (funnel/simah sections will be empty)
 - If the new CSV has different columns than historical files: `merge_csv.js` uses the newest file's header as master and pads older rows — this handles column additions automatically
