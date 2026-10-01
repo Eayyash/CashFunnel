@@ -325,6 +325,106 @@ function buildJourneyTrends(rows, dataMax, companyStatusMap, normCompany) {
   return { changeDate: JOURNEY_CHANGE_DATE, windowStart: start30, windowEnd: end, dataMax, trends30, incomeDaily };
 }
 
+// ── "2nd SIMAH call" tab (added 2026-09-30 per explicit request) ──────────
+// Question: for a customer who applies more than once, does anything about
+// their risk assessment or offer change between the FIRST and SECOND
+// application that actually reached SIMAH (SMH_Score populated)? Grouped by
+// CivilID, ordered by submitted date, comparing application #1 vs #2 only
+// (later re-applications are ignored -- the question is specifically about
+// the *second* call, not every subsequent one).
+//
+// Two very different sample sizes are at play here, kept separate rather
+// than blended into one misleading average:
+//  - riskGrade/dbrBand/smhScore are populated whenever SIMAH is called at
+//    all (declined or not), so they cover the FULL pair population.
+//  - finAmount/profitRate/tenure/finBand are only populated once an
+//    application reaches a real financing offer -- a small, non-random
+//    slice (confirmed 2026-09-30: ~0.6% of pairs) of people who got that
+//    far on BOTH applications. Read as directional, not conclusive.
+// CREDIT_LIMIT was checked and dropped -- it's a Cards-only column in this
+// shared schema, always blank for loan applications, not a real signal here.
+function buildSimah2Analysis(rows) {
+  const byCiv = new Map();
+  rows.forEach(r => {
+    const civ = String(r['CivilID'] || '').trim();
+    if (!civ) return;
+    if (String(r['SMH_Score'] || '').trim() === '') return; // only apps that actually reached SIMAH
+    const sd = toYMD(r['submitted']);
+    if (!sd) return;
+    let arr = byCiv.get(civ);
+    if (!arr) { arr = []; byCiv.set(civ, arr); }
+    arr.push({ sd, r });
+  });
+
+  const num = v => { const n = parseFloat(v); return isNaN(n) ? null : n; };
+  const str = v => { const s = String(v == null ? '' : v).trim(); return s === '' ? null : s; };
+
+  const pairs = [];
+  byCiv.forEach(arr => {
+    if (arr.length < 2) return;
+    arr.sort((a, b) => a.sd < b.sd ? -1 : (a.sd > b.sd ? 1 : 0));
+    pairs.push({ first: arr[0].r, second: arr[1].r, d2: arr[1].sd });
+  });
+
+  const riskGrade = { changed: 0, same: 0, transitions: {} };
+  const dbrBand = { changed: 0, same: 0, transitions: {} };
+  const smhScore = { up: 0, down: 0, same: 0, n: 0, sumDelta: 0 };
+  const monthly = {};
+
+  const bump = (o, k) => { o[k] = (o[k] || 0) + 1; };
+  const transitionBump = (t, from, to) => { const f = t[from] || (t[from] = {}); f[to] = (f[to] || 0) + 1; };
+
+  pairs.forEach(p => {
+    const g1 = str(p.first['SC_RiskGrade']) || 'Unknown', g2 = str(p.second['SC_RiskGrade']) || 'Unknown';
+    if (g1 !== g2) riskGrade.changed++; else riskGrade.same++;
+    transitionBump(riskGrade.transitions, g1, g2);
+
+    const d1 = str(p.first['CurrentDBRBand']) || 'Unknown', d2 = str(p.second['CurrentDBRBand']) || 'Unknown';
+    if (d1 !== d2) dbrBand.changed++; else dbrBand.same++;
+    transitionBump(dbrBand.transitions, d1, d2);
+
+    const s1 = num(p.first['SMH_Score']), s2 = num(p.second['SMH_Score']);
+    if (s1 != null && s2 != null) {
+      smhScore.n++;
+      if (s2 > s1) smhScore.up++; else if (s2 < s1) smhScore.down++; else smhScore.same++;
+      smhScore.sumDelta += (s2 - s1);
+    }
+
+    const mk = p.d2.slice(0, 7);
+    bump(monthly, mk);
+  });
+
+  // Offer-terms comparison -- only where BOTH applications produced a real
+  // financing offer (see comment above re: sample size).
+  const offerFields = ['FIN_AMOUNT', 'PROFIT_RATE', 'TENURE'];
+  const offer = {};
+  offerFields.forEach(f => { offer[f] = { n: 0, up: 0, down: 0, same: 0, sumDelta: 0 }; });
+  const finBand = { n: 0, changed: 0, same: 0 };
+  pairs.forEach(p => {
+    offerFields.forEach(f => {
+      const a = num(p.first[f]), b = num(p.second[f]);
+      if (a == null || b == null) return;
+      const o = offer[f];
+      o.n++;
+      if (b > a) o.up++; else if (b < a) o.down++; else o.same++;
+      o.sumDelta += (b - a);
+    });
+    const fb1 = str(p.first['FinBand']), fb2 = str(p.second['FinBand']);
+    if (fb1 != null && fb2 != null) {
+      finBand.n++;
+      if (fb1 !== fb2) finBand.changed++; else finBand.same++;
+    }
+  });
+
+  const monthlyTrend = Object.keys(monthly).sort().map(m => ({ month: m, pairs: monthly[m] }));
+
+  return {
+    distinctCivilIdsWithSimah: byCiv.size,
+    pairCount: pairs.length,
+    riskGrade, dbrBand, smhScore, offer, finBand, monthlyTrend,
+  };
+}
+
 function computeBookedThenCancelledYesterday(dashboardRows) {
   const empty = { count: 0, amount: 0, yesterday: null };
   let maxDate = null;
@@ -561,6 +661,9 @@ if (fs.existsSync(APPROVED_COMPANIES_CSV)) {
 result.journey = buildJourneyTrends(dashboardRows, result.meta.max, companyStatusMap, normCompany);
 console.log(`Journey trends: ${result.journey.trends30.length} days (${result.journey.windowStart} → ${result.journey.windowEnd}), income series ${result.journey.incomeDaily.length} days`);
 if (approvedCompaniesMeta) result.journey.approvedCompanies = approvedCompaniesMeta;
+
+result.simah2 = buildSimah2Analysis(dashboardRows);
+console.log(`2nd SIMAH call: ${result.simah2.pairCount.toLocaleString()} pairs (of ${result.simah2.distinctCivilIdsWithSimah.toLocaleString()} distinct SIMAH-pulled customers), offer-terms available for ${result.simah2.offer.FIN_AMOUNT.n.toLocaleString()} of them`);
 
 const newLine = `const DAILY_DEFAULT = ${JSON.stringify(result)};`;
 
